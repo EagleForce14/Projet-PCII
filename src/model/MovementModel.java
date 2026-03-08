@@ -1,0 +1,57 @@
+package model;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Modèle de gestion des entités.
+ * Actuellement, il n'y a qu'une unité principale mais la structure est prête pour N unités.
+ */
+public class MovementModel {
+    // La liste de toutes les unités présentes sur le terrain
+    private final List<Unit> units;
+    
+    // Référence directe vers le joueur (pour le contrôler au clavier)
+    private Unit playerUnit;
+
+    public MovementModel() {
+        units = new ArrayList<>();
+    }
+
+    // Permet l'ajout d'unités contrôlables au clavier (non utilisée pour le moment mais elle le sera par la suite)
+    public void addUnit(Unit unit) {
+        units.add(unit);
+    }
+
+
+    // Définit l'unité spécifique qui sera contrôlée par le joueur
+    public void setPlayerUnit(Unit unit) {
+        this.playerUnit = unit;
+        // On s'assure qu'il est aussi dans la liste générale pour l'affichage/update
+        if (!units.contains(unit)) {
+            units.add(unit);
+        }
+    }
+
+
+    // On met à jour la position pour chaque unité de la liste
+    public void update() {
+        for (Unit u : units) {
+            u.updatePosition();
+            
+            // Petit log console si le joueur se déplace
+            if (u == playerUnit && u.isMoving()) {
+                System.out.println("Joueur Pos: (" + u.getX() + ", " + u.getY() + ")");
+            }
+        }
+    }
+
+    // Accesseur pour le contrôleur (qui a besoin de piloter le joueur)
+    public Unit getPlayerUnit() {
+        return playerUnit;
+    }
+    
+    // Accesseur pour la vue (qui a besoin d'afficher TOUT le monde)
+    public List<Unit> getUnits() {
+        return units;
+    }
+}

@@ -6,6 +6,7 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 
 /**
@@ -29,14 +30,10 @@ public class FieldPanel extends JPanel {
     }
 
     /**
-     * Dessine la grille (avec les images).
+     * Retourne uniquement le rectangle occupé par la grille d'images du champ
+     * a l'intérieur du panneau.
      */
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        Graphics2D g2 = (Graphics2D) g.create();
-        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-
+    public Rectangle getFieldBounds() {
         int availableWidth = Math.max(0, getWidth() - 2 * INNER_PADDING);
         int availableHeight = Math.max(0, getHeight() - 2 * INNER_PADDING);
         int tileW = availableWidth / COLS;
@@ -46,6 +43,21 @@ public class FieldPanel extends JPanel {
         int gridH = tileSize * ROWS;
         int startX = (getWidth() - gridW) / 2;
         int startY = (getHeight() - gridH) / 2;
+        return new Rectangle(startX, startY, gridW, gridH);
+    }
+
+    /**
+     * Dessine la grille (avec les images).
+     */
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2 = (Graphics2D) g.create();
+
+        Rectangle fieldBounds = getFieldBounds();
+        int tileSize = fieldBounds.width / COLS;
+        int startX = fieldBounds.x;
+        int startY = fieldBounds.y;
 
         for (int r = 0; r < ROWS; r++) {
             for (int c = 0; c < COLS; c++) {
