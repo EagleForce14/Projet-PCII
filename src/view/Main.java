@@ -1,6 +1,8 @@
 package view;
 
 import controller.MovementController;
+import model.EnemyPhysicsThread;
+import model.EnemyModel;
 import model.MovementModel;
 import model.PhysicsThread;
 import model.Unit;
@@ -24,10 +26,17 @@ public class Main {
             Unit playerUnit = new Unit(0, 0);
             model.setPlayerUnit(playerUnit);
 
+            EnemyModel enemyModel = new EnemyModel();
+            enemyModel.setPlayer(playerUnit);
+
             FieldPanel fieldPanel = new FieldPanel();
             MovementView movementView = new MovementView(model, fieldPanel);
             movementView.setAlignmentX(0.5f);
             movementView.setAlignmentY(0.5f);
+
+            EnemyView enemyView = new EnemyView(enemyModel, fieldPanel);
+            enemyView.setAlignmentX(0.5f);
+            enemyView.setAlignmentY(0.5f);
 
             JPanel fieldLayer = new JPanel(new GridBagLayout());
             fieldLayer.setOpaque(false);
@@ -38,18 +47,22 @@ public class Main {
             JPanel root = new JPanel();
             root.setLayout(new OverlayLayout(root));
             root.add(movementView);
+            root.add(enemyView);
             root.add(fieldLayer);
             frame.setContentPane(root);
 
             new MovementController(model, movementView);
 
-            (new PhysicsThread(model)).start();
-
-            (new RenderThread(movementView)).start();
-
             frame.pack();
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
+
+            enemyModel.setViewportSize(root.getWidth(), root.getHeight());
+
+            (new PhysicsThread(model)).start();
+            (new EnemyPhysicsThread(enemyModel)).start();
+            (new RenderThread(root)).start();
+
             movementView.requestFocusInWindow();
         });
     }

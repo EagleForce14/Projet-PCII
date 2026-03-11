@@ -1,22 +1,24 @@
 package view;
+
+import java.awt.Component;
+
 /**
  * Thread dédié au moteur de rendu pour mettre à jour l'affichage.
  * Il demande à la vue de se redessiner à intervalle régulier.
  */
 public class RenderThread extends Thread {
-    private final MovementView view;
+    private final Component component;
     private volatile boolean running = true;
     private final int DELAY = 16; // ~60 FPS
 
-    public RenderThread(MovementView view) {
-        this.view = view;
+    public RenderThread(Component component) {
+        this.component = component;
     }
 
     @Override
     public void run() {
         while (running) {
-            // Demande de redessin
-            view.repaint();
+            component.repaint();
 
             try {
                 Thread.sleep(DELAY);
