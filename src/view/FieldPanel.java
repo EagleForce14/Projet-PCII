@@ -7,7 +7,6 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Rectangle;
-import java.awt.RenderingHints;
 
 /**
  * Panneau d'affichage du champ, compose d'une grille d'images.
@@ -17,7 +16,8 @@ public class FieldPanel extends JPanel {
     private static final int COLS = 10;
     private static final int PREF_WIDTH = 900;
     private static final int PREF_HEIGHT = 540;
-    private static final int INNER_PADDING = 96;
+    private static final int INNER_PADDING = 52;
+    private static final int VERTICAL_OFFSET = 24;
 
     private final Image tileImage;
 
@@ -27,6 +27,8 @@ public class FieldPanel extends JPanel {
     public FieldPanel() {
         this.tileImage = ImageLoader.load("/assets/Terre.png");
         setPreferredSize(new Dimension(PREF_WIDTH, PREF_HEIGHT));
+        // Le panneau reste transparent hors de la grille pour laisser voir le fond global.
+        setOpaque(false);
     }
 
     /**
@@ -42,7 +44,8 @@ public class FieldPanel extends JPanel {
         int gridW = tileSize * COLS;
         int gridH = tileSize * ROWS;
         int startX = (getWidth() - gridW) / 2;
-        int startY = (getHeight() - gridH) / 2;
+        // On décale légèrement le champ vers le bas tout en restant entièrement visible.
+        int startY = Math.min((getHeight() - gridH), ((getHeight() - gridH) / 2) + VERTICAL_OFFSET);
         return new Rectangle(startX, startY, gridW, gridH);
     }
 

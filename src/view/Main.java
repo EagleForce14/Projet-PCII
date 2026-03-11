@@ -10,60 +10,66 @@ import model.Unit;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.OverlayLayout;
-import javax.swing.SwingUtilities;
 import java.awt.Dimension;
 import java.awt.GridBagLayout;
+import java.awt.Image;
 
 public class Main {
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Projet PCII");
-            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setMinimumSize(new Dimension(960, 540));
-            frame.setPreferredSize(new Dimension(1280, 720));
+        JFrame frame = new JFrame("Projet PCII");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setMinimumSize(new Dimension(960, 540));
+        frame.setPreferredSize(new Dimension(1280, 720));
 
-            MovementModel model = new MovementModel();
-            Unit playerUnit = new Unit(0, 0);
-            model.setPlayerUnit(playerUnit);
+        // Image de fond globale de la fenêtre.
+        Image backgroundImage = ImageLoader.load("/assets/Main_Background.png");
 
-            EnemyModel enemyModel = new EnemyModel();
-            enemyModel.setPlayer(playerUnit);
+        MovementModel model = new MovementModel();
+        Unit playerUnit = new Unit(0, 0);
+        model.setPlayerUnit(playerUnit);
 
-            FieldPanel fieldPanel = new FieldPanel();
-            MovementView movementView = new MovementView(model, fieldPanel);
-            movementView.setAlignmentX(0.5f);
-            movementView.setAlignmentY(0.5f);
+        EnemyModel enemyModel = new EnemyModel();
+        enemyModel.setPlayer(playerUnit);
 
-            EnemyView enemyView = new EnemyView(enemyModel, fieldPanel);
-            enemyView.setAlignmentX(0.5f);
-            enemyView.setAlignmentY(0.5f);
+        FieldPanel fieldPanel = new FieldPanel();
+        MovementView movementView = new MovementView(model, fieldPanel);
+        movementView.setAlignmentX(0.5f);
+        movementView.setAlignmentY(0.5f);
 
-            JPanel fieldLayer = new JPanel(new GridBagLayout());
-            fieldLayer.setOpaque(false);
-            fieldLayer.setAlignmentX(0.5f);
-            fieldLayer.setAlignmentY(0.5f);
-            fieldLayer.add(fieldPanel);
+        EnemyView enemyView = new EnemyView(enemyModel, fieldPanel);
+        enemyView.setAlignmentX(0.5f);
+        enemyView.setAlignmentY(0.5f);
 
-            JPanel root = new JPanel();
-            root.setLayout(new OverlayLayout(root));
-            root.add(movementView);
-            root.add(enemyView);
-            root.add(fieldLayer);
-            frame.setContentPane(root);
+        JPanel fieldLayer = new JPanel(new GridBagLayout());
+        fieldLayer.setOpaque(false);
+        fieldLayer.setAlignmentX(0.5f);
+        fieldLayer.setAlignmentY(0.5f);
+        fieldLayer.add(fieldPanel);
 
-            new MovementController(model, movementView);
+        // On affiche l'image d'arrière-plan avant les autres composants du panneau.
+        JPanel root = createRootPanel(backgroundImage);
+        root.setLayout(new OverlayLayout(root));
+        root.add(movementView);
+        root.add(enemyView);
+        root.add(fieldLayer);
+        frame.setContentPane(root);
 
-            frame.pack();
-            frame.setLocationRelativeTo(null);
-            frame.setVisible(true);
+        new MovementController(model, movementView);
 
-            enemyModel.setViewportSize(root.getWidth(), root.getHeight());
+        frame.pack();
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
 
-            (new PhysicsThread(model)).start();
-            (new EnemyPhysicsThread(enemyModel)).start();
-            (new RenderThread(root)).start();
+        enemyModel.setViewportSize(root.getWidth(), root.getHeight());
 
-            movementView.requestFocusInWindow();
-        });
+        (new PhysicsThread(model)).start();
+        (new EnemyPhysicsThread(enemyModel)).start();
+        (new RenderThread(root)).start();
+
+        movementView.requestFocusInWindow();
+    }
+
+    private static JPanel createRootPanel(Image backgroundImage) {
+        return new BackgroundPanel(backgroundImage);
     }
 }
