@@ -47,7 +47,7 @@ public class Culture {
         // Vérifie si la culture est à maturité avant de la récolter
         if (stadeCroissance == Stade.MATURE) {
             // Arrêter le thread de croissance
-            threadCroissance.interrupt();
+            threadCroissance.arreter();
             return GrilleCulture.getPrixVente(type);
         } else {
             throw new IllegalStateException("La culture n'est pas à maturité et ne peut pas être récoltée.");
@@ -63,7 +63,7 @@ public class Culture {
     public void manger() {
         // Vérifie si la culture est à maturité avant de la manger
         if (stadeCroissance == Stade.MATURE) {
-            threadCroissance.interrupt(); // Arrêter le thread de croissance
+            threadCroissance.arreter();; // Arrêter le thread de croissance
         } else {
             throw new IllegalStateException("La culture n'est pas à maturité et ne peut pas être mangée.");
         }
