@@ -1,8 +1,11 @@
 package model;
+
 /**
  * Représente une entité déplaçable.
  */
 public class Unit {
+    public static final int SIZE = 30;
+
     // On rappelle que volatile assure que les modifications sont immédiatement visibles par tous les threads
     private volatile int x;
     private volatile int y;
@@ -26,15 +29,21 @@ public class Unit {
 
     // On met à jour la position selon le flag activé
     public synchronized void updatePosition() {
+        int nextX = x;
+        int nextY = y;
+
         if (moveUp) {
-            y -= SPEED;
+            nextY -= SPEED;
         } else if (moveDown) {
-            y += SPEED;
+            nextY += SPEED;
         } else if (moveLeft) {
-            x -= SPEED;
+            nextX -= SPEED;
         } else if (moveRight) {
-            x += SPEED;
+            nextX += SPEED;
         }
+
+        x = nextX;
+        y = nextY;
     }
 
     // Getters et Setters

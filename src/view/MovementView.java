@@ -9,9 +9,6 @@ import java.util.List;
  * On réalise une interface graphique très simple afin de mieux tester la fonctionnalité
  */
 public class MovementView extends JPanel {
-    // Taille d'une unité déplaçable
-    private static final int UNIT_SIZE = 30;
-
     // Le modèle contenant la liste des unités à afficher
     private final MovementModel model;
     private final FieldPanel fieldPanel;
@@ -37,10 +34,10 @@ public class MovementView extends JPanel {
         int centerY = fieldBounds.y + (fieldBounds.height / 2);
         // On calcule ici les positions minimales et maximales autorisées pour que
         // l'unité reste entièrement visible dans la fenêtre.
-        int minX = -centerX + (UNIT_SIZE / 2);
-        int maxX = getWidth() - centerX - (UNIT_SIZE / 2);
-        int minY = -centerY + (UNIT_SIZE / 2);
-        int maxY = getHeight() - centerY - (UNIT_SIZE / 2);
+        int minX = -centerX + (Unit.SIZE / 2);
+        int maxX = getWidth() - centerX - (Unit.SIZE / 2);
+        int minY = -centerY + (Unit.SIZE / 2);
+        int maxY = getHeight() - centerY - (Unit.SIZE / 2);
 
         // On dessine chaque unité présente dans le modèle
         for (Unit u : units) {
@@ -61,10 +58,10 @@ public class MovementView extends JPanel {
             
             // Position relative au centre de la fenêtre
             // (La position (0,0) de l'unité correspond au centre de l'écran)
-            int drawX = centerX - (UNIT_SIZE / 2) + u.getX(); 
-            int drawY = centerY - (UNIT_SIZE / 2) + u.getY();
+            int drawX = centerX - (Unit.SIZE / 2) + u.getX(); 
+            int drawY = centerY - (Unit.SIZE / 2) + u.getY();
             
-            g.fillRect(drawX, drawY, UNIT_SIZE, UNIT_SIZE);
+            g.fillRect(drawX, drawY, Unit.SIZE, Unit.SIZE);
         }
     }
 }

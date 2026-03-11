@@ -189,10 +189,13 @@ public class EnemyUnit {
         
         // Si la cible est encore assez loin, on avance dans sa direction.
         if (distance > currentSpeed) {
+            double nextX = x + (dx / distance) * currentSpeed;
+            double nextY = y + (dy / distance) * currentSpeed;
+
             // Déplacement normalisé sur X.
-            x += (dx / distance) * currentSpeed;
+            x = nextX;
             // Déplacement normalisé sur Y.
-            y += (dy / distance) * currentSpeed;
+            y = nextY;
         } else {
             // La cible atteinte, on en choisit une nouvelle si on est dans la carte et qu'on ne fuit pas
             // Remarque : en fuite, on ne remplace pas la cible ici, car il faut sortir de l'écran.

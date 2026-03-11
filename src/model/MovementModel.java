@@ -49,7 +49,7 @@ public class MovementModel {
     public Unit getPlayerUnit() {
         return playerUnit;
     }
-    
+
     // Accesseur pour la vue (qui a besoin d'afficher TOUT le monde)
     public List<Unit> getUnits() {
         return units;

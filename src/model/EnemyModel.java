@@ -23,7 +23,7 @@ public class EnemyModel {
     
     // Référence au joueur pour la fuite
     private Unit player;
-    
+
     public EnemyModel() {
         // Remarque : On utilise CopyOnWriteArrayList pour éviter les ConcurrentModificationException
         // entre le thread de rendu (qui lit la liste) et le thread physique (qui ajoute des ennemis)

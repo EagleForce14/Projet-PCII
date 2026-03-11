@@ -46,7 +46,6 @@ public class Main {
         fieldLayer.setAlignmentY(0.5f);
         fieldLayer.add(fieldPanel);
 
-        // On affiche l'image d'arrière-plan avant les autres composants du panneau.
         JPanel root = createRootPanel(backgroundImage);
         root.setLayout(new OverlayLayout(root));
         root.add(movementView);
