@@ -34,6 +34,11 @@ public class GrilleCulture {
     /** Attribut représentant la grille de culture */
     ZoneCulture[][] grille;
 
+    // Centralise la validation des coordonnées pour que vue et logique manipulent la même grille.
+    private boolean estDansGrille(int x, int y) {
+        return x >= 0 && x < LARGEUR_GRILLE && y >= 0 && y < HAUTEUR_GRILLE;
+    }
+
     /** Constructeur de la grille de culture */
     public GrilleCulture() {
         this.grille = new ZoneCulture[LARGEUR_GRILLE][HAUTEUR_GRILLE];
@@ -55,16 +60,34 @@ public class GrilleCulture {
         return PRIX_VENTE_CULTURES.get(type);
     }
 
+    /** Getter qui renvoie la largeur logique de la grille. */
+    public int getLargeur() {
+        return LARGEUR_GRILLE;
+    }
+
+    /** Getter qui renvoie la hauteur logique de la grille. */
+    public int getHauteur() {
+        return HAUTEUR_GRILLE;
+    }
+
+    /** Getter qui renvoie la zone de culture a une position donnee. */
+    public ZoneCulture getZoneCulture(int x, int y) {
+        if (estDansGrille(x, y)) {
+            return grille[x][y];
+        }
+        return null;
+    }
+
     /** Méthode qui plante une culture dans la grille */
     public void planterCulture(int x, int y, Type type) {
-        if (x >= 0 && x < LARGEUR_GRILLE && y >= 0 && y < HAUTEUR_GRILLE) {
+        if (estDansGrille(x, y)) {
             grille[x][y].planterCulture(type);
         }
     }
 
     /** Getter qui renvoie la culture à une position donnée */
     public Culture getCulture(int x, int y) {
-        if (x >= 0 && x < LARGEUR_GRILLE && y >= 0 && y < HAUTEUR_GRILLE) {
+        if (estDansGrille(x, y)) {
             return grille[x][y].getCulture();
         }
         return null;
@@ -72,7 +95,7 @@ public class GrilleCulture {
 
     /** Méthode qui mange la culture à une position donnée */
     public void mangerCulture(int x, int y) {
-        if (x >= 0 && x < LARGEUR_GRILLE && y >= 0 && y < HAUTEUR_GRILLE) {
+        if (estDansGrille(x, y)) {
             grille[x][y].mangerCulture();
         }
     }

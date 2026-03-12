@@ -25,8 +25,10 @@ public class MovementView extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g); // Toujours appeler super pour nettoyer le fond
-        
+
         List<Unit> units = model.getUnits();
+        Unit playerUnit = model.getPlayerUnit();
+        Point highlightedCell = null;
 
         // On convertit les bornes du champ dans le repère de cette vue pour dessiner l'unité au centre du champ
         Rectangle fieldBounds = SwingUtilities.convertRectangle(fieldPanel, fieldPanel.getFieldBounds(), this);
@@ -57,11 +59,22 @@ public class MovementView extends JPanel {
             g.setColor(Color.RED);
             
             // Position relative au centre de la fenêtre
-            // (La position (0,0) de l'unité correspond au centre de l'écran)
+            // Rappel : La position (0,0) de l'unité correspond au centre de l'écran
             int drawX = centerX - (Unit.SIZE / 2) + u.getX(); 
             int drawY = centerY - (Unit.SIZE / 2) + u.getY();
+
+            // La case active est calculée à partir du rectangle réel du joueur,
+            // sans tenir compte du cercle d'influence. Un chevauchement entre deux
+            // cases annule donc la surbrillance.
+            if (u == playerUnit) {
+                Rectangle playerBounds = new Rectangle(drawX, drawY, Unit.SIZE, Unit.SIZE);
+                Rectangle playerBoundsInField = SwingUtilities.convertRectangle(this, playerBounds, fieldPanel);
+                highlightedCell = fieldPanel.getFullyOccupiedCell(playerBoundsInField);
+            }
             
             g.fillRect(drawX, drawY, Unit.SIZE, Unit.SIZE);
         }
+
+        fieldPanel.setHighlightedCell(highlightedCell);
     }
 }

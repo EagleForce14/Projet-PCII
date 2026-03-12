@@ -3,6 +3,7 @@ package view;
 import controller.MovementController;
 import model.EnemyPhysicsThread;
 import model.EnemyModel;
+import model.GrilleCulture;
 import model.MovementModel;
 import model.PhysicsThread;
 import model.Unit;
@@ -13,6 +14,7 @@ import javax.swing.OverlayLayout;
 import java.awt.Dimension;
 import java.awt.GridBagLayout;
 import java.awt.Image;
+import java.awt.Point;
 
 public class Main {
     public static void main(String[] args) {
@@ -24,14 +26,17 @@ public class Main {
         // Image de fond globale de la fenêtre.
         Image backgroundImage = ImageLoader.load("/assets/Main_Background.png");
 
+        GrilleCulture grilleCulture = new GrilleCulture();
+        FieldPanel fieldPanel = new FieldPanel(grilleCulture);
+
         MovementModel model = new MovementModel();
-        Unit playerUnit = new Unit(0, 0);
+        // Le joueur démarre hors du champ, près du coin haut-gauche de la grille.
+        Point initialPlayerOffset = fieldPanel.getInitialPlayerOffset();
+        Unit playerUnit = new Unit(initialPlayerOffset.x, initialPlayerOffset.y);
         model.setPlayerUnit(playerUnit);
 
         EnemyModel enemyModel = new EnemyModel();
         enemyModel.setPlayer(playerUnit);
-
-        FieldPanel fieldPanel = new FieldPanel();
         MovementView movementView = new MovementView(model, fieldPanel);
         movementView.setAlignmentX(0.5f);
         movementView.setAlignmentY(0.5f);
