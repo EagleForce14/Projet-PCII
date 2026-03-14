@@ -13,6 +13,9 @@ public class MovementModel {
     // Référence directe vers le joueur (pour le contrôler au clavier)
     private Unit playerUnit;
 
+    // Vaut true si une unité déplaçable (ici le joueur) est sur une case du champ highlightée.
+    private volatile boolean actionOverlayEnabled;
+
     public MovementModel() {
         units = new ArrayList<>();
     }
@@ -32,7 +35,6 @@ public class MovementModel {
         }
     }
 
-
     // On met à jour la position pour chaque unité de la liste
     public void update() {
         for (Unit u : units) {
@@ -50,7 +52,21 @@ public class MovementModel {
         return playerUnit;
     }
 
-    // Accesseur pour la vue (qui a besoin d'afficher TOUT le monde)
+    /**
+     * Getter pour activer/désactiver visuellement les boutons.
+     */
+    public boolean isActionOverlayEnabled() {
+        return actionOverlayEnabled;
+    }
+
+    /**
+     * Setter pour activer / désactiver les boutons.
+     */
+    public void setActionOverlayEnabled(boolean actionOverlayEnabled) {
+        this.actionOverlayEnabled = actionOverlayEnabled;
+    }
+
+    // Accesseur pour la vue (qui a besoin d'afficher TOUTES les unités)
     public List<Unit> getUnits() {
         return units;
     }

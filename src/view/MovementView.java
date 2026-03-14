@@ -75,6 +75,9 @@ public class MovementView extends JPanel {
             g.fillRect(drawX, drawY, Unit.SIZE, Unit.SIZE);
         }
 
+        // La condition d'activation des actions est strictement liée à la présence
+        // de l'unité déplaçable sur une case valide highlightée du champ.
+        model.setActionOverlayEnabled(highlightedCell != null);
         fieldPanel.setHighlightedCell(highlightedCell);
     }
 }

@@ -1,4 +1,4 @@
-package view;
+package main;
 
 import controller.MovementController;
 import model.EnemyPhysicsThread;
@@ -7,6 +7,7 @@ import model.GrilleCulture;
 import model.MovementModel;
 import model.PhysicsThread;
 import model.Unit;
+import view.*;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -41,6 +42,9 @@ public class Main {
         movementView.setAlignmentX(0.5f);
         movementView.setAlignmentY(0.5f);
 
+        // L'overlay des actions contextuelles (plantation/recolte/arrosage/nettoyage).
+        ActionOverlayPanel actionOverlayPanel = new ActionOverlayPanel(model);
+
         EnemyView enemyView = new EnemyView(enemyModel, fieldPanel);
         enemyView.setAlignmentX(0.5f);
         enemyView.setAlignmentY(0.5f);
@@ -56,6 +60,10 @@ public class Main {
         root.add(movementView);
         root.add(enemyView);
         root.add(fieldLayer);
+        root.add(actionOverlayPanel);
+
+        // On force l'overlay en premier plan pour garantir sa visibilité.
+        root.setComponentZOrder(actionOverlayPanel, 0);
         frame.setContentPane(root);
 
         new MovementController(model, movementView);
