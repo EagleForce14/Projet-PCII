@@ -16,22 +16,22 @@ import java.awt.Insets;
 import java.awt.BorderLayout;
 
 /**
- * Overlay d'actions placé en bas à gauche de l'interface.
+ * Sidebar d'actions placée à droite de l'interface.
  */
-public class ActionOverlayPanel extends JPanel {
-    private static final int OVERLAY_WIDTH = 320;
-    private static final int OVERLAY_HEIGHT = 230;
+public class SidebarPanel extends JPanel {
+    public static final int SIDEBAR_WIDTH = 320;
+    private static final int ACTIONS_CONTENT_HEIGHT = 230;
 
     // Le chemin pour accéder à la police personnalisée
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
 
-    // Référence au modèle: la vue lit uniquement un état booléen d'activation.
+    // On référence au modèle car la vue lit uniquement un état booléen d'activation.
     private final MovementModel movementModel;
 
     // Texture de fond en bois (chargée via la classe utilitaire du projet).
     private final Image woodBackground;
 
-    // les 4 boutons de contrôle des actions des unités déplaçables.
+    // Les 4 boutons de contrôle des actions des unités déplaçables.
     private final JButton plantButton;
     private final JButton harvestButton;
     private final JButton waterButton;
@@ -41,28 +41,25 @@ public class ActionOverlayPanel extends JPanel {
     private boolean currentEnabledState;
 
     // Constructeur de la classe
-    public ActionOverlayPanel(MovementModel movementModel) {
+    public SidebarPanel(MovementModel movementModel) {
         this.movementModel = movementModel;
         this.woodBackground = ImageLoader.load("/assets/bois.png");
 
         // Le panneau est transparent hors de sa zone peinte personnalisée.
         setOpaque(false);
 
-        // On souhaite faire un overlay placé en bas à gauche.
-        setAlignmentX(0.0f);
-        setAlignmentY(1.0f);
+        // La sidebar garde une largeur fixe pour ne jamais empiéter sur le jeu.
+        setPreferredSize(new Dimension(SIDEBAR_WIDTH, ACTIONS_CONTENT_HEIGHT));
+        setMinimumSize(new Dimension(SIDEBAR_WIDTH, 0));
 
-        // On fixe la taille.
-        setPreferredSize(new Dimension(OVERLAY_WIDTH, OVERLAY_HEIGHT));
-        setMinimumSize(new Dimension(OVERLAY_WIDTH, OVERLAY_HEIGHT));
-        setMaximumSize(new Dimension(OVERLAY_WIDTH, OVERLAY_HEIGHT));
-
-        // Petite marge depuis le bord de la fenêtre pour ne pas coller aux bords.
-        setBorder(BorderFactory.createEmptyBorder(0, 14, 14, 0));
-
-        // On utilise un BorderLayout pour séparer clairement
-        // le titre (haut) et la grille de boutons (centre).
         setLayout(new BorderLayout());
+
+        // Le contenu utile garde la même hauteur que l'ancien overlay afin de
+        // préserver la taille visuelle des boutons, sans étirer la grille.
+        JPanel contentPanel = new JPanel(new BorderLayout());
+        contentPanel.setOpaque(false);
+        contentPanel.setPreferredSize(new Dimension(SIDEBAR_WIDTH, ACTIONS_CONTENT_HEIGHT));
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(0, 14, 14, 0));
 
         // On s'occupe du titre principal (avec la police personnalisée).
         JPanel titleRow = new JPanel(new BorderLayout());
@@ -92,8 +89,9 @@ public class ActionOverlayPanel extends JPanel {
         buttonsGrid.add(waterButton);
         buttonsGrid.add(cleanButton);
 
-        add(titleRow, BorderLayout.NORTH);
-        add(buttonsGrid, BorderLayout.CENTER);
+        contentPanel.add(titleRow, BorderLayout.NORTH);
+        contentPanel.add(buttonsGrid, BorderLayout.CENTER);
+        add(contentPanel, BorderLayout.NORTH);
 
         // Au démarrage, les boutons sont désactivés tant que l'unité déplaçable n'est pas
         // sur une case valide du champ.

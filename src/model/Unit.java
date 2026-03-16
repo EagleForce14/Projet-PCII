@@ -5,6 +5,7 @@ package model;
  */
 public class Unit {
     public static final int SIZE = 30;
+    private static final int SPEED = 3;
 
     // On rappelle que volatile assure que les modifications sont immédiatement visibles par tous les threads
     private volatile int x;
@@ -19,6 +20,7 @@ public class Unit {
     // Rayon de la zone d'influence
     public static final int INFLUENCE_RADIUS = 100;
 
+    // Le constructeur de la classe.
     public Unit(int x, int y) {
         this.x = x;
         this.y = y;
@@ -26,22 +28,32 @@ public class Unit {
 
     // On met à jour la position selon le flag activé
     public synchronized void updatePosition() {
+        int stepX = 0;
+        int stepY = 0;
+        if (moveUp) {
+            stepY -= SPEED;
+        } else if (moveDown) {
+            stepY += SPEED;
+        } else if (moveLeft) {
+            stepX -= SPEED;
+        } else if (moveRight) {
+            stepX += SPEED;
+        }
+
         int nextX = x;
         int nextY = y;
 
-        // La vitesse de déplacement
-        int SPEED = 3;
-        if (moveUp) {
-            nextY -= SPEED;
-        } else if (moveDown) {
-            nextY += SPEED;
-        } else if (moveLeft) {
-            nextX -= SPEED;
-        } else if (moveRight) {
-            nextX += SPEED;
+        /* La collision avec la grange s'applique uniquement au corps du joueur.
+         * Ainsi, le cercle de zone d'influence n'est pas pris en compte pour bloquer le déplacement, il est par ailleurs
+         * purement visuel.
+         */
+        if (stepX != 0 && Barn.canOccupyCenteredBox(x + stepX, y, SIZE, SIZE)) {
+            nextX = x + stepX;
+        }
+        if (stepY != 0 && Barn.canOccupyCenteredBox(nextX, y + stepY, SIZE, SIZE)) {
+            nextY = y + stepY;
         }
 
-        // Collision grange désactivée: l'unité traverse librement.
         x = nextX;
         y = nextY;
     }

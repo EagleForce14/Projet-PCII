@@ -1,11 +1,32 @@
 package model;
 
+import java.awt.Rectangle;
 import java.util.Random;
 
 /**
  * Représente un ennemi (IA ennemie).
  */
 public class EnemyUnit {
+    private static final int HITBOX_SIZE = 20;
+    // Ces listes décrivent les rotations possibles autour de la direction voulue.
+    // On teste d'abord de petits écarts, puis des virages plus forts, puis seulement un demi-tour.
+    // RIGHT_HAND_OFFSETS privilégie un contournement "main droite", LEFT_HAND_OFFSETS l'inverse.
+    // Le lapin garde ainsi un côté préféré le long de la grange, ce qui limite les hésitations.
+    private static final double[] RIGHT_HAND_OFFSETS = {
+        Math.PI / 8, Math.PI / 4, (3 * Math.PI) / 8, Math.PI / 2,
+        (5 * Math.PI) / 8, (3 * Math.PI) / 4, (7 * Math.PI) / 8,
+        -Math.PI / 8, -Math.PI / 4, -(3 * Math.PI) / 8, -Math.PI / 2,
+        -(5 * Math.PI) / 8, -(3 * Math.PI) / 4, -(7 * Math.PI) / 8,
+        Math.PI
+    };
+    private static final double[] LEFT_HAND_OFFSETS = {
+        -Math.PI / 8, -Math.PI / 4, -(3 * Math.PI) / 8, -Math.PI / 2,
+        -(5 * Math.PI) / 8, -(3 * Math.PI) / 4, -(7 * Math.PI) / 8,
+        Math.PI / 8, Math.PI / 4, (3 * Math.PI) / 8, Math.PI / 2,
+        (5 * Math.PI) / 8, (3 * Math.PI) / 4, (7 * Math.PI) / 8,
+        Math.PI
+    };
+
     // Position courante du lapin sur l'axe horizontal.
     private volatile double x;
     // Position courante du lapin sur l'axe vertical.
@@ -26,6 +47,11 @@ public class EnemyUnit {
     private double lastY;
     // Compteur du nombre d'updates pendant lesquels le lapin a presque cessé de bouger.
     private int stagnantFrames = 0;
+    // Dernier déplacement réellement appliqué, utile pour éviter un demi-tour immédiat.
+    private double lastMoveX = 0;
+    private double lastMoveY = 0;
+    // Côté de contournement actuellement privilégié pour longer proprement la grange.
+    private int preferredTurnSign = 1;
 
     // Temporisateur avant de choisir une nouvelle cible de promenade.
     private int wanderTimer = 0;
@@ -110,7 +136,7 @@ public class EnemyUnit {
         handleFleeTrigger(player);
         ensureValidTarget(player);
         updateNavigationState();
-        moveTowardTarget(player);
+        moveTowardTarget();
         updateStagnationAndRecover(player);
         updateFledStatus();
     }
@@ -183,7 +209,7 @@ public class EnemyUnit {
     /**
      * Calcule le pas de déplacement vers la cible et applique les collisions avec la grange.
      */
-    private void moveTowardTarget(Unit player) {
+    private void moveTowardTarget() {
         double dx = targetX - x;
         double dy = targetY - y;
         double distance = Math.sqrt(dx * dx + dy * dy);
@@ -193,7 +219,7 @@ public class EnemyUnit {
             double step = Math.min(currentSpeed, distance);
             double stepX = (dx / distance) * step;
             double stepY = (dy / distance) * step;
-            moveWithBarnCollision(stepX, stepY, currentSpeed, player);
+            moveWithBarnCollision(stepX, stepY, currentSpeed);
             return;
         }
 
@@ -259,11 +285,26 @@ public class EnemyUnit {
         int halfFieldWidth = fieldWidth / 2;
         // Moitié de la hauteur du champ.
         int halfFieldHeight = fieldHeight / 2;
+        Rectangle barnBounds = Barn.getCollisionBounds();
+        int barnMargin = 90;
 
-        // Cible horizontale choisie à l'intérieur du champ avec une petite marge.
-        targetX = random.nextInt(Math.max(1, fieldWidth - 80)) - (halfFieldWidth - 40);
-        // Cible verticale choisie à l'intérieur du champ avec une petite marge.
-        targetY = random.nextInt(Math.max(1, fieldHeight - 80)) - (halfFieldHeight - 40);
+        for (int attempt = 0; attempt < 12; attempt++) {
+            double candidateX = random.nextInt(Math.max(1, fieldWidth - 80)) - (halfFieldWidth - 40);
+            double candidateY = random.nextInt(Math.max(1, fieldHeight - 80)) - (halfFieldHeight - 40);
+
+            if (!isInsideBarnAvoidanceZone(candidateX, candidateY, barnBounds, barnMargin)) {
+                targetX = candidateX;
+                targetY = candidateY;
+                return;
+            }
+        }
+
+        // Fallback: on vise franchement un des côtés libres de la grange pour contourner l'obstacle.
+        boolean goLeft = x <= (barnBounds.x + (barnBounds.width / 2.0));
+        double fallbackX = goLeft ? barnBounds.x - barnMargin : barnBounds.x + barnBounds.width + barnMargin;
+        double fallbackY = barnBounds.y + barnBounds.height + 35;
+        targetX = Math.max(-halfFieldWidth + 40, Math.min(halfFieldWidth - 40, fallbackX));
+        targetY = Math.max(-halfFieldHeight + 40, Math.min(halfFieldHeight - 40, fallbackY));
     }
 
     /**
@@ -329,10 +370,108 @@ public class EnemyUnit {
         targetY = nextTargetY;
     }
 
-    private void moveWithBarnCollision(double stepX, double stepY, double speed, Unit player) {
-        // Collision grange désactivée: les lapins traversent librement.
-        x += stepX;
-        y += stepY;
+    private void moveWithBarnCollision(double stepX, double stepY, double speed) {
+        if (tryMove(stepX, stepY)) {
+            return;
+        }
+
+        redirectAroundBarn(stepX, stepY, speed);
+    }
+
+    /**
+     * Applique uniquement un déplacement complet valide.
+     * Si le pas demandé traverse la grange, il est refusé et une autre direction sera cherchée.
+     */
+    private boolean tryMove(double stepX, double stepY) {
+        double nextX = x + stepX;
+        double nextY = y + stepY;
+
+        if (!canOccupy(nextX, nextY)) {
+            return false;
+        }
+
+        x = nextX;
+        y = nextY;
+        lastMoveX = stepX;
+        lastMoveY = stepY;
+        return true;
+    }
+
+    /**
+     * Choisit une direction libre proche de la direction voulue.
+     * En fuite, on garde la cible lointaine; hors fuite, on publie un petit détour local.
+     */
+    private void redirectAroundBarn(double desiredStepX, double desiredStepY, double speed) {
+        double desiredAngle = Math.atan2(desiredStepY, desiredStepX);
+        double[] offsets = preferredTurnSign >= 0 ? RIGHT_HAND_OFFSETS : LEFT_HAND_OFFSETS;
+
+        for (int pass = 0; pass < 2; pass++) {
+            for (double offset : offsets) {
+                double angle = desiredAngle + offset;
+                double candidateStepX = Math.cos(angle) * speed;
+                double candidateStepY = Math.sin(angle) * speed;
+
+                // On évite le demi-tour immédiat si une autre porte de sortie existe.
+                if (pass == 0 && isImmediateReverse(candidateStepX, candidateStepY)) {
+                    continue;
+                }
+
+                if (!tryMove(candidateStepX, candidateStepY)) {
+                    continue;
+                }
+
+                if (offset > 0.0001) {
+                    preferredTurnSign = 1;
+                } else if (offset < -0.0001) {
+                    preferredTurnSign = -1;
+                }
+
+                if (!isFleeing) {
+                    setDetourTarget(angle);
+                }
+                return;
+            }
+        }
+    }
+
+    private boolean canOccupy(double centerX, double centerY) {
+        return Barn.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE);
+    }
+
+    /**
+     * Évite qu'un lapin oscille bêtement entre deux directions opposées au contact du mur.
+     */
+    private boolean isImmediateReverse(double stepX, double stepY) {
+        double lastMagnitude = Math.sqrt((lastMoveX * lastMoveX) + (lastMoveY * lastMoveY));
+        double nextMagnitude = Math.sqrt((stepX * stepX) + (stepY * stepY));
+        if (lastMagnitude < 0.0001 || nextMagnitude < 0.0001) {
+            return false;
+        }
+
+        double dot = (lastMoveX * stepX) + (lastMoveY * stepY);
+        return dot < -(lastMagnitude * nextMagnitude * 0.35);
+    }
+
+    /**
+     * Hors fuite, on garde un petit objectif local pour que le lapin poursuive son contournement
+     * au lieu de retenter immédiatement de traverser le mur.
+     */
+    private void setDetourTarget(double angle) {
+        double detourDistance = 180 + random.nextDouble() * 60;
+        double nextTargetX = x + Math.cos(angle) * detourDistance;
+        double nextTargetY = y + Math.sin(angle) * detourDistance;
+        int halfViewportWidth = viewportWidth / 2;
+        int halfViewportHeight = viewportHeight / 2;
+
+        targetX = Math.max(-halfViewportWidth + 20, Math.min(halfViewportWidth - 20, nextTargetX));
+        targetY = Math.max(-halfViewportHeight + 20, Math.min(halfViewportHeight - 20, nextTargetY));
+    }
+
+    private boolean isInsideBarnAvoidanceZone(double candidateX, double candidateY, Rectangle barnBounds, int margin) {
+        return candidateX >= barnBounds.x - margin
+            && candidateX <= barnBounds.x + barnBounds.width + margin
+            && candidateY >= barnBounds.y - margin
+            && candidateY <= barnBounds.y + barnBounds.height + margin;
     }
     
     // Retourne la position entière actuelle sur X pour l'affichage.

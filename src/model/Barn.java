@@ -36,4 +36,22 @@ public class Barn {
         
         return new Rectangle(hitboxX, hitboxY, hitboxWidth, hitboxHeight);
     }
+
+    /**
+     * Vérifie si une entité centrée sur (centerX, centerY) recoupe la hitbox de la grange.
+     * Les coordonnées reçues sont dans le repère logique partagé par le joueur et les lapins.
+     */
+    public static boolean collidesWithCenteredBox(double centerX, double centerY, int width, int height) {
+        int left = (int) Math.round(centerX - (width / 2.0));
+        int top = (int) Math.round(centerY - (height / 2.0));
+        Rectangle entityBounds = new Rectangle(left, top, width, height);
+        return getCollisionBounds().intersects(entityBounds);
+    }
+
+    /**
+     * Indique si une entité peut occuper librement une position centrée donnée.
+     */
+    public static boolean canOccupyCenteredBox(double centerX, double centerY, int width, int height) {
+        return !collidesWithCenteredBox(centerX, centerY, width, height);
+    }
 }
