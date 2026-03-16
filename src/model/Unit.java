@@ -16,9 +16,6 @@ public class Unit {
     private volatile boolean moveLeft = false;
     private volatile boolean moveRight = false;
 
-    // La vitesse de déplacement
-    private final int SPEED = 3;
-
     // Rayon de la zone d'influence
     public static final int INFLUENCE_RADIUS = 100;
 
@@ -32,6 +29,8 @@ public class Unit {
         int nextX = x;
         int nextY = y;
 
+        // La vitesse de déplacement
+        int SPEED = 3;
         if (moveUp) {
             nextY -= SPEED;
         } else if (moveDown) {
@@ -42,6 +41,7 @@ public class Unit {
             nextX += SPEED;
         }
 
+        // Collision grange désactivée: l'unité traverse librement.
         x = nextX;
         y = nextY;
     }

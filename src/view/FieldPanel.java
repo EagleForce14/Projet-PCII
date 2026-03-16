@@ -10,6 +10,7 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.util.Objects;
 
 import model.Unit;
 
@@ -72,7 +73,7 @@ public class FieldPanel extends JPanel {
      * pour rester parfaitement alignée avec les images du champ.
      */
     public void setHighlightedCell(Point highlightedCell) {
-        if (this.highlightedCell == null ? highlightedCell == null : this.highlightedCell.equals(highlightedCell)) {
+        if (Objects.equals(this.highlightedCell, highlightedCell)) {
             return;
         }
 

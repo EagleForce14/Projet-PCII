@@ -106,135 +106,139 @@ public class EnemyUnit {
      * @param player Le joueur (pour vérifier la zone d'influence)
      */
     public synchronized void update(Unit player, int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight) {
-        // On met à jour la largeur de la fenêtre avec la valeur la plus récente.
-        this.viewportWidth = viewportWidth;
-        // On met à jour la hauteur de la fenêtre avec la valeur la plus récente.
-        this.viewportHeight = viewportHeight;
-        // On met à jour la largeur du champ avec la valeur la plus récente.
-        this.fieldWidth = fieldWidth;
-        // On met à jour la hauteur du champ avec la valeur la plus récente.
-        this.fieldHeight = fieldHeight;
+        refreshDimensions(viewportWidth, viewportHeight, fieldWidth, fieldHeight);
+        handleFleeTrigger(player);
+        ensureValidTarget(player);
+        updateNavigationState();
+        moveTowardTarget(player);
+        updateStagnationAndRecover(player);
+        updateFledStatus();
+    }
 
-        // Moitié de la largeur de la fenêtre.
-        int halfWidth = viewportWidth / 2;
-        // Moitié de la hauteur de la fenêtre.
-        int halfHeight = viewportHeight / 2;
-        // Moitié de la largeur du champ.
+    /**
+     * Met à jour les dimensions de référence utilisées par l'IA sur cette frame.
+     */
+    private void refreshDimensions(int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight) {
+        this.viewportWidth = viewportWidth;
+        this.viewportHeight = viewportHeight;
+        this.fieldWidth = fieldWidth;
+        this.fieldHeight = fieldHeight;
+    }
+
+    /**
+     * Passe le lapin en état de fuite si le joueur entre dans sa zone d'influence.
+     */
+    private void handleFleeTrigger(Unit player) {
+        if (player == null || isFleeing) {
+            return;
+        }
+
+        if (player.isInInfluenceZone((int) x, (int) y)) {
+            isFleeing = true;
+            updateFleeTarget(player);
+        }
+    }
+
+    /**
+     * Garantit que la cible courante est valide; sinon, recalcule une cible adaptée à l'état.
+     */
+    private void ensureValidTarget(Unit player) {
+        if (!Double.isNaN(targetX) && !Double.isNaN(targetY)
+            && !Double.isInfinite(targetX) && !Double.isInfinite(targetY)) {
+            return;
+        }
+
+        if (isFleeing && player != null) {
+            updateFleeTarget(player);
+        } else {
+            pickNewTarget();
+        }
+    }
+
+    /**
+     * Gère l'état de navigation: entrée dans le champ, puis promenade aléatoire hors fuite.
+     */
+    private void updateNavigationState() {
         int halfFieldWidth = fieldWidth / 2;
-        // Moitié de la hauteur du champ.
         int halfFieldHeight = fieldHeight / 2;
 
-        // Vérifie si l'ennemi doit fuir
-        // On n'entre dans ce bloc que si un joueur existe et que le lapin n'est pas déjà en fuite.
-        if (player != null && !isFleeing) {
-            // Si l'ennemi entre dans la zone d'influence de l'unité, l'unité ennemie fuit
-            if (player.isInInfluenceZone((int) x, (int) y)) {
-                // Changement d'état: l'unité ennemie fuit désormais.
-                isFleeing = true;
-                // On calcule une cible de fuite.
-                updateFleeTarget(player);
-            }
-        }
-
-        // Si une cible devient invalide (i.e. une valeur incohérente dans targetX oiu targetY), on la recalcule.
-        // C'est une sécurité pour éviter qu'une unité ennemie se bloque.
-        if (Double.isNaN(targetX) || Double.isNaN(targetY) || Double.isInfinite(targetX) || Double.isInfinite(targetY)) {
-            // Si l'unité ennemie est en fuite, on recalcule une fuite.
-            if (isFleeing && player != null) {
-                updateFleeTarget(player);
-            } else {
-                // S'il n'est pas en fuite, on le relance simplement sur une nouvelle cible.
-                pickNewTarget();
-            }
-        }
-
-        // Tant qu'il n'a pas atteint le champ, il vise une zone aleatoire du champ.
-        // On gère ici l'approche initiale du lapin depuis l'extérieur.
         if (!isInsideMap) {
-            // Si sa position est maintenant dans les bornes du champ, on considère qu'il est arrivé.
             if (x >= -halfFieldWidth && x <= halfFieldWidth && y >= -halfFieldHeight && y <= halfFieldHeight) {
                 isInsideMap = true;
-            // Sinon, de temps en temps, on ajuste son point d'entrée pour éviter une trajectoire trop rigide.
-            // Remarque = on ne le fait surtout pas pendant une fuite, sinon on écraserait la cible de fuite.
             } else if (!isFleeing && random.nextInt(90) == 0) {
                 pickFieldEntryTarget();
             }
-        // Une fois dans le champ, s'il ne fuit pas, il se promène.
-        } else if (!isFleeing) {
-            // Comportement de balade (wander) une fois à l'intérieur, s'il ne fuit pas
-            // On décrémente le temps avant le prochain changement de cible.
+            return;
+        }
+
+        if (!isFleeing) {
             wanderTimer--;
-            // Quand le timer arrive à zéro, on choisit une nouvelle destination.
             if (wanderTimer <= 0) {
                 pickNewTarget();
-                // Change de direction toutes les 1 à 3 secondes.
-                wanderTimer = 60 + random.nextInt(120); 
+                wanderTimer = 60 + random.nextInt(120);
             }
         }
-        
-        // Déplacement vers la cible
-        // Distance horizontale à la cible.
+    }
+
+    /**
+     * Calcule le pas de déplacement vers la cible et applique les collisions avec la grange.
+     */
+    private void moveTowardTarget(Unit player) {
         double dx = targetX - x;
-        // Distance verticale à la cible.
         double dy = targetY - y;
-        // On calcule la distance euclidienne jusqu'à la cible.
         double distance = Math.sqrt(dx * dx + dy * dy);
-        
-        // La vitesse de l'unité dépend de l'état courant du lapin.
-        // Vitesse plus élevée utilisée quand le lapin fuit le joueur.
-        double fleeSpeed = 3.0;
-        // Vitesse normale de déplacement quand le lapin se promène.
-        double speed = 1.5;
-        double currentSpeed = isFleeing ? fleeSpeed : speed;
-        
-        // Si la cible est encore assez loin, on avance dans sa direction.
-        if (distance > currentSpeed) {
-            double nextX = x + (dx / distance) * currentSpeed;
-            double nextY = y + (dy / distance) * currentSpeed;
+        double currentSpeed = isFleeing ? 3.0 : 1.5;
 
-            // Déplacement normalisé sur X.
-            x = nextX;
-            // Déplacement normalisé sur Y.
-            y = nextY;
-        } else {
-            // La cible atteinte, on en choisit une nouvelle si on est dans la carte et qu'on ne fuit pas
-            // Remarque : en fuite, on ne remplace pas la cible ici, car il faut sortir de l'écran.
-            if (isInsideMap && !isFleeing) {
-                pickNewTarget();
-            }
+        if (distance > 0.0001) {
+            double step = Math.min(currentSpeed, distance);
+            double stepX = (dx / distance) * step;
+            double stepY = (dy / distance) * step;
+            moveWithBarnCollision(stepX, stepY, currentSpeed, player);
+            return;
         }
 
-        // Certaines unités ennemies peuvent tomber sur une cible trop proche ou un etat incoherent.
-        // On detecte ce cas et on force une nouvelle cible pour eviter qu'ils restent bloqués.
-        // On applique donc une mesure simple de déplacement depuis la dernière frame logique.
+        if (isInsideMap && !isFleeing) {
+            pickNewTarget();
+        }
+    }
+
+    /**
+     * Détecte un blocage (l'unité ennemie est quasi immobile) et force donc une relance de cible pour débloquer l'ennemi.
+     */
+    private void updateStagnationAndRecover(Unit player) {
         double movedDistance = Math.abs(x - lastX) + Math.abs(y - lastY);
-        // Si le déplacement est presque nul, on considère qu'il est possiblement bloqué.
         if (movedDistance < 0.05) {
             stagnantFrames++;
         } else {
             stagnantFrames = 0;
         }
-        // On mémorise la nouvelle position X pour l'update suivante.
+
         lastX = x;
-        // On mémorise la nouvelle position Y pour l'update suivante.
         lastY = y;
 
-        // Si le lapin reste trop longtemps quasi immobile, on le débloque.
-        if (stagnantFrames > 20) {
-            // En fuite, on recalcule une cible de fuite.
-            if (isFleeing && player != null) {
-                updateFleeTarget(player);
-            } else {
-                // Hors fuite, on repart sur une autre direction normale.
-                pickNewTarget();
-            }
-            // Le compteur repart à zéro après correction.
-            stagnantFrames = 0;
+        if (stagnantFrames <= 20) {
+            return;
         }
-        
-        // Si le ennemi fuit et qu'il est sorti de la carte, on le marque comme ayant fui
-        // Cette condition permet au modèle de le retirer proprement de la liste.
-        if (isFleeing && (x < -halfWidth - 100 || x > halfWidth + 100 || y < -halfHeight - 100 || y > halfHeight + 100)) {
+
+        if (isFleeing && player != null) {
+            updateFleeTarget(player);
+        } else {
+            pickNewTarget();
+        }
+        stagnantFrames = 0;
+    }
+
+    /**
+     * Marque l'ennemi comme "fui" lorsqu'il a quitté la zone de jeu pendant une fuite.
+     */
+    private void updateFledStatus() {
+        if (!isFleeing) {
+            return;
+        }
+
+        int halfWidth = viewportWidth / 2;
+        int halfHeight = viewportHeight / 2;
+        if (x < -halfWidth - 100 || x > halfWidth + 100 || y < -halfHeight - 100 || y > halfHeight + 100) {
             hasFled = true;
         }
     }
@@ -323,6 +327,12 @@ public class EnemyUnit {
         // On publie les nouvelles cibles une fois les calculs terminés.
         targetX = nextTargetX;
         targetY = nextTargetY;
+    }
+
+    private void moveWithBarnCollision(double stepX, double stepY, double speed, Unit player) {
+        // Collision grange désactivée: les lapins traversent librement.
+        x += stepX;
+        y += stepY;
     }
     
     // Retourne la position entière actuelle sur X pour l'affichage.

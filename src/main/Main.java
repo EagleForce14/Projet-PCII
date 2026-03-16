@@ -21,8 +21,8 @@ public class Main {
     public static void main(String[] args) {
         JFrame frame = new JFrame("Projet PCII");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setMinimumSize(new Dimension(960, 540));
-        frame.setPreferredSize(new Dimension(1280, 720));
+        frame.setMinimumSize(new Dimension(960, 690));
+        frame.setPreferredSize(new Dimension(1280, 850));
 
         // Image de fond globale de la fenêtre.
         Image backgroundImage = ImageLoader.load("/assets/Main_Background.png");
@@ -49,17 +49,27 @@ public class Main {
         enemyView.setAlignmentX(0.5f);
         enemyView.setAlignmentY(0.5f);
 
+        // Cette vue couvre toute la fenêtre et affiche les éléments de décor fixes
+        EnvironmentView environmentView = new EnvironmentView(fieldPanel);
+        environmentView.setAlignmentX(0.5f);
+        environmentView.setAlignmentY(0.5f);
+
         JPanel fieldLayer = new JPanel(new GridBagLayout());
         fieldLayer.setOpaque(false);
         fieldLayer.setAlignmentX(0.5f);
         fieldLayer.setAlignmentY(0.5f);
-        fieldLayer.add(fieldPanel);
+        
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        // On repousse le champ vers le bas pour qu'il soit moins centré
+        gbc.insets = new java.awt.Insets(100, 0, 0, 0); 
+        fieldLayer.add(fieldPanel, gbc);
 
         JPanel root = createRootPanel(backgroundImage);
         root.setLayout(new OverlayLayout(root));
         root.add(movementView);
         root.add(enemyView);
-        root.add(fieldLayer);
+        root.add(environmentView); // S'affiche derrière les ennemis
+        root.add(fieldLayer); // S'affiche derrière l'environnement
         root.add(actionOverlayPanel);
 
         // On force l'overlay en premier plan pour garantir sa visibilité.
