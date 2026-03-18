@@ -1,6 +1,9 @@
 package view;
 
+import model.Culture;
+import model.GrilleCulture;
 import model.MovementModel;
+import model.Stade;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -14,6 +17,7 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.BorderLayout;
+import java.awt.Point;
 
 /**
  * Sidebar d'actions placée à droite de l'interface.
@@ -27,6 +31,7 @@ public class SidebarPanel extends JPanel {
 
     // On référence au modèle car la vue lit uniquement un état booléen d'activation.
     private final MovementModel movementModel;
+    private final GrilleCulture grilleCulture;
 
     // Texture de fond en bois (chargée via la classe utilitaire du projet).
     private final Image woodBackground;
@@ -39,10 +44,12 @@ public class SidebarPanel extends JPanel {
 
     // Petit cache local pour éviter d'appliquer setEnabled en boucle inutilement.
     private boolean currentEnabledState;
+    private boolean currentCleanEnabledState;
 
     // Constructeur de la classe
-    public SidebarPanel(MovementModel movementModel) {
+    public SidebarPanel(MovementModel movementModel, GrilleCulture grilleCulture) {
         this.movementModel = movementModel;
+        this.grilleCulture = grilleCulture;
         this.woodBackground = ImageLoader.load("/assets/bois.png");
 
         // Le panneau est transparent hors de sa zone peinte personnalisée.
@@ -95,7 +102,7 @@ public class SidebarPanel extends JPanel {
 
         // Au démarrage, les boutons sont désactivés tant que l'unité déplaçable n'est pas
         // sur une case valide du champ.
-        applyButtonsEnabledState(false);
+        applyButtonsEnabledState(false, false);
     }
 
     /**
@@ -129,27 +136,46 @@ public class SidebarPanel extends JPanel {
      */
     private void syncFromModel() {
         boolean shouldEnable = movementModel.isActionOverlayEnabled();
-        if (shouldEnable != currentEnabledState) {
-            applyButtonsEnabledState(shouldEnable);
+        boolean shouldEnableClean = canCleanActiveCell();
+        if (shouldEnable != currentEnabledState || shouldEnableClean != currentCleanEnabledState) {
+            applyButtonsEnabledState(shouldEnable, shouldEnableClean);
         }
     }
 
     /**
      * Active/désactive les boutons.
      */
-    private void applyButtonsEnabledState(boolean enabled) {
+    private void applyButtonsEnabledState(boolean enabled, boolean cleanEnabled) {
         currentEnabledState = enabled;
+        currentCleanEnabledState = cleanEnabled;
 
         plantButton.setEnabled(enabled);
         harvestButton.setEnabled(enabled);
         waterButton.setEnabled(enabled);
-        cleanButton.setEnabled(enabled);
+        cleanButton.setEnabled(cleanEnabled);
 
         repaint();
     }
 
+    /**
+     * Le nettoyage n'est disponible que sur une case occupée par une culture flétrie.
+     */
+    private boolean canCleanActiveCell() {
+        Point activeFieldCell = movementModel.getActiveFieldCell();
+        if (activeFieldCell == null) {
+            return false;
+        }
+
+        Culture culture = grilleCulture.getCulture(activeFieldCell.x, activeFieldCell.y);
+        return culture != null && culture.getStadeCroissance() == Stade.FLETRIE;
+    }
+
     public JButton getPlantButton() {
         return plantButton;
+    }
+
+    public JButton getCleanButton() {
+        return cleanButton;
     }
 
     /**

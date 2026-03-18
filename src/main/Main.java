@@ -53,7 +53,7 @@ public class Main {
         movementView.setAlignmentY(0.5f);
 
         // Les actions contextuelles sont affichées dans une sidebar dédiée, hors du jeu.
-        SidebarPanel actionSidebarPanel = new SidebarPanel(model);
+        SidebarPanel actionSidebarPanel = new SidebarPanel(model, grilleCulture);
 
         EnemyView enemyView = new EnemyView(enemyModel, fieldPanel);
         enemyView.setAlignmentX(0.5f);

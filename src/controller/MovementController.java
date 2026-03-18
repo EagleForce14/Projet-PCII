@@ -23,6 +23,9 @@ public class MovementController implements KeyListener {
 
         JButton plantButton = sidebarPanel.getPlantButton();
         plantButton.addActionListener(this::planterSurCaseActive);
+
+        JButton cleanButton = sidebarPanel.getCleanButton();
+        cleanButton.addActionListener(this::nettoyerCaseActive);
     }
 
     /**
@@ -39,6 +42,17 @@ public class MovementController implements KeyListener {
         if (grilleCulture.getCulture(activeFieldCell.x, activeFieldCell.y) == null) {
             grilleCulture.planterCulture(activeFieldCell.x, activeFieldCell.y, Type.FLEURS);
         }
+    }
+
+    /**
+     * Le bouton nettoyer retire uniquement une culture flétrie sur la case du jardinier.
+     */
+    private void nettoyerCaseActive(ActionEvent event) {
+        Point activeFieldCell = model.getActiveFieldCell();
+        if (activeFieldCell == null) {
+            return;
+        }
+        grilleCulture.nettoyerCultureFletrie(activeFieldCell.x, activeFieldCell.y);
     }
 
     // On implémente KeyListener (Gestion des Touches)

@@ -47,4 +47,11 @@ public class ZoneCulture {
             throw new IllegalStateException("Il n'y a pas de culture à manger dans cette zone.");
         }
     }
+
+    /** Retire la culture seulement si elle est vraiment flétrie. */
+    public void nettoyerCultureFletrie() {
+        if (culture != null && culture.getStadeCroissance() == Stade.FLETRIE) {
+            culture = null;
+        }
+    }
 }

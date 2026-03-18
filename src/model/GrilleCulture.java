@@ -108,4 +108,11 @@ public class GrilleCulture {
             grille[x][y].mangerCulture();
         }
     }
+
+    /** Le nettoyage ne supprime que les cultures flétries. */
+    public void nettoyerCultureFletrie(int x, int y) {
+        if (estDansGrille(x, y)) {
+            grille[x][y].nettoyerCultureFletrie();
+        }
+    }
 }
