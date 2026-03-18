@@ -85,6 +85,15 @@ public class GrilleCulture {
         }
     }
 
+    /** Méthode qui recolte une culture de la grille */
+    public int recolterCulture(int x, int y) {
+        if (estDansGrille(x, y)) {
+            return grille[x][y].recolterCulture();
+        } else {
+            throw new IllegalStateException("Coordonnées hors de la grille.");
+        }
+    }
+
     /** Getter qui renvoie la culture à une position donnée */
     public Culture getCulture(int x, int y) {
         if (estDansGrille(x, y)) {
