@@ -12,21 +12,21 @@ public class GrilleCulture {
 
     /** Constante représentant le prix d'achat de chaque culture */
     public static final Map<Type, Integer> PRIX_ACHAT_CULTURES = Map.of(
-        Type.TYPE1, 10,
+        Type.FLEURS, 10,
         Type.TYPE2, 20,
         Type.TYPE3, 30
     );
 
     /** Constante représentant le prix de vente de chaque culture */
     public static final Map<Type, Integer> PRIX_VENTE_CULTURES = Map.of(
-        Type.TYPE1, 15,
+        Type.FLEURS, 15,
         Type.TYPE2, 25,
         Type.TYPE3, 35
     );
 
     /** Constante représentant le delai de croissance de chaque culture */
     public static final Map<Type, Integer> DELAI_CROISSANCE_CULTURES = Map.of(
-        Type.TYPE1, 5,
+        Type.FLEURS, 5,
         Type.TYPE2, 10,
         Type.TYPE3, 15
     );

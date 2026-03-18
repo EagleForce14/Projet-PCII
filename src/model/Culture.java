@@ -7,10 +7,10 @@ public class Culture {
     private Stade stadeCroissance;
 
     /** Attribut stockant le thread gérant la croissance de la culture */
-    private Croissance threadCroissance;
+    private final Croissance threadCroissance;
 
     /** Attribut représentant le type de la culture */
-    private Type type;
+    private final Type type;
 
     /** Constructeur de la classe Culture qui initialise le stade de croissance et démarre le thread de croissance */
     public Culture(Type type) {
@@ -63,7 +63,7 @@ public class Culture {
     public void manger() {
         // Vérifie si la culture est à maturité avant de la manger
         if (stadeCroissance == Stade.MATURE) {
-            threadCroissance.arreter();; // Arrêter le thread de croissance
+            threadCroissance.arreter(); // Arrêter le thread de croissance
         } else {
             throw new IllegalStateException("La culture n'est pas à maturité et ne peut pas être mangée.");
         }

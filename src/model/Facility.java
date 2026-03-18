@@ -12,7 +12,7 @@ public class Facility extends Product {
     }
     
     // atttributs propres à une installation 
-    private FacilityType type; // type  (jardinier, cloture, engrais)
+    private final FacilityType type; // type  (jardinier, cloture, engrais)
     
     // constructeur
     public Facility(String name, int price, int quantity, FacilityType type) {

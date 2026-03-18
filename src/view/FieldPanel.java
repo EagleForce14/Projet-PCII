@@ -1,6 +1,9 @@
 package view;
 
+import model.Culture;
 import model.GrilleCulture;
+import model.Stade;
+import model.Unit;
 
 import javax.swing.JPanel;
 import java.awt.Color;
@@ -10,9 +13,8 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.util.Objects;
-
-import model.Unit;
 
 /**
  * Panneau d'affichage du champ, compose d'une grille d'images.
@@ -28,6 +30,10 @@ public class FieldPanel extends JPanel {
     // La vue ne porte plus sa propre grille: elle affiche directement celle du modèle.
     private final GrilleCulture grilleCulture;
     private final Image tileImage;
+    private final Image jeunePousseImage;
+    private final Image croissanceInterImage;
+    private final Image maturiteImage;
+    private final Image fletrieImage;
     private Point highlightedCell;
 
     /**
@@ -36,6 +42,10 @@ public class FieldPanel extends JPanel {
     public FieldPanel(GrilleCulture grilleCulture) {
         this.grilleCulture = grilleCulture;
         this.tileImage = ImageLoader.load("/assets/Terre.png");
+        this.jeunePousseImage = ImageLoader.load("/assets/jeune_pousse.png");
+        this.croissanceInterImage = ImageLoader.load("/assets/croissance_inter.png");
+        this.maturiteImage = ImageLoader.load("/assets/maturite.png");
+        this.fletrieImage = ImageLoader.load("/assets/fletrie.png");
         setPreferredSize(new Dimension(PREF_WIDTH, PREF_HEIGHT));
         // Le panneau reste transparent hors de la grille pour laisser voir le fond global.
         setOpaque(false);
@@ -175,6 +185,62 @@ public class FieldPanel extends JPanel {
     }
 
     /**
+     * Convertit le stade du modèle en image d'affichage.
+     */
+    private Image getCultureImage(Culture culture) {
+        if (culture == null) {
+            return null;
+        }
+
+        Stade stade = culture.getStadeCroissance();
+        if (stade == Stade.JEUNE_POUSSE) {
+            return jeunePousseImage;
+        }
+        if (stade == Stade.INTERMEDIAIRE) {
+            return croissanceInterImage;
+        }
+        if (stade == Stade.MATURE) {
+            return maturiteImage;
+        }
+        if (stade == Stade.FLETRIE) {
+            return fletrieImage;
+        }
+        return null;
+    }
+
+    /**
+     * Dessine l'image dans la case sans la déformer.
+     */
+    private void drawCultureImage(Graphics2D g2, Image cultureImage, int x, int y, int tileSize) {
+        int imageWidth = cultureImage.getWidth(this);
+        int imageHeight = cultureImage.getHeight(this);
+        if (imageWidth <= 0 || imageHeight <= 0) {
+            return;
+        }
+
+        // On garde un petit bord vide pour que la plante ne colle pas au contour de la case.
+        int padding = Math.max(4, tileSize / 10);
+        int availableWidth = tileSize - (2 * padding);
+        int availableHeight = tileSize - (2 * padding);
+
+        // On applique un facteur d'échelle pour préserver les proportions d'origine.
+        double scale = Math.min(
+                (double) availableWidth / imageWidth,
+                (double) availableHeight / imageHeight
+        );
+
+        int drawWidth = (int) Math.round(imageWidth * scale);
+        int drawHeight = (int) Math.round(imageHeight * scale);
+
+        // On s'assure que l'image reste centrée dans la case même si elle n'occupe pas tout l'espace disponible.
+        int drawX = x + ((tileSize - drawWidth) / 2);
+        int drawY = y + ((tileSize - drawHeight) / 2);
+
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2.drawImage(cultureImage, drawX, drawY, drawWidth, drawHeight, this);
+    }
+
+    /**
      * Dessine la grille (avec les images).
      */
     @Override
@@ -198,6 +264,12 @@ public class FieldPanel extends JPanel {
                     g2.fillRect(x, y, tileSize, tileSize);
                     g2.setColor(new Color(160, 150, 130));
                     g2.drawRect(x, y, tileSize, tileSize);
+                }
+
+                Culture culture = grilleCulture.getCulture(c, r);
+                Image cultureImage = getCultureImage(culture);
+                if (cultureImage != null) {
+                    drawCultureImage(g2, cultureImage, x, y, tileSize);
                 }
 
                 // La case active est surlignée uniquement quand le rectangle du joueur

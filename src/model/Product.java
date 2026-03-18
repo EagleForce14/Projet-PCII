@@ -1,8 +1,6 @@
 package model;
 
 public abstract class Product {
-
-    
     /**
      * Classe abstraite représentant un produit du magasin.
      * Les produits peuvent être des graines, des clotures, de la main d'oeuvre ou de l'engrais.

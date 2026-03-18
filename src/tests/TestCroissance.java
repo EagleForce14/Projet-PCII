@@ -5,7 +5,7 @@ import model.Culture;
 public class TestCroissance {
 
     public static void main(String[] args) {
-        Culture culture = new Culture(model.Type.TYPE1); // Créer une culture de type TYPE1
+        Culture culture = new Culture(model.Type.FLEURS); // Créer une culture de type FLEURS
 
         // Affiche dans la console le stade de croissance de la culture toutes les 3 secondes
         while (true) {

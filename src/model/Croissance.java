@@ -2,15 +2,14 @@ package model;
 
 /** Thread gérant automatiquement la croissance d'une culture */
 public class Croissance extends Thread {
+    private static final int DELAI_CROISSANCE = 7000;
+    private static final int DELAI_AVANT_FLETRISSEMENT = 10000;
 
     /** Attribut représentant la culture associée à ce thread de croissance */
-    private Culture culture;
+    private final Culture culture;
 
     /** Attribut représentant l'état actif du thread de croissance */
     private boolean actif = true;
-
-    /** Attribut représentant le délai à attendre entre chaque stade de croissance */
-    private static final int DELAI_CROISSANCE = 2000; // Délai de croissance en millisecondes (exemple : 2 secondes)
 
     /** Constructeur de la classe Croissance qui prend en argument la culture à gérer */
     public Croissance(Culture culture) {
@@ -27,7 +26,12 @@ public class Croissance extends Thread {
     public void run() {
         while (actif) {
             try {
-                Thread.sleep(DELAI_CROISSANCE); // Attendre le délai de croissance
+                // On allonge uniquement le temps passé au stade mature.
+                int delai = DELAI_CROISSANCE;
+                if (culture.getStadeCroissance() == Stade.MATURE) {
+                    delai = DELAI_AVANT_FLETRISSEMENT;
+                }
+                Thread.sleep(delai);
                 Stade nouveauStade = culture.grandir(); // Faire grandir la culture et récupérer le nouveau stade
                 if (nouveauStade == Stade.FLETRIE) {
                     this.arreter(); // Arrêter le thread si la culture est flétrie

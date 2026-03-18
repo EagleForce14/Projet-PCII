@@ -86,7 +86,7 @@ public class Main {
         contentPanel.add(actionSidebarPanel, BorderLayout.EAST);
         frame.setContentPane(contentPanel);
 
-        new MovementController(model, movementView);
+        new MovementController(model, movementView, actionSidebarPanel, grilleCulture);
 
         frame.pack();
         frame.setLocationRelativeTo(null);

@@ -148,6 +148,10 @@ public class SidebarPanel extends JPanel {
         repaint();
     }
 
+    public JButton getPlantButton() {
+        return plantButton;
+    }
+
     /**
      * Dessine le fond de l'overlay avec l'image, puis un léger contour.
      */

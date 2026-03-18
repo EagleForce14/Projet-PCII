@@ -1,7 +1,10 @@
 package controller;
 
+import java.awt.Point;
+import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import javax.swing.JButton;
 import model.*;
 import view.*;
 
@@ -10,11 +13,32 @@ import view.*;
  */
 public class MovementController implements KeyListener {
     private final MovementModel model;
+    private final GrilleCulture grilleCulture;
 
-    public MovementController(MovementModel model, MovementView view) {
+    public MovementController(MovementModel model, MovementView view, SidebarPanel sidebarPanel, GrilleCulture grilleCulture) {
         this.model = model;
+        this.grilleCulture = grilleCulture;
         // On s'abonne aux événements clavier.
         view.addKeyListener(this);
+
+        JButton plantButton = sidebarPanel.getPlantButton();
+        plantButton.addActionListener(this::planterSurCaseActive);
+    }
+
+    /**
+     * On plante uniquement sur la case actuellement surlignée.
+     * Pour le moment, le bouton utilise un type par défaut unique.
+     */
+    private void planterSurCaseActive(ActionEvent event) {
+        Point activeFieldCell = model.getActiveFieldCell();
+        if (activeFieldCell == null) {
+            return;
+        }
+
+        // Tant qu'il n'existe pas encore de sélecteur de graines, on plante toujours le même type.
+        if (grilleCulture.getCulture(activeFieldCell.x, activeFieldCell.y) == null) {
+            grilleCulture.planterCulture(activeFieldCell.x, activeFieldCell.y, Type.FLEURS);
+        }
     }
 
     // On implémente KeyListener (Gestion des Touches)

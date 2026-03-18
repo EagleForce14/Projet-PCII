@@ -1,4 +1,5 @@
 package model;
+import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,6 +16,9 @@ public class MovementModel {
 
     // Vaut true si une unité déplaçable (ici le joueur) est sur une case du champ highlightée.
     private volatile boolean actionOverlayEnabled;
+
+    // La case sur laquelle le joueur est réellement positionné dans le champ.
+    private volatile Point activeFieldCell;
 
     public MovementModel() {
         units = new ArrayList<>();
@@ -64,6 +68,22 @@ public class MovementModel {
      */
     public void setActionOverlayEnabled(boolean actionOverlayEnabled) {
         this.actionOverlayEnabled = actionOverlayEnabled;
+    }
+
+    /**
+     * Mémorise la case active du champ. Le contrôleur s'appuie dessus pour
+     * déclencher les actions au bon endroit sans lire directement la vue.
+     */
+    public void setActiveFieldCell(Point activeFieldCell) {
+        this.activeFieldCell = activeFieldCell == null ? null : new Point(activeFieldCell);
+        this.actionOverlayEnabled = activeFieldCell != null;
+    }
+
+    /**
+     * Renvoie une copie pour éviter qu'un appelant modifie l'état interne.
+     */
+    public Point getActiveFieldCell() {
+        return activeFieldCell == null ? null : new Point(activeFieldCell);
     }
 
     // Accesseur pour la vue (qui a besoin d'afficher TOUTES les unités)

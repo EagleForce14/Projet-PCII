@@ -5,9 +5,9 @@ public class TestRecolterCulture {
     public static void main(String[] args) {
 
         /** Test si la culture est à maturité */
-        // Créer une zone de culture et planter une culture de type TYPE1
+        // Créer une zone de culture et planter une culture de type FLEURS
         model.ZoneCulture zone1 = new model.ZoneCulture();
-        zone1.planterCulture(model.Type.TYPE1);
+        zone1.planterCulture(model.Type.FLEURS);
         
         // Attendre que la culture atteigne le stade de récolte
         while (zone1.getCulture().getStadeCroissance() != model.Stade.MATURE) {
@@ -36,7 +36,7 @@ public class TestRecolterCulture {
 
         /** Test si la culture n'est pas à maturité */
         model.ZoneCulture zone2 = new model.ZoneCulture();
-        zone2.planterCulture(model.Type.TYPE1);
+        zone2.planterCulture(model.Type.FLEURS);
 
         try {
             zone2.recolterCulture();
