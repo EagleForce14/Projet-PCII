@@ -43,7 +43,8 @@ public class SidebarPanel extends JPanel {
     private final JButton cleanButton;
 
     // Petit cache local pour éviter d'appliquer setEnabled en boucle inutilement.
-    private boolean currentEnabledState;
+    private boolean currentActionEnabledState;
+    private boolean currentHarvestEnabledState;
     private boolean currentCleanEnabledState;
 
     // Constructeur de la classe
@@ -102,7 +103,7 @@ public class SidebarPanel extends JPanel {
 
         // Au démarrage, les boutons sont désactivés tant que l'unité déplaçable n'est pas
         // sur une case valide du champ.
-        applyButtonsEnabledState(false, false);
+        applyButtonsEnabledState(false, false, false);
     }
 
     /**
@@ -135,43 +136,66 @@ public class SidebarPanel extends JPanel {
      * Lit l'état dans le modèle et applique visuellement l'activation si nécessaire.
      */
     private void syncFromModel() {
-        boolean shouldEnable = movementModel.isActionOverlayEnabled();
+        boolean shouldEnableActions = movementModel.isActionOverlayEnabled();
+        boolean shouldEnableHarvest = canHarvestActiveCell();
         boolean shouldEnableClean = canCleanActiveCell();
-        if (shouldEnable != currentEnabledState || shouldEnableClean != currentCleanEnabledState) {
-            applyButtonsEnabledState(shouldEnable, shouldEnableClean);
+        if (shouldEnableActions != currentActionEnabledState
+                || shouldEnableHarvest != currentHarvestEnabledState
+                || shouldEnableClean != currentCleanEnabledState) {
+            applyButtonsEnabledState(shouldEnableActions, shouldEnableHarvest, shouldEnableClean);
         }
     }
 
     /**
      * Active/désactive les boutons.
      */
-    private void applyButtonsEnabledState(boolean enabled, boolean cleanEnabled) {
-        currentEnabledState = enabled;
+    private void applyButtonsEnabledState(boolean actionEnabled, boolean harvestEnabled, boolean cleanEnabled) {
+        currentActionEnabledState = actionEnabled;
+        currentHarvestEnabledState = harvestEnabled;
         currentCleanEnabledState = cleanEnabled;
 
-        plantButton.setEnabled(enabled);
-        harvestButton.setEnabled(enabled);
-        waterButton.setEnabled(enabled);
+        plantButton.setEnabled(actionEnabled);
+        harvestButton.setEnabled(harvestEnabled);
+        waterButton.setEnabled(actionEnabled);
         cleanButton.setEnabled(cleanEnabled);
 
         repaint();
     }
 
     /**
+     * La récolte n'est disponible que sur une case occupée par une culture mature.
+     */
+    private boolean canHarvestActiveCell() {
+        Culture culture = getCultureOnActiveCell();
+        return culture != null && culture.getStadeCroissance() == Stade.MATURE;
+    }
+
+    /**
      * Le nettoyage n'est disponible que sur une case occupée par une culture flétrie.
      */
     private boolean canCleanActiveCell() {
+        Culture culture = getCultureOnActiveCell();
+        return culture != null && culture.getStadeCroissance() == Stade.FLETRIE;
+    }
+
+    /**
+     * Centralise la lecture de la case active pour garder les règles au même endroit.
+     */
+    private Culture getCultureOnActiveCell() {
         Point activeFieldCell = movementModel.getActiveFieldCell();
         if (activeFieldCell == null) {
-            return false;
+            return null;
         }
 
-        Culture culture = grilleCulture.getCulture(activeFieldCell.x, activeFieldCell.y);
-        return culture != null && culture.getStadeCroissance() == Stade.FLETRIE;
+        return grilleCulture.getCulture(activeFieldCell.x, activeFieldCell.y);
     }
 
     public JButton getPlantButton() {
         return plantButton;
+    }
+
+    public JButton getHarvestButton() {
+        return harvestButton;
     }
 
     public JButton getCleanButton() {

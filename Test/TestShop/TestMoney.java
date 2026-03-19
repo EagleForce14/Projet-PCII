@@ -21,6 +21,12 @@ public class TestMoney {
         Assertions.assertEquals(150, money.getAmount());
     }
 
+    @Test
+    public void testCredit() {
+        money.credit(25);
+        Assertions.assertEquals(125, money.getAmount());
+    }
+
     //teste de la soustraction d'argent
     @Test
     public void testSubtract() {

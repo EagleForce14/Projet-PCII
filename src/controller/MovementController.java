@@ -14,15 +14,21 @@ import view.*;
 public class MovementController implements KeyListener {
     private final MovementModel model;
     private final GrilleCulture grilleCulture;
+    private final Money playerMoney;
 
-    public MovementController(MovementModel model, MovementView view, SidebarPanel sidebarPanel, GrilleCulture grilleCulture) {
+    public MovementController(MovementModel model, MovementView view, SidebarPanel sidebarPanel,
+                              GrilleCulture grilleCulture, Money playerMoney) {
         this.model = model;
         this.grilleCulture = grilleCulture;
+        this.playerMoney = playerMoney;
         // On s'abonne aux événements clavier.
         view.addKeyListener(this);
 
         JButton plantButton = sidebarPanel.getPlantButton();
         plantButton.addActionListener(this::planterSurCaseActive);
+
+        JButton harvestButton = sidebarPanel.getHarvestButton();
+        harvestButton.addActionListener(this::recolterCaseActive);
 
         JButton cleanButton = sidebarPanel.getCleanButton();
         cleanButton.addActionListener(this::nettoyerCaseActive);
@@ -42,6 +48,30 @@ public class MovementController implements KeyListener {
         if (grilleCulture.getCulture(activeFieldCell.x, activeFieldCell.y) == null) {
             grilleCulture.planterCulture(activeFieldCell.x, activeFieldCell.y, Type.FLEURS);
         }
+    }
+
+    /**
+     * La récolte ne s'exécute que sur une plante mature, puis on crédite le joueur.
+     */
+    private void recolterCaseActive(ActionEvent event) {
+        Point activeFieldCell = model.getActiveFieldCell();
+        // Si le jardinier n'est sur aucune case du champ, il n'y a rien à récolter.
+        if (activeFieldCell == null) {
+            return;
+        }
+
+        Culture culture = grilleCulture.getCulture(activeFieldCell.x, activeFieldCell.y);
+        // On garde la vérification ici même si le bouton est déjà filtré par la vue.
+        // Comme ça, la règle reste vraie même si cette méthode est réutilisée ailleurs plus tard.
+        if (culture == null || culture.getStadeCroissance() != Stade.MATURE) {
+            return;
+        }
+
+        // On calcule le gain associé.
+        int gain = grilleCulture.recolterCulture(activeFieldCell.x, activeFieldCell.y);
+
+        // Le portefeuille du joueur est mis à jour à part pour garder une logique bien découpée.
+        playerMoney.credit(gain);
     }
 
     /**

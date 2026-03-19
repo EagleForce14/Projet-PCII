@@ -4,6 +4,7 @@ import controller.MovementController;
 import model.EnemyPhysicsThread;
 import model.EnemyModel;
 import model.GrilleCulture;
+import model.Money;
 import model.MovementModel;
 import model.PhysicsThread;
 import model.Unit;
@@ -38,6 +39,7 @@ public class Main {
         Image backgroundImage = ImageLoader.load("/assets/Main_Background.png");
 
         GrilleCulture grilleCulture = new GrilleCulture();
+        Money playerMoney = new Money(50);
         FieldPanel fieldPanel = new FieldPanel(grilleCulture);
 
         MovementModel model = new MovementModel();
@@ -81,12 +83,21 @@ public class Main {
         gamePanel.add(environmentView); // S'affiche derrière les ennemis
         gamePanel.add(fieldLayer); // S'affiche derrière l'environnement
 
+        // Petit overlay HUD pour garder les infos du joueur visibles sans bouger le layout principal.
+        JPanel hudPanel = new JPanel(new BorderLayout());
+        hudPanel.setOpaque(false);
+        hudPanel.setAlignmentX(0.5f);
+        hudPanel.setAlignmentY(0.5f);
+        hudPanel.add(new TopBarPanel(playerMoney), BorderLayout.NORTH);
+        gamePanel.add(hudPanel);
+        gamePanel.setComponentZOrder(hudPanel, 0);
+
         JPanel contentPanel = new JPanel(new BorderLayout());
         contentPanel.add(gamePanel, BorderLayout.CENTER);
         contentPanel.add(actionSidebarPanel, BorderLayout.EAST);
         frame.setContentPane(contentPanel);
 
-        new MovementController(model, movementView, actionSidebarPanel, grilleCulture);
+        new MovementController(model, movementView, actionSidebarPanel, grilleCulture, playerMoney);
 
         frame.pack();
         frame.setLocationRelativeTo(null);

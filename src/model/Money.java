@@ -3,7 +3,7 @@ package model;
 public class Money {
     /**
      * Classe réprésentant le système d'argent du jeu. 
-     * Stockage de l'argent en Integer pour évité les arondissemnt lié au float et double.
+     * Stockage de l'argent en Integer pour évité les arondis liés au float et double.
      * **/
     
     // attribut 
@@ -30,13 +30,24 @@ public class Money {
     }
 
     /**
+     * Ajoute un montant brut.
+     * Utile quand une action de jeu rapporte directement un gain.
+     */
+    public void credit(int amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Un gain d'argent ne peut pas être négatif.");
+        }
+        this.amount += amount;
+    }
+
+    /**
      * Méthode pour ajouter de l'argent à l'instance actuelle.
      * @param other
      * L'instance d'argent à ajouter.
      * Cette méthode modifie l'instance actuelle en ajoutant la quantité d'argent de l'autre instance.
     **/
     public void add(Money other) {
-        this.amount += other.amount;
+        credit(other.amount);
     }
     /**
      * Méthode pour soustraire de l'argent de l'instance actuelle.
