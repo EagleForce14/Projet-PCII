@@ -201,6 +201,7 @@ public class EnemyUnit {
             wanderTimer--;
             if (wanderTimer <= 0) {
                 pickNewTarget();
+                // Correspond au nombre de mises à jour à attendre avant de choisir une nouvelle destination aléatoire
                 wanderTimer = 60 + random.nextInt(120);
             }
         }
