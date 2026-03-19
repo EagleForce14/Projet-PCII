@@ -1,6 +1,9 @@
 package model;
 
+import java.awt.Point;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -10,6 +13,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class EnemyModel {
     // La liste des unités ennemies présentes.
     private final List<EnemyUnit> enemies;
+    // Associe chaque case de culture à l'unique lapin autorisé à la viser.
+    private final Map<Point, EnemyUnit> reservedCultures;
+    private GrilleCulture grilleCulture;
     private volatile int viewportWidth = 1280;
     private volatile int viewportHeight = 720;
     private volatile int fieldWidth = 900;
@@ -28,10 +34,15 @@ public class EnemyModel {
         // Remarque : On utilise CopyOnWriteArrayList pour éviter les ConcurrentModificationException
         // entre le thread de rendu (qui lit la liste) et le thread physique (qui ajoute des ennemis)
         enemies = new CopyOnWriteArrayList<>();
+        reservedCultures = new HashMap<>();
     }
     
     public void setPlayer(Unit player) {
         this.player = player;
+    }
+
+    public void setGrilleCulture(GrilleCulture grilleCulture) {
+        this.grilleCulture = grilleCulture;
     }
 
     public void setViewportSize(int viewportWidth, int viewportHeight) {
@@ -73,12 +84,42 @@ public class EnemyModel {
         
         // Mise à jour de tous les ennemis
         for (EnemyUnit enemy : enemies) {
-            enemy.update(player, currentViewportWidth, currentViewportHeight, currentFieldWidth, currentFieldHeight);
+            enemy.update(this, player, grilleCulture, currentViewportWidth, currentViewportHeight, currentFieldWidth, currentFieldHeight);
             
-            // Si le ennemi a fui en dehors de la carte, on le supprime
+            // Si le ennemi a fui en dehors de la carte ou a mangé une culture, on le supprime.
             if (enemy.hasFled()) {
                 enemies.remove(enemy);
             }
+        }
+    }
+
+    /**
+     * Réserve une culture pour un lapin donné.
+     * Renvoie false si la case est déjà réservée par un autre lapin.
+     */
+    public synchronized boolean reserveCulture(int gridX, int gridY, EnemyUnit enemy) {
+        // La clé est la position logique de la culture dans la grille.
+        Point cell = new Point(gridX, gridY);
+        EnemyUnit reserver = reservedCultures.get(cell);
+        // Si un autre lapin a déjà réservé cette culture, on la refuse.
+        if (reserver != null && reserver != enemy) {
+            return false;
+        }
+
+        // Sinon on mémorise que cette case appartient à ce lapin.
+        reservedCultures.put(cell, enemy);
+        return true;
+    }
+
+    /**
+     * Libère la réservation d'une culture si elle appartient encore à ce lapin.
+     */
+    public synchronized void releaseCultureReservation(int gridX, int gridY, EnemyUnit enemy) {
+        Point cell = new Point(gridX, gridY);
+        // On libère uniquement si c'est bien ce lapin qui détenait la réservation.
+        // Cela évite qu'un autre lapin efface la réservation en cours par erreur.
+        if (reservedCultures.get(cell) == enemy) {
+            reservedCultures.remove(cell);
         }
     }
     

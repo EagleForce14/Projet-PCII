@@ -50,6 +50,7 @@ public class Main {
 
         EnemyModel enemyModel = new EnemyModel();
         enemyModel.setPlayer(playerUnit);
+        enemyModel.setGrilleCulture(grilleCulture);
         MovementView movementView = new MovementView(model, fieldPanel);
         movementView.setAlignmentX(0.5f);
         movementView.setAlignmentY(0.5f);

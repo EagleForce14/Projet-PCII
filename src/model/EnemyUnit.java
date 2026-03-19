@@ -8,6 +8,8 @@ import java.util.Random;
  */
 public class EnemyUnit {
     private static final int HITBOX_SIZE = 20;
+    private static final int CULTURE_DETECTION_RADIUS = 120;
+    private static final long DELAI_AVANT_MANGER_MS = 5000L;
     // Ces listes décrivent les rotations possibles autour de la direction voulue.
     // On teste d'abord de petits écarts, puis des virages plus forts, puis seulement un demi-tour.
     // RIGHT_HAND_OFFSETS privilégie un contournement "main droite", LEFT_HAND_OFFSETS l'inverse.
@@ -52,6 +54,11 @@ public class EnemyUnit {
     private double lastMoveY = 0;
     // Côté de contournement actuellement privilégié pour longer proprement la grange.
     private int preferredTurnSign = 1;
+    // Case de culture actuellement visée par le lapin.
+    private int targetCultureGridX = -1;
+    private int targetCultureGridY = -1;
+    // Instant où le lapin a atteint la case et commence son attente de 5 secondes avant de manger.
+    private long cultureWaitStartTime = -1L;
 
     // Temporisateur avant de choisir une nouvelle cible de promenade.
     private int wanderTimer = 0;
@@ -131,12 +138,20 @@ public class EnemyUnit {
      * On met à jour la position et le comportement du ennemi.
      * @param player Le joueur (pour vérifier la zone d'influence)
      */
-    public synchronized void update(Unit player, int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight) {
+    public synchronized void update(EnemyModel enemyModel, Unit player, GrilleCulture grilleCulture, int viewportWidth, int viewportHeight,
+                                    int fieldWidth, int fieldHeight) {
         refreshDimensions(viewportWidth, viewportHeight, fieldWidth, fieldHeight);
-        handleFleeTrigger(player);
+        // L'ordre compte:
+        // 1) la fuite peut annuler une cible,
+        // 2) la recherche peut réserver une culture libre,
+        // 3) le déplacement rapproche le lapin de sa case,
+        // 4) puis seulement on déclenche l'attente avant consommation.
+        handleFleeTrigger(enemyModel, player);
+        updateCultureTarget(enemyModel, grilleCulture);
         ensureValidTarget(player);
         updateNavigationState();
         moveTowardTarget();
+        updateCultureWaiting(enemyModel, grilleCulture);
         updateStagnationAndRecover(player);
         updateFledStatus();
     }
@@ -154,13 +169,16 @@ public class EnemyUnit {
     /**
      * Passe le lapin en état de fuite si le joueur entre dans sa zone d'influence.
      */
-    private void handleFleeTrigger(Unit player) {
+    private void handleFleeTrigger(EnemyModel enemyModel, Unit player) {
         if (player == null || isFleeing) {
             return;
         }
 
         if (player.isInInfluenceZone((int) x, (int) y)) {
             isFleeing = true;
+            // Si le joueur fait fuir le lapin, la culture redevient immédiatement disponible
+            // pour un autre lapin et le délai avant consommation est perdu.
+            clearCultureTarget(enemyModel);
             updateFleeTarget(player);
         }
     }
@@ -169,6 +187,10 @@ public class EnemyUnit {
      * Garantit que la cible courante est valide; sinon, recalcule une cible adaptée à l'état.
      */
     private void ensureValidTarget(Unit player) {
+        if (hasCultureTarget()) {
+            return;
+        }
+
         if (!Double.isNaN(targetX) && !Double.isNaN(targetY)
             && !Double.isInfinite(targetX) && !Double.isInfinite(targetY)) {
             return;
@@ -198,6 +220,9 @@ public class EnemyUnit {
         }
 
         if (!isFleeing) {
+            if (hasCultureTarget()) {
+                return;
+            }
             wanderTimer--;
             if (wanderTimer <= 0) {
                 pickNewTarget();
@@ -224,7 +249,11 @@ public class EnemyUnit {
             return;
         }
 
-        if (isInsideMap && !isFleeing) {
+        if (hasCultureTarget() || isFleeing) {
+            return;
+        }
+
+        if (isInsideMap) {
             pickNewTarget();
         }
     }
@@ -233,6 +262,13 @@ public class EnemyUnit {
      * Détecte un blocage (l'unité ennemie est quasi immobile) et force donc une relance de cible pour débloquer l'ennemi.
      */
     private void updateStagnationAndRecover(Unit player) {
+        if (hasCultureTarget() && cultureWaitStartTime >= 0L) {
+            stagnantFrames = 0;
+            lastX = x;
+            lastY = y;
+            return;
+        }
+
         double movedDistance = Math.abs(x - lastX) + Math.abs(y - lastY);
         if (movedDistance < 0.05) {
             stagnantFrames++;
@@ -249,6 +285,9 @@ public class EnemyUnit {
 
         if (isFleeing && player != null) {
             updateFleeTarget(player);
+        } else if (hasCultureTarget()) {
+            targetX = getCultureCenterX(targetCultureGridX);
+            targetY = getCultureCenterY(targetCultureGridY);
         } else {
             pickNewTarget();
         }
@@ -275,7 +314,186 @@ public class EnemyUnit {
      */
     public synchronized void update() {
         // On réutilise la méthode principale avec les dimensions déjà connues.
-        update(null, viewportWidth, viewportHeight, fieldWidth, fieldHeight);
+        update(null, null, null, viewportWidth, viewportHeight, fieldWidth, fieldHeight);
+    }
+
+    /**
+     * Cherche une culture mature proche, tente de la réserver, puis fixe cette case
+     * comme nouvelle cible du lapin.
+     */
+    private void updateCultureTarget(EnemyModel enemyModel, GrilleCulture grilleCulture) {
+        if (grilleCulture == null || isFleeing) {
+            clearCultureTarget(enemyModel);
+            return;
+        }
+
+        if (hasCultureTarget()) {
+            if (!isCultureAvailable(grilleCulture, targetCultureGridX, targetCultureGridY)) {
+                clearCultureTarget(enemyModel);
+                return;
+            }
+
+            // Tant que la culture existe encore, on continue simplement vers cette case.
+            targetX = getCultureCenterX(targetCultureGridX);
+            targetY = getCultureCenterY(targetCultureGridY);
+            return;
+        }
+
+        int bestGridX = -1;
+        int bestGridY = -1;
+        double bestDistanceSquared = (double) CULTURE_DETECTION_RADIUS * CULTURE_DETECTION_RADIUS;
+
+        for (int gridX = 0; gridX < grilleCulture.getLargeur(); gridX++) {
+            for (int gridY = 0; gridY < grilleCulture.getHauteur(); gridY++) {
+                if (!isCultureAvailable(grilleCulture, gridX, gridY)) {
+                    continue;
+                }
+                // Une culture mature déjà réservée par un autre lapin est ignorée.
+                if (enemyModel != null && !enemyModel.reserveCulture(gridX, gridY, this)) {
+                    continue;
+                }
+
+                double cultureCenterX = getCultureCenterX(gridX);
+                double cultureCenterY = getCultureCenterY(gridY);
+                double dx = cultureCenterX - x;
+                double dy = cultureCenterY - y;
+                double distanceSquared = (dx * dx) + (dy * dy);
+                if (distanceSquared > bestDistanceSquared) {
+                    // Cette culture n'est pas la meilleure candidate pour ce lapin:
+                    // on annule donc tout de suite la réservation temporaire.
+                    if (enemyModel != null) {
+                        enemyModel.releaseCultureReservation(gridX, gridY, this);
+                    }
+                    continue;
+                }
+
+                // Si on vient de trouver une culture plus proche, on relâche l'ancienne
+                // réservation pour ne pas bloquer inutilement cette case.
+                if (bestGridX >= 0 && bestGridY >= 0 && enemyModel != null) {
+                    enemyModel.releaseCultureReservation(bestGridX, bestGridY, this);
+                }
+
+                bestDistanceSquared = distanceSquared;
+                bestGridX = gridX;
+                bestGridY = gridY;
+            }
+        }
+
+        if (bestGridX >= 0 && bestGridY >= 0) {
+            targetCultureGridX = bestGridX;
+            targetCultureGridY = bestGridY;
+            targetX = getCultureCenterX(bestGridX);
+            targetY = getCultureCenterY(bestGridY);
+            cultureWaitStartTime = -1L;
+        }
+    }
+
+    /**
+     * Gère l'attente de 5 secondes une fois le lapin arrivé sur la culture ciblée.
+     * Si la culture disparaît ou si la cible est annulée avant la fin, rien n'est mangé.
+     */
+    private void updateCultureWaiting(EnemyModel enemyModel, GrilleCulture grilleCulture) {
+        if (!hasCultureTarget() || grilleCulture == null) {
+            return;
+        }
+
+        if (!isCultureAvailable(grilleCulture, targetCultureGridX, targetCultureGridY)) {
+            clearCultureTarget(enemyModel);
+            return;
+        }
+
+        if (!isOnTargetCultureCell()) {
+            // Tant que le lapin n'est pas exactement sur la case, le chrono ne démarre pas.
+            cultureWaitStartTime = -1L;
+            return;
+        }
+
+        if (cultureWaitStartTime < 0L) {
+            // Premier frame où le lapin est vraiment arrivé sur la culture.
+            cultureWaitStartTime = System.currentTimeMillis();
+            return;
+        }
+
+        if ((System.currentTimeMillis() - cultureWaitStartTime) < DELAI_AVANT_MANGER_MS) {
+            return;
+        }
+
+        boolean cultureMangee = false;
+        try {
+            grilleCulture.mangerCulture(targetCultureGridX, targetCultureGridY);
+            cultureMangee = true;
+        } catch (IllegalStateException ignored) {
+            // La culture a pu changer d'état ou disparaître avant la fin de l'attente.
+        }
+
+        // Après consommation (ou échec), on libère la réservation pour que la case redevienne neutre.
+        clearCultureTarget(enemyModel);
+        if (cultureMangee) {
+            // Le lapin disparaît dès qu'il a effectivement mangé la culture.
+            hasFled = true;
+            return;
+        }
+        if (!isFleeing) {
+            pickNewTarget();
+        }
+    }
+
+    /**
+     * Indique si une culture existe encore sur cette case et si elle est mature.
+     */
+    private boolean isCultureAvailable(GrilleCulture grilleCulture, int gridX, int gridY) {
+        Culture culture = grilleCulture.getCulture(gridX, gridY);
+        return culture != null && culture.getStadeCroissance() == Stade.MATURE;
+    }
+
+    /**
+     * Vérifie si le lapin est exactement arrivé au centre de la case ciblée.
+     */
+    private boolean isOnTargetCultureCell() {
+        if (!hasCultureTarget()) {
+            return false;
+        }
+
+        double dx = targetX - x;
+        double dy = targetY - y;
+        return Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001;
+    }
+
+    /**
+     * Convertit la colonne logique d'une culture en coordonnée X dans le repère du lapin.
+     */
+    private double getCultureCenterX(int gridX) {
+        double tileWidth = (double) fieldWidth / GrilleCulture.LARGEUR_GRILLE;
+        return (-fieldWidth / 2.0) + ((gridX + 0.5) * tileWidth);
+    }
+
+    /**
+     * Convertit la ligne logique d'une culture en coordonnée Y dans le repère du lapin.
+     */
+    private double getCultureCenterY(int gridY) {
+        double tileHeight = (double) fieldHeight / GrilleCulture.HAUTEUR_GRILLE;
+        return (-fieldHeight / 2.0) + ((gridY + 0.5) * tileHeight);
+    }
+
+    /**
+     * Indique si le lapin poursuit actuellement une culture.
+     */
+    private boolean hasCultureTarget() {
+        return targetCultureGridX >= 0 && targetCultureGridY >= 0;
+    }
+
+    /**
+     * Abandonne la culture ciblée et libère sa réservation éventuelle.
+     */
+    private void clearCultureTarget(EnemyModel enemyModel) {
+        // La libération se fait ici pour centraliser tous les cas de sortie:
+        // fuite, culture disparue, culture mangée ou abandon de cible.
+        if (enemyModel != null && hasCultureTarget()) {
+            enemyModel.releaseCultureReservation(targetCultureGridX, targetCultureGridY, this);
+        }
+        targetCultureGridX = -1;
+        targetCultureGridY = -1;
+        cultureWaitStartTime = -1L;
     }
     
     /**
@@ -427,7 +645,7 @@ public class EnemyUnit {
                     preferredTurnSign = -1;
                 }
 
-                if (!isFleeing) {
+                if (!isFleeing && !hasCultureTarget()) {
                     setDetourTarget(angle);
                 }
                 return;
@@ -479,6 +697,6 @@ public class EnemyUnit {
     public synchronized int getX() { return (int) x; }
     // Retourne la position entière actuelle sur Y pour l'affichage.
     public synchronized int getY() { return (int) y; }
-    // Indique si l'unité ennemie est sorti de la fenêtre près sa fuite.
+    // Indique si l'unité ennemie a quitté la fenêtre ou doit disparaître.
     public synchronized boolean hasFled() { return hasFled; }
 }

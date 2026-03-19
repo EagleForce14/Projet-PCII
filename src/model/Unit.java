@@ -18,7 +18,7 @@ public class Unit {
     private volatile boolean moveRight = false;
 
     // Rayon de la zone d'influence
-    public static final int INFLUENCE_RADIUS = 100;
+    public static final int INFLUENCE_RADIUS = 50;
 
     // Le constructeur de la classe.
     public Unit(int x, int y) {
