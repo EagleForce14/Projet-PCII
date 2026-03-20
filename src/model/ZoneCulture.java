@@ -15,13 +15,16 @@ public class ZoneCulture {
         return culture;
     }
 
-    /** Méthode qui plante une culture dans la zone */
-    public void planterCulture(Type type) {
+    /** Méthode qui plante une culture dans la zone 
+     * @param typeSpe : le type de la culture à planter (fleur ou légume)
+     * @throws IllegalStateException si la zone de culture est déjà occupée par une culture
+    **/
+    public void planterCulture(Object typeSpe) {
         // Vérifie s'il n'y a pas déjà une culture dans la zone avant de planter une nouvelle culture
         if (culture != null) {
             throw new IllegalStateException("Il y a déjà une culture plantée dans cette zone.");
         } else {
-            this.culture = new Culture(type); // Plante une nouvelle culture de type spécifié
+            this.culture = new Culture(typeSpe); // Plante une nouvelle culture de type spécifié
         }
     }
 

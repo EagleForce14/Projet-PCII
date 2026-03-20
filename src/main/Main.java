@@ -1,13 +1,8 @@
 package main;
 
 import controller.MovementController;
-import model.EnemyPhysicsThread;
-import model.EnemyModel;
-import model.GrilleCulture;
-import model.Money;
-import model.MovementModel;
-import model.PhysicsThread;
-import model.Unit;
+
+import model.*;
 import view.*;
 
 import javax.swing.JFrame;
@@ -40,7 +35,12 @@ public class Main {
 
         GrilleCulture grilleCulture = new GrilleCulture();
         Money playerMoney = new Money(50);
+        Inventaire inventaire = new Inventaire();
+        Shop shop = new Shop();
         FieldPanel fieldPanel = new FieldPanel(grilleCulture);
+
+        
+        
 
         MovementModel model = new MovementModel();
         // Le joueur démarre hors du champ, près du coin haut-gauche de la grille.
@@ -56,7 +56,7 @@ public class Main {
         movementView.setAlignmentY(0.5f);
 
         // Les actions contextuelles sont affichées dans une sidebar dédiée, hors du jeu.
-        SidebarPanel actionSidebarPanel = new SidebarPanel(model, grilleCulture);
+        SidebarPanel actionSidebarPanel = new SidebarPanel(model, grilleCulture, shop, inventaire);
 
         EnemyView enemyView = new EnemyView(enemyModel, fieldPanel);
         enemyView.setAlignmentX(0.5f);
@@ -98,7 +98,7 @@ public class Main {
         contentPanel.add(actionSidebarPanel, BorderLayout.EAST);
         frame.setContentPane(contentPanel);
 
-        new MovementController(model, movementView, actionSidebarPanel, grilleCulture, playerMoney);
+        new MovementController(model, movementView, actionSidebarPanel, grilleCulture, playerMoney , shop, inventaire);
 
         frame.pack();
         frame.setLocationRelativeTo(null);

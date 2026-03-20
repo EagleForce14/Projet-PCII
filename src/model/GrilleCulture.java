@@ -13,21 +13,28 @@ public class GrilleCulture {
     /** Constante représentant le prix d'achat de chaque culture */
     public static final Map<Type, Integer> PRIX_ACHAT_CULTURES = Map.of(
         Type.FLEURS, 10,
-        Type.TYPE2, 20,
+        Type.LEGUMES, 20,
         Type.TYPE3, 30
     );
 
     /** Constante représentant le prix de vente de chaque culture */
-    public static final Map<Type, Integer> PRIX_VENTE_CULTURES = Map.of(
-        Type.FLEURS, 15,
-        Type.TYPE2, 25,
-        Type.TYPE3, 35
+    public static final Map<Object, Integer> PRIX_VENTE_CULTURES = Map.of(
+        // certains vont être supprimé car on aura pas besoin d'autant de cultures différentes, mais on peut les garder pour l'instant pour les tests   
+        FleurType.TULIPE, 15,
+        FleurType.ROSE, 20,
+        FleurType.MARGUERITE, 12,
+        FleurType.ORCHIDEE, 25,
+        LegumeType.CAROTTE, 25,
+        LegumeType.TOMATE, 30,
+        LegumeType.POIVRON, 35,
+        LegumeType.COURGETTE, 28
+
     );
 
     /** Constante représentant le delai de croissance de chaque culture */
     public static final Map<Type, Integer> DELAI_CROISSANCE_CULTURES = Map.of(
         Type.FLEURS, 5,
-        Type.TYPE2, 10,
+        Type.LEGUMES, 10,
         Type.TYPE3, 15
     );
 
@@ -56,8 +63,8 @@ public class GrilleCulture {
     }
 
     /** Fonction qui renvoie le prix de vente d'une culture */
-    public static int getPrixVente(Type type) {
-        return PRIX_VENTE_CULTURES.get(type);
+    public static int getPrixVente(Object typeSpe) {
+        return PRIX_VENTE_CULTURES.get(typeSpe);
     }
 
     /** Getter qui renvoie la largeur logique de la grille. */
@@ -79,9 +86,9 @@ public class GrilleCulture {
     }
 
     /** Méthode qui plante une culture dans la grille */
-    public void planterCulture(int x, int y, Type type) {
+    public void planterCulture(int x, int y, Object typeSpe) {
         if (estDansGrille(x, y)) {
-            grille[x][y].planterCulture(type);
+            grille[x][y].planterCulture(typeSpe);
         }
     }
 

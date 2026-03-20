@@ -1,9 +1,6 @@
 package view;
 
-import model.Culture;
-import model.GrilleCulture;
-import model.MovementModel;
-import model.Stade;
+import model.*;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -32,6 +29,9 @@ public class SidebarPanel extends JPanel {
     // On référence au modèle car la vue lit uniquement un état booléen d'activation.
     private final MovementModel movementModel;
     private final GrilleCulture grilleCulture;
+    private final Shop shop;
+    private final Inventaire inventaire;
+
 
     // Texture de fond en bois (chargée via la classe utilitaire du projet).
     private final Image woodBackground;
@@ -41,6 +41,8 @@ public class SidebarPanel extends JPanel {
     private final JButton harvestButton;
     private final JButton waterButton;
     private final JButton cleanButton;
+    private final JButton shopButton;
+
 
     // Petit cache local pour éviter d'appliquer setEnabled en boucle inutilement.
     private boolean currentActionEnabledState;
@@ -48,9 +50,11 @@ public class SidebarPanel extends JPanel {
     private boolean currentCleanEnabledState;
 
     // Constructeur de la classe
-    public SidebarPanel(MovementModel movementModel, GrilleCulture grilleCulture) {
+    public SidebarPanel(MovementModel movementModel, GrilleCulture grilleCulture, Shop shop, Inventaire inventaire) {
         this.movementModel = movementModel;
         this.grilleCulture = grilleCulture;
+        this.shop = shop;
+        this.inventaire = inventaire;
         this.woodBackground = ImageLoader.load("/assets/bois.png");
 
         // Le panneau est transparent hors de sa zone peinte personnalisée.
@@ -90,12 +94,13 @@ public class SidebarPanel extends JPanel {
         harvestButton = createStyledButton("Recolter", new Color(160, 82, 45, 255), 12.5f);
         waterButton = createStyledButton("Arroser", new Color(205, 133, 63, 255), 12.5f);
         cleanButton = createStyledButton("Nettoyer", new Color(101, 67, 33, 255), 12.5f);
-
+        shopButton = createStyledButton("Boutique", new Color(139, 69, 19, 255), 12.5f);
         // On ajoute les boutons
         buttonsGrid.add(plantButton);
         buttonsGrid.add(harvestButton);
         buttonsGrid.add(waterButton);
         buttonsGrid.add(cleanButton);
+        buttonsGrid.add(shopButton);
 
         contentPanel.add(titleRow, BorderLayout.NORTH);
         contentPanel.add(buttonsGrid, BorderLayout.CENTER);
@@ -201,6 +206,12 @@ public class SidebarPanel extends JPanel {
     public JButton getCleanButton() {
         return cleanButton;
     }
+
+    public JButton getShopButton() {
+        return shopButton;
+    }
+
+
 
     /**
      * Dessine le fond de l'overlay avec l'image, puis un léger contour.

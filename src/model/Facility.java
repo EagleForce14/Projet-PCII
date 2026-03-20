@@ -7,9 +7,7 @@ public class Facility extends Product {
      * Chaque installation a un nom, un prix et une quantité et un type (cloture, engrais ou jardinier).
      * **/
 
-    public enum FacilityType {
-        FENCE , FERTILIZER, GARDENER
-    }
+    
     
     // atttributs propres à une installation 
     private final FacilityType type; // type  (jardinier, cloture, engrais)
@@ -30,6 +28,7 @@ public class Facility extends Product {
 
     
     
+
 
     // pas de setter pour type car inchangeable
 }

@@ -9,15 +9,26 @@ public class Culture {
     /** Attribut stockant le thread gérant la croissance de la culture */
     private final Croissance threadCroissance;
 
-    /** Attribut représentant le type de la culture */
+    /** Attribut représentant le type générique de la culture */
     private final Type type;
+    /** Attribut représentant le type spécifique de la culture (fleur ou légume) */
+    private final Object typeSpecific;
 
     /** Constructeur de la classe Culture qui initialise le stade de croissance et démarre le thread de croissance */
-    public Culture(Type type) {
-        this.type = type;
+    public Culture(Object typeSpe) {
+        this.typeSpecific = typeSpe;
         this.stadeCroissance = Stade.JEUNE_POUSSE;
         this.threadCroissance = new Croissance(this);
         this.threadCroissance.start(); // Démarrer le thread de croissance
+        
+        // initialisation de type 
+        if (typeSpe instanceof FleurType) {
+            this.type = Type.FLEURS;
+        } else if (typeSpe instanceof LegumeType) {
+            this.type = Type.LEGUMES;
+        } else {
+            throw new IllegalArgumentException("Le type spécifique doit être une instance de FleurType ou LegumeType.");
+        }
     }
 
     /** Méthode qui fait grandir la culture et renvoie le nouveau stade de croissance */

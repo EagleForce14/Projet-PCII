@@ -2,35 +2,18 @@ package model;
 
 import java.util.ArrayList;
 
+
 public class Shop {
     /**
      * Classe représentant le magasin du jeu.
      * Achat des graines, de clotures et de main d'oeuvre.
      * **/
-    private ArrayList<Product> seeds; // liste des graines disponibles dans le magasin
-    private ArrayList<Product> facilities; // liste des installations disponibles dans le magasin 
+    private ArrayList<Seed> seeds; // liste des graines disponibles dans le magasin
+    private ArrayList<Facility> facilities; // liste des installations disponibles dans le magasin 
     // panier avec des item différents du stock pour éviter de modifier les quantités du stock avant l'achat
     private ArrayList<CartItem> shoppingCard; // liste des produits que le joueur souhaite acheter
 
-    // Élément de panier : référence produit + quantité demandée
-    // classe interne pour représenter un élément du panier
-    private static class CartItem {
-        /** Classe représentant un élément du panier d'achat du magasin.
-         * Un élément du panier est composé d'un produit et d'une quantité.
-         * **/
-
-        Product product;
-        int quantity;
-        // constructeur
-        CartItem(Product product, int quantity) {
-            this.product = product;
-            this.quantity = quantity;
-        }
-
-        int totalPrice() {
-            return product.getPrice() * quantity;
-        }
-    }
+    
 
     //Constructeur
     public Shop() {
@@ -39,33 +22,35 @@ public class Shop {
         shoppingCard = new ArrayList<>();
 
         // initialisation des produits disponibles dans le magasin
-        seeds.add(new Seed("Rose", 10, 100, 20, Seed.SeedType.FLOWER));
-        seeds.add(new Seed("Tulip", 8, 100, 16, Seed.SeedType.FLOWER));
-        seeds.add(new Seed("Carrot", 5, 100, 10, Seed.SeedType.VEGETABLE));
-        facilities.add(new Facility("Cloture", 50, 20,  Facility.FacilityType.FENCE));
-        facilities.add(new Facility("Engrais", 30, 50, Facility.FacilityType.FERTILIZER));
-        facilities.add(new Facility("Jardinier", 100, 10, Facility.FacilityType.GARDENER));
+        /** pour l'instant, les autres types sont commenté 
+        
+        */
+       seeds.add(new Seed("Tulipe", 8, 100, Type.FLEURS));
+        seeds.add(new Seed("Carrote", 5, 100, Type.LEGUMES));
+        facilities.add(new Facility("Cloture", 50, 20,  FacilityType.CLOTURE));
+        facilities.add(new Facility("Engrais", 30, 50, FacilityType.ENGRAIS));
+        facilities.add(new Facility("Jardinier", 100, 10, FacilityType.JARDINIER));
     }
 
     // getter et setter
 
     /** une méthode pour récupérer la liste des graines disponibles dans le magasin
-     * @return ArrayList<Product> : la liste des graines disponibles dans le magasin
+     * @return ArrayList<Seed> : la liste des graines disponibles dans le magasin
      * **/
-    public ArrayList<Product> getSeeds() {
+    public ArrayList<Seed> getSeeds() {
         return seeds;
     }
 
 
     /** une méthode pour récupérer la liste des installations disponibles dans le magasin
-     * @return ArrayList<Product> : la liste des installations disponibles dans le magasin
+     * @return ArrayList<Facility> : la liste des installations disponibles dans le magasin
      * **/
-    public ArrayList<Product> getFacilities() {
+    public ArrayList<Facility> getFacilities() {
         return facilities;
     }
 
     /** une méthode pour récupérer la liste des produits que le joueur souhaite acheter
-     * @return ArrayList<Product> : la liste des produits que le joueur souhaite acheter
+     * @return ArrayList<CartItem> : la liste des produits que le joueur souhaite acheter
      * **/
     public ArrayList<CartItem> getShoppingCard() {
         // si le panier est null, on initialise une nouvelle liste de produits à acheter
@@ -82,14 +67,17 @@ public class Shop {
     /** une méthode pour ajouter un produit à la liste des produits que le joueur souhaite acheter
      * @param product : le produit que le joueur souhaite acheter
      * **/
-    public void addToShoppingCard(Product product, int quantity) {
+    public Boolean addToShoppingCard(Product product, int quantity) {
         // on vérifie que la quantité demandée est disponible dans le magasin
         if (product.getQuantity() < quantity) {
             System.out.println("La quantité demandée n'est pas disponible dans le magasin. Veuillez choisir une quantité inférieure ou égale à " + product.getQuantity());
-            return;
+            return false;
         }
+
+
         // on ajoute au panier sans modifier l'objet de stock
         shoppingCard.add(new CartItem(product, quantity)); 
+        return true;
     }
 
     /** une méthode pour retirer un produit de la liste des produits que le joueur souhaite acheter
