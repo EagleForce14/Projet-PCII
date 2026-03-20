@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="013e1038-c947-4f25-a738-9ba11d163713" name="Changes" comment="LE PACKAGE TEST EST LA">
-      <change afterPath="$PROJECT_DIR$/.idea/git_toolbox_prj.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-    </list>
+    <list default="true" id="013e1038-c947-4f25-a738-9ba11d163713" name="Changes" comment="ajout des nouveaux types et du boutons shop et tout les fonctionnement avec" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -67,12 +63,21 @@
       <option name="project" value="LOCAL" />
       <updated>1773237915079</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="ajout des nouveaux types et du boutons shop et tout les fonctionnement avec">
+      <option name="closed" value="true" />
+      <created>1774026111250</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1774026111250</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="LE PACKAGE TEST EST LA" />
-    <option name="LAST_COMMIT_MESSAGE" value="LE PACKAGE TEST EST LA" />
+    <MESSAGE value="ajout des nouveaux types et du boutons shop et tout les fonctionnement avec" />
+    <option name="LAST_COMMIT_MESSAGE" value="ajout des nouveaux types et du boutons shop et tout les fonctionnement avec" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
