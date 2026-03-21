@@ -1,5 +1,6 @@
 package view;
 
+import model.Jour;
 import model.Money;
 
 import javax.swing.BorderFactory;
@@ -14,27 +15,29 @@ import java.awt.Graphics;
  */
 public class TopBarPanel extends JPanel {
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
-    // @TODO - Felix : A supprimer / A modifier
-    private static final String DAY_TEXT = "Jour 1";
 
     private final Money playerMoney;
     private final JLabel dayLabel;
     private final JLabel moneyLabel;
+    private Jour jour;
 
     public TopBarPanel(Money playerMoney) {
         this.playerMoney = playerMoney;
+        this.jour = new Jour();
+        jour.start();
 
         setOpaque(false);
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setBorder(BorderFactory.createEmptyBorder(18, 24, 0, 0));
 
-        dayLabel = createLabel(DAY_TEXT, 14.0f);
+        dayLabel = createLabel("", 14.0f);
         moneyLabel = createLabel("", 18.0f);
 
         add(dayLabel);
         add(moneyLabel);
 
         syncMoneyText();
+        syncDayText(jour.getJour());
     }
 
     /**
@@ -58,9 +61,20 @@ public class TopBarPanel extends JPanel {
         }
     }
 
+    /**
+     * Relit le jour actuel pour garder l'affichage synchro avec le modèle.
+     */
+    private void syncDayText(int day) {
+        String nextText = "Jour " + day;
+        if (!nextText.equals(dayLabel.getText())) {
+            dayLabel.setText(nextText);
+        }
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         syncMoneyText();
+        syncDayText(jour.getJour());
         super.paintComponent(g);
     }
 }
