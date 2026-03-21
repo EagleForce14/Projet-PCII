@@ -1,9 +1,11 @@
 package model;
 
 import java.util.Map;
+import model.Inventaire;
 
 /** Classe représentant la grille de culture */
 public class GrilleCulture {
+
     /** Constante représentant la largeur de la grille */
     public static final int LARGEUR_GRILLE = 10;
     
@@ -94,10 +96,21 @@ public class GrilleCulture {
     }
 
     /** Méthode qui plante une culture dans la grille */
-    public void planterCulture(int x, int y, Type type) {
+    public void planterCulture(int x, int y, Type type, Inventaire inventaire) {
+        if (inventaire.estVide()){
+            throw new IllegalStateException("L'inventaire est vide. Vous ne pouvez pas planter une culture. veuillez acheter des graines dans la boutique.");
+        }
         if (estDansGrille(x, y)) {
             grille[x][y].planterCulture(type);
         }
+
+        // retirer la graine de l'inventaire
+        inventaire.UseGraineFleure(type);
+
+        // afficher l'inventaire après la plantation
+
+        inventaire.afficherInventaire();
+
     }
 
     /** Méthode qui recolte une culture de la grille */

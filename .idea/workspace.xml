@@ -4,49 +4,33 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="013e1038-c947-4f25-a738-9ba11d163713" name="Changes" comment="ajout des nouveaux types et du boutons shop et tout les fonctionnement avec">
-      <change afterPath="$PROJECT_DIR$/src/view/ShopThread.java" afterDir="false" />
+    <list default="true" id="013e1038-c947-4f25-a738-9ba11d163713" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/TestShop/TestFacility.java" beforeDir="false" afterPath="$PROJECT_DIR$/Test/TestShop/TestFacility.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/TestShop/TestMoney.java" beforeDir="false" afterPath="$PROJECT_DIR$/Test/TestShop/TestMoney.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/TestShop/TestSeed.java" beforeDir="false" afterPath="$PROJECT_DIR$/Test/TestShop/TestSeed.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/TestShop/TestShop.java" beforeDir="false" afterPath="$PROJECT_DIR$/Test/TestShop/TestShop.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/controller/MovementController.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/controller/MovementController.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/main/Main.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/main/Main.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/Croissance.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/model/Croissance.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/Culture.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/model/Culture.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/EnemyModel.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/model/EnemyModel.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/EnemyUnit.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/model/EnemyUnit.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/Facility$FacilityType.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/Facility.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/model/Facility.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/GrilleCulture.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/model/GrilleCulture.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/Money.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/model/Money.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/MovementModel.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/model/MovementModel.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/Seed$SeedType.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/Seed.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/model/Seed.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/Shop$CartItem.class" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/Shop.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/model/Shop.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/Stade.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/model/Stade.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/Type.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/model/Type.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/Unit.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/model/Unit.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/model/ZoneCulture.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/model/ZoneCulture.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/tests/TestCroissance.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/tests/TestCroissance.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/tests/TestMangerCulture.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/tests/TestMangerCulture.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/tests/TestPlanterCulture.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/tests/TestPlanterCulture.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/tests/TestRecolterCulture.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/tests/TestRecolterCulture.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/view/CustomFontLoader.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/view/CustomFontLoader.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/view/ImageLoader.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/view/ImageLoader.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/view/MovementView.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/view/MovementView.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Projet-PCII/view/SidebarPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Projet-PCII/view/SidebarPanel.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/controller/MovementController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/controller/MovementController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/Culture.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/Culture.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/FleurType.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/model/CartItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/CartItem.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model/GrilleCulture.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/GrilleCulture.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model/Inventaire.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/Inventaire.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/LegumeType.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/Seed.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/Seed.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model/Shop.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/Shop.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/Type.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/Type.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model/ZoneCulture.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/ZoneCulture.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/tests/TestCroissance.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/tests/TestCroissance.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/tests/TestMangerCulture.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/tests/TestMangerCulture.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/tests/TestPlanterCulture.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/tests/TestPlanterCulture.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/tests/TestRecolterCulture.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/tests/TestRecolterCulture.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/view/ShopThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/view/ShopThread.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -83,24 +67,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.Main.executor": "Run",
-    "Application.TestCroissance.executor": "Run",
-    "Application.TestMangerCulture.executor": "Run",
-    "Application.TestPlanterCulture.executor": "Run",
-    "Application.TestRecolterCulture.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "master",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/lafat/Université/PCII-Project/Projet-PCII",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.Main.executor&quot;: &quot;Run&quot;,
+    &quot;Application.TestCroissance.executor&quot;: &quot;Run&quot;,
+    &quot;Application.TestMangerCulture.executor&quot;: &quot;Run&quot;,
+    &quot;Application.TestPlanterCulture.executor&quot;: &quot;Run&quot;,
+    &quot;Application.TestRecolterCulture.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/lafat/Université/PCII-Project/Projet-PCII&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="Application.Main">
     <configuration name="Main" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="main.Main" />
@@ -202,8 +186,27 @@
       <option name="project" value="LOCAL" />
       <updated>1774026111250</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="ajout des nouveaux types et du boutons shop et tout les fonctionnement avec">
+      <option name="closed" value="true" />
+      <created>1774026341979</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1774026341979</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="LE PACKAGE TEST EST LA" />

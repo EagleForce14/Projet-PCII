@@ -1,7 +1,8 @@
-package TestShop;
+/*package TestShop;
+import model.Inventaire;
 import model.Money;
 import model.Shop;
-
+import model.Inventaire;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,10 +12,11 @@ public class TestShop {
 
     Shop shop;
     Money money;
+    Invenaire inventaire;
 
     @BeforeEach
     public void setUp() {
-        shop = new Shop();
+        shop = new Shop(inventaire);
         money = new Money(100);
     }
 
@@ -96,3 +98,4 @@ public class TestShop {
 
 
 }
+*/

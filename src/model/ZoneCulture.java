@@ -20,12 +20,16 @@ public class ZoneCulture {
      * @throws IllegalStateException si la zone de culture est déjà occupée par une culture
     **/
     public void planterCulture(Type type) {
+
         // Vérifie s'il n'y a pas déjà une culture dans la zone avant de planter une nouvelle culture
         if (culture != null) {
             throw new IllegalStateException("Il y a déjà une culture plantée dans cette zone.");
         } else {
+
             this.culture = new Culture(type); // Plante une nouvelle culture du type demandé
         }
+
+
     }
 
     /** Méthode qui récolte la culture de la zone et renvoie son prix de vente */
