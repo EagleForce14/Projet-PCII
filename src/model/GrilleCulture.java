@@ -1,7 +1,6 @@
 package model;
 
 import java.util.Map;
-import model.Inventaire;
 
 /** Classe représentant la grille de culture */
 public class GrilleCulture {
