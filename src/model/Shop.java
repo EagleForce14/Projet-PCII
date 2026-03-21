@@ -14,8 +14,12 @@ public class Shop {
     // panier avec des item différents du stock pour éviter de modifier les quantités du stock avant l'achat
     private ArrayList<CartItem> shoppingCard; // liste des produits que le joueur souhaite acheter
 
+    // référence vers l'inventaire du joueur
+
+
     //Constructeur
     public Shop() {
+
         seeds = new ArrayList<>();
         facilities = new ArrayList<>();
         shoppingCard = new ArrayList<>();
@@ -70,6 +74,14 @@ public class Shop {
         return shoppingCard;
     }
 
+    public int getShoppingCardTotalPrice() {
+        int totalPrice = 0;
+        for (CartItem item : shoppingCard) {
+            totalPrice += item.totalPrice();
+        }
+        return totalPrice;
+    }
+
 
     /**
      * une méthode pour ajouter un produit à la liste des produits que le joueur souhaite acheter
@@ -86,6 +98,17 @@ public class Shop {
 
 
         // on ajoute au panier sans modifier l'objet de stock
+
+        // on vérifie le nom du produit pour éviter les doublons dans le panier
+        for (CartItem item : shoppingCard) {
+            if (item.getProduct().getName().equals(product.getName())) {
+                // si le produit est déjà dedans on change juste la quantité
+                item.quantity += quantity;
+                return true;
+            }
+        }
+
+        // sinon on ajoute le nouvel item
         shoppingCard.add(new CartItem(product, quantity));
         return true;
     }
@@ -94,10 +117,21 @@ public class Shop {
      * une méthode pour retirer un produit de la liste des produits que le joueur souhaite acheter
      *
      * @param product : le produit que le joueur souhaite retirer
-     *
+     * @param quantité : la quantité du produit que le joueur souhaite retirer
      **/
-    public void removeFromShoppingCard(Product product) {
-        shoppingCard.removeIf(item -> item.product.getName().equals(product.getName()));
+
+    public void removeFromShoppingCard(Product product,int quantité) {
+        for (CartItem item : shoppingCard) {
+            if (item.getProduct().getName().equals(product.getName())) {
+                if (item.getQuantity() > quantité) {
+                    item.quantity -= quantité;
+                } else {
+                    shoppingCard.remove(item);
+                }
+                break;
+            }
+        }
+
     }
 
     /**
@@ -116,10 +150,11 @@ public class Shop {
      *
      **/
 
-    public Money buyProducts(Money playerMoney) {
+    public boolean buyProducts(Money playerMoney,Inventaire inventaire) {
+
         int totalPrice = 0;
         int playerAmount = playerMoney.getAmount();
-
+        boolean achatReussi = false;
         // calcul du prix total des produits dans le panier
         for (CartItem item : shoppingCard) {
             totalPrice += item.totalPrice();
@@ -144,6 +179,8 @@ public class Shop {
                             break;
                         }
                     }
+                    // ajout dans l'inventaire
+                    inventaire.ajoutGraine((Seed) item.product, item.quantity);
 
                     // cas des installations
                 } else if (item.product instanceof Facility) {
@@ -153,20 +190,26 @@ public class Shop {
                             break;
                         }
                     }
+                    // ajout dans l'inventaire
+                    inventaire.ajoutInstallation((Facility) item.product, item.quantity);
                 }
             }
+            achatReussi = true;
+
+
             // vider le panier après l'achat
             clearShoppingCard();
+            // affichage de l'argent restant du joueur après l'achat
 
-            return playerMoney;
+            return achatReussi;
         }
         // cas d'achat échoué : le joueur n'a pas assez d'argent pour acheter les produits du panier
         else {
-            System.out.println("Vous n'avez pas assez d'argent pour acheter les produits du panier. Enlevez des produits du panier ou gagnez plus d'argent pour pouvoir acheter les produits du panier.");
-            System.out.println("Prix total des produits dans le panier : " + totalPrice + "€");
-            System.out.println("Votre argent actuel : " + playerMoney + "€");
-            return playerMoney;
+
+            return achatReussi;
         }
+
+
     }
 
 

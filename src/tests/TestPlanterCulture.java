@@ -1,13 +1,15 @@
 package tests;
 
 /** Classe de test pour la fonctionnalité de plantation des cultures */
+
 public class TestPlanterCulture {
     public static void main(String[] args) {
         // Créer une grille de culture
         model.GrilleCulture grille = new model.GrilleCulture();
+        model.Inventaire inventaire = new model.Inventaire();
 
         // Planter une culture dans la grille de culture
-        grille.planterCulture(0, 0, model.Type.TULIPE);
+        grille.planterCulture(0, 0, model.Type.TULIPE,inventaire);
 
         // Vérifier que la culture a été plantée correctement
         if (grille.getCulture(0, 0) != null && grille.getCulture(0, 0).getType() == model.Type.TULIPE
@@ -19,7 +21,7 @@ public class TestPlanterCulture {
 
         // Essayer de planter une culture dans une zone déjà occupée pour vérifier que l'exception est levée
         try {
-            grille.planterCulture(0, 0, model.Type.TULIPE);
+            grille.planterCulture(0, 0, model.Type.TULIPE,inventaire);
             System.out.println("Test échoué : Il est possible de planter une culture dans une zone déjà occupée.");
         } catch (IllegalStateException e) {
             System.out.println("Test réussi : " + e.getMessage());

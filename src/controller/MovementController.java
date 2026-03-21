@@ -60,7 +60,7 @@ public class MovementController implements KeyListener {
 
         // Tant qu'il n'existe pas encore de sélecteur de graines, on plante une tulipe par défaut.
         if (grilleCulture.getCulture(activeFieldCell.x, activeFieldCell.y) == null) {
-            grilleCulture.planterCulture(activeFieldCell.x, activeFieldCell.y, Type.TULIPE);
+            grilleCulture.planterCulture(activeFieldCell.x, activeFieldCell.y, Type.TULIPE,inventaire);
         }
     }
 
@@ -121,7 +121,7 @@ public class MovementController implements KeyListener {
             return;
         }
 
-        (new ShopThread(shop, playerMoney)).start();
+        (new ShopThread(shop, playerMoney,inventaire)).start();
     }
 
     // On implémente KeyListener (Gestion des Touches)

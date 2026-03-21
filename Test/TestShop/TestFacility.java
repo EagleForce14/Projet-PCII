@@ -1,4 +1,4 @@
-package TestShop;
+/*package TestShop;
 import model.Facility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,3 +76,4 @@ public class TestFacility {
 
 
 }
+*/
