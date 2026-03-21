@@ -12,30 +12,38 @@ public class GrilleCulture {
 
     /** Constante représentant le prix d'achat de chaque culture */
     public static final Map<Type, Integer> PRIX_ACHAT_CULTURES = Map.of(
-        Type.FLEURS, 10,
-        Type.LEGUMES, 20,
-        Type.TYPE3, 30
+        Type.TULIPE, 10,
+        Type.ROSE, 10,
+        Type.MARGUERITE, 10,
+        Type.ORCHIDEE, 10,
+        Type.CAROTTE, 20,
+        Type.TOMATE, 20,
+        Type.POIVRON, 20,
+        Type.COURGETTE, 20
     );
 
     /** Constante représentant le prix de vente de chaque culture */
-    public static final Map<Object, Integer> PRIX_VENTE_CULTURES = Map.of(
-        // certains vont être supprimé car on aura pas besoin d'autant de cultures différentes, mais on peut les garder pour l'instant pour les tests   
-        FleurType.TULIPE, 15,
-        FleurType.ROSE, 20,
-        FleurType.MARGUERITE, 12,
-        FleurType.ORCHIDEE, 25,
-        LegumeType.CAROTTE, 25,
-        LegumeType.TOMATE, 30,
-        LegumeType.POIVRON, 35,
-        LegumeType.COURGETTE, 28
-
+    public static final Map<Type, Integer> PRIX_VENTE_CULTURES = Map.of(
+        Type.TULIPE, 15,
+        Type.ROSE, 20,
+        Type.MARGUERITE, 12,
+        Type.ORCHIDEE, 25,
+        Type.CAROTTE, 25,
+        Type.TOMATE, 30,
+        Type.POIVRON, 35,
+        Type.COURGETTE, 28
     );
 
     /** Constante représentant le delai de croissance de chaque culture */
     public static final Map<Type, Integer> DELAI_CROISSANCE_CULTURES = Map.of(
-        Type.FLEURS, 5,
-        Type.LEGUMES, 10,
-        Type.TYPE3, 15
+        Type.TULIPE, 5,
+        Type.ROSE, 5,
+        Type.MARGUERITE, 5,
+        Type.ORCHIDEE, 5,
+        Type.CAROTTE, 10,
+        Type.TOMATE, 10,
+        Type.POIVRON, 10,
+        Type.COURGETTE, 10
     );
 
     /** Attribut représentant la grille de culture */
@@ -63,8 +71,8 @@ public class GrilleCulture {
     }
 
     /** Fonction qui renvoie le prix de vente d'une culture */
-    public static int getPrixVente(Object typeSpe) {
-        return PRIX_VENTE_CULTURES.get(typeSpe);
+    public static int getPrixVente(Type type) {
+        return PRIX_VENTE_CULTURES.get(type);
     }
 
     /** Getter qui renvoie la largeur logique de la grille. */
@@ -86,9 +94,9 @@ public class GrilleCulture {
     }
 
     /** Méthode qui plante une culture dans la grille */
-    public void planterCulture(int x, int y, Object typeSpe) {
+    public void planterCulture(int x, int y, Type type) {
         if (estDansGrille(x, y)) {
-            grille[x][y].planterCulture(typeSpe);
+            grille[x][y].planterCulture(type);
         }
     }
 

@@ -4,10 +4,8 @@ import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.util.Scanner;
 
 import javax.swing.JButton;
-import javax.swing.JOptionPane;
 import model.*;
 import view.*;
 
@@ -20,6 +18,7 @@ public class MovementController implements KeyListener {
     private final Money playerMoney;
     private final Shop shop;
     private final Inventaire inventaire;
+    private ShopThread shopThread;
 
     // Constructeur de la classe
 
@@ -44,13 +43,7 @@ public class MovementController implements KeyListener {
 
         JButton shopButton = sidebarPanel.getShopButton();
         shopButton.addActionListener(this::ouvrirBoutique);
-
-
-
     }
-    
-    
-    
 
     /**
      * On plante uniquement sur la case actuellement surlignée.
@@ -62,9 +55,9 @@ public class MovementController implements KeyListener {
             return;
         }
 
-        // Tant qu'il n'existe pas encore de sélecteur de graines, on plante toujours le même type.
+        // Tant qu'il n'existe pas encore de sélecteur de graines, on plante une tulipe par défaut.
         if (grilleCulture.getCulture(activeFieldCell.x, activeFieldCell.y) == null) {
-            grilleCulture.planterCulture(activeFieldCell.x, activeFieldCell.y, Type.FLEURS);
+            grilleCulture.planterCulture(activeFieldCell.x, activeFieldCell.y, Type.TULIPE);
         }
     }
 
@@ -108,77 +101,13 @@ public class MovementController implements KeyListener {
      * Affichage des prix de chaque objet, de la quantité dispo et de l'argent du joueur
      * et affichage du panier
      **/
-
-
     private void ouvrirBoutique(ActionEvent event) {
-        System.out.println("Ouverture de la boutique");
-        System.out.println("Argent du joueur : " + playerMoney.getAmount() + "€");
-        System.out.println("Graines disponibles : ");
-        for (Seed seed : (shop.getSeeds())) {
-            System.out.println("- " + seed.getName() + " (Type: " + seed.getType() + ", Prix: " + seed.getPrice() + ", Quantité disponible: " + seed.getQuantity() + ")");
-        }
-        System.out.println("Installations disponibles : ");
-        for (Facility facility : shop.getFacilities()) {
-            System.out.println("- " + facility.getName() + " (Type: " + facility.getType() + ", Prix: " + facility.getPrice() + ", Quantité disponible: " + facility.getQuantity() + ")");
-        }
-        System.out.println("Panier : ");
-        for (CartItem item : shop.getShoppingCard()) {
-            if (item.getProduct() instanceof Seed) {
-                System.out.println("- " + item.getProduct().getName() + " (Type: " + ((Seed)item.getProduct()).getType()+ ", Prix: " + item.getProduct().getPrice() + ", Quantité: " + item.getQuantity() + ")");
-            } else if (item.getProduct() instanceof Facility) {
-                System.out.println("- " + item.getProduct().getName() + " (Type: " + ((Facility)item.getProduct()).getType()+ ", Prix: " + item.getProduct().getPrice() + ", Quantité: " + item.getQuantity() + ")");
-            } else {
-                System.out.println("- " + item.getProduct().getName() + " (Type: " + ((Seed)item.getProduct()).getType()+ ", Prix: " + item.getProduct().getPrice() + ", Quantité: " + item.getQuantity() + ")");
-            }
+        if (shopThread != null && shopThread.isAlive()) {
+            System.out.println("La boutique est deja ouverte dans le terminal.");
+            return;
         }
 
-        // entrée des valeur utilisateur pour acheter des produits
-        Scanner Scaner = new Scanner(System.in);
-        System.out.println("Entrez le nom du produit:");
-        String nomProduit = Scaner.nextLine();
-        System.out.println("Entrez la quantité:");
-        int quantite = Scaner.nextInt();
-        Scaner.close();
-        // achat du produit
-        Product productToBuy = null;
-        for (Seed seed : shop.getSeeds()) {
-            if (seed.getName().equalsIgnoreCase(nomProduit)) {
-                productToBuy = seed;
-                break;
-            }
-        }
-
-        if (productToBuy == null) {
-            for (Facility facility : shop.getFacilities()) {
-                if (facility.getName().equalsIgnoreCase(nomProduit)) {
-                    productToBuy = facility;
-                    break;
-                }
-            }
-        }
-        if (productToBuy != null) {
-            // cas où le produit existe dans le magasin, on essaye de l'ajouter au panier
-            boolean achatReussi = shop.addToShoppingCard(productToBuy, quantite);
-            while(!achatReussi) {
-                System.out.println("La qunnatité n'est pas valide, veuillez réessayer : ");
-                System.out.println("Entrez le nom du produit:");
-                nomProduit = Scaner.nextLine();
-                System.out.println("Entrez la quantité:");
-                quantite = Scaner.nextInt();
-
-                // on revérifie que l'acchat est valide de nouveau
-                achatReussi = shop.addToShoppingCard(productToBuy, quantite);
-                
-            }
-        }else {
-            System.out.println("Le produit demandé n'existe pas dans le magasin.");
-        }
-
-        Scaner.close();
-
-        
-
-
+        (new ShopThread(shop, playerMoney)).start();
     }
 
     // On implémente KeyListener (Gestion des Touches)

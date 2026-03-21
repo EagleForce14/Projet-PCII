@@ -8,10 +8,10 @@ public class Inventaire {
     // liste des nombres de graines que le joueur possède
     // pour l'instant on suppose qu'il ne possède que les graines de tulipe
     
-    // tout les graine de type FLEURS seront stocké dans cet attribut, on peut faire de même pour les autres types de graines   
-    private HashMap<FleurType, Integer> fleurs;
-    private HashMap<LegumeType, Integer> legumes;
-    private HashMap<FacilityType, Integer> installations;
+    // On garde deux rangements séparés, mais avec le type unique du projet.
+    private final HashMap<Type, Integer> fleurs;
+    private final HashMap<Type, Integer> legumes;
+    private final HashMap<FacilityType, Integer> installations;
     
     // constructeur
     public Inventaire() {
@@ -24,16 +24,16 @@ public class Inventaire {
     
         // getter et setter
         /** getFleurs : méthode pour récupérer la liste des graines de fleurs que le joueur possède
-        * @return HashMap<FleurType, Integer> : la liste des graines de fleurs 
+        * @return HashMap<Type, Integer> : la liste des graines de fleurs 
         **/
-        public HashMap<FleurType, Integer> getFleurs() {
+        public HashMap<Type, Integer> getFleurs() {
             return fleurs;
         }   
 
         /** getLegumes : méthode pour récupérer la liste des graines de légumes que le joueur possède
-        * @return HashMap<LegumeType, Integer> : la liste des graines de légumes que le joueur possède
+        * @return HashMap<Type, Integer> : la liste des graines de légumes que le joueur possède
         **/
-        public HashMap<LegumeType, Integer> getLegumes() {
+        public HashMap<Type, Integer> getLegumes() {
             return legumes;
         }
         
@@ -48,32 +48,30 @@ public class Inventaire {
         // SETTER
 
         /** ajoutGraine : méthode pour ajouter les graine dans leur inventaire resopectif
-         * @param type : le type de la graine (fleur ou légume)
          * @param quantite : la quantité de graines que le joueur à acheté 
          * **/
         public void ajoutGraine(Seed graine, int quantite) {
             //traiter les graines par case selon leur type
 
-            // dans le cas  où la graine est une fleure
-            if (graine.getType() == Type.FLEURS) {
+            // dans le cas  où la graine est une fleur
+            if (graine.isFleur()) {
                 
                 // si le joueur possède déjà la graine, on rajoute les graines achetées à la quantité de base
-                if (fleurs.containsKey(graine.getFleurType())) {
-                    fleurs.put(graine.getFleurType(), fleurs.get(graine.getFleurType()) + quantite);
+                if (fleurs.containsKey(graine.getType())) {
+                    fleurs.put(graine.getType(), fleurs.get(graine.getType()) + quantite);
                 } else {
                     // sinon, on ajoute la nouvelle graine avec sa quantité
-                    fleurs.put(graine.getFleurType(), quantite);
+                    fleurs.put(graine.getType(), quantite);
                 }
-                fleurs.put(graine.getFleurType(), quantite);
-            } else if (graine.getType() == Type.LEGUMES) {
+            } else if (graine.isLegume()) {
 
                     // de même pour les graines de légumes 
-                if (legumes.containsKey(graine.getLegumeType())) {
+                if (legumes.containsKey(graine.getType())) {
                     
-                    legumes.put(graine.getLegumeType(), legumes.get(graine.getLegumeType()) + quantite);
+                    legumes.put(graine.getType(), legumes.get(graine.getType()) + quantite);
                 } else {
                     
-                    legumes.put(graine.getLegumeType(), quantite);
+                    legumes.put(graine.getType(), quantite);
                 }
                 
             }
@@ -105,7 +103,7 @@ public class Inventaire {
          * UseGraine : méthode pour utiliser une graine de fleur
          * @param nomGraine : le nom de la graine à utiliser
          **/
-        public void UseGraineFleure(FleurType nomGraine) {
+        public void UseGraineFleure(Type nomGraine) {
 
             // véfifie si la graine est une fleure ou un légume
         
@@ -123,7 +121,7 @@ public class Inventaire {
         
         }
 
-        public void UseGraineLegume(LegumeType nomGraine) {
+        public void UseGraineLegume(Type nomGraine) {
             // on verifie que le joueur possède la graine
             if (legumes.containsKey(nomGraine)) {
 

@@ -8,7 +8,7 @@ public class Seed extends Product {
      * **/
     // atttributs propres à une graine 
     //private int prixDeVente; // prix de vente de la culture une fois récoltée
-    private Type type; // type de la graine (fleur ou légume)
+    private Type type; // type concret de la graine
     
     // constructeur
     public Seed(String name, int price, int quantity, Type type) {
@@ -27,8 +27,8 @@ public class Seed extends Product {
     }*/
 
     
-     /** getType : méthode pour récupérer le type de la graine (fleur ou légume)
-      * @return SeedType : le type de la graine (fleur ou légume)
+     /** getType : méthode pour récupérer le type concret de la graine
+      * @return Type : le type de la graine
       **/
      public Type getType() {
         return type;
@@ -43,40 +43,11 @@ public class Seed extends Product {
         this.prixDeVente = prixDeVente;
     }**/
 
-    // récupération du type de la graine , si fleure 
-
     public boolean isFleur() {
-        return type == Type.FLEURS;
+        return type.isFleur();
     }
 
-    /**
-     * Récupère le type de la graine si elle est une fleur.
-     * @return FleurType : le type de la graine
-     * @throws IllegalStateException : si la graine n'est pas une fleur
-     **/
-    public FleurType getFleurType() {
-        if (isFleur()) {
-            return FleurType.valueOf(name.toUpperCase());
-        } else {
-            throw new IllegalStateException("La graine n'est pas une fleur.");
-        }
-    }
-
-    // si légume
     public boolean isLegume() {
-        return type == Type.LEGUMES;
-    }
-
-    /**
-    * Récupère le type de la graine si elle est un légume.
-    * @return LegumeType : le type de la graine
-    * @throws IllegalStateException : si la graine n'est pas un légume
-    **/
-    public LegumeType getLegumeType() {
-        if (isLegume()) {
-            return LegumeType.valueOf(name.toUpperCase());
-        } else {
-            throw new IllegalStateException("La graine n'est pas un légume.");
-        }
+        return type.isLegume();
     }
 }

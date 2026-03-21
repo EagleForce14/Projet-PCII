@@ -7,7 +7,7 @@ public class TestMangerCulture {
         model.GrilleCulture grille = new model.GrilleCulture();
 
         // Planter une culture dans la grille de culture
-        grille.planterCulture(0, 0, model.Type.FLEURS);
+        grille.planterCulture(0, 0, model.Type.TULIPE);
 
         /* Test pour une culture qui peut être mangée */
         // Attendre que la culture atteigne le stade de maturité
@@ -34,7 +34,7 @@ public class TestMangerCulture {
         }
 
         // Test pour une culture qui n'est pas à maturité
-        grille.planterCulture(2, 2, model.Type.FLEURS);
+        grille.planterCulture(2, 2, model.Type.TULIPE);
         try {
             grille.mangerCulture(2, 2);
             System.out.println("Test échoué : La culture n'est pas à maturité.");
