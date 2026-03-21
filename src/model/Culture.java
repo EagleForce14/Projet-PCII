@@ -12,6 +12,9 @@ public class Culture {
     /** Attribut représentant le type concret de la culture */
     private final Type type;
 
+    /** Attribut stockant si la culture a été arrosée */
+    private boolean arrosee;
+
     /** Constructeur de la classe Culture qui initialise le stade de croissance et démarre le thread de croissance */
     public Culture(Type type) {
         if (type == null) {
@@ -22,6 +25,7 @@ public class Culture {
         this.stadeCroissance = Stade.JEUNE_POUSSE;
         this.threadCroissance = new Croissance(this);
         this.threadCroissance.start(); // Démarrer le thread de croissance
+        this.arrosee = false;
     }
 
     /** Méthode qui fait grandir la culture et renvoie le nouveau stade de croissance */
@@ -58,9 +62,29 @@ public class Culture {
         }
     }
 
+    /** Méthode qui arrose la culture et la fait grandir plus vite */
+    public void arroser() {
+        // Vérifie si la culture est à un stade intermédiaire avant de l'arroser
+        if (stadeCroissance == Stade.INTERMEDIAIRE) {
+            if (!arrosee) {
+                arrosee = true;
+                threadCroissance.reveillerPourRecalculDelai(); // Réveiller le thread de croissance pour recalculer le délai
+            } else {
+                throw new IllegalStateException("La culture a déjà été arrosée et ne peut pas être arrosée à nouveau.");
+            }
+        } else {
+            throw new IllegalStateException("La culture n'est pas à un stade intermédiaire et ne peut pas être arrosée.");
+        }
+    }
+
     /** Getter pour l'attribut type */
     public Type getType() {
         return type;
+    }
+
+    /** Getter pour l'attribut arrosee */
+    public boolean isArrosee() {
+        return arrosee;
     }
 
     /** Méthode qui permet de manger la culture seulement si elle est à maturité */

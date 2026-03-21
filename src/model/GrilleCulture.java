@@ -109,6 +109,15 @@ public class GrilleCulture {
         }
     }
 
+    /** Méthode qui arrose une culture de la grille */
+    public void arroserCulture(int x, int y) {
+        if (estDansGrille(x, y)) {
+            grille[x][y].arroserCulture();
+        } else {
+            throw new IllegalStateException("Coordonnées hors de la grille.");
+        }
+    }
+
     /** Getter qui renvoie la culture à une position donnée */
     public Culture getCulture(int x, int y) {
         if (estDansGrille(x, y)) {

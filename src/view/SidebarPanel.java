@@ -48,6 +48,7 @@ public class SidebarPanel extends JPanel {
     private boolean currentActionEnabledState;
     private boolean currentHarvestEnabledState;
     private boolean currentCleanEnabledState;
+    private boolean currentWaterEnabledState;
 
     // Constructeur de la classe
     public SidebarPanel(MovementModel movementModel, GrilleCulture grilleCulture, Shop shop, Inventaire inventaire) {
@@ -108,7 +109,7 @@ public class SidebarPanel extends JPanel {
 
         // Au démarrage, les boutons sont désactivés tant que l'unité déplaçable n'est pas
         // sur une case valide du champ.
-        applyButtonsEnabledState(false, false, false);
+        applyButtonsEnabledState(false, false, false, false);
     }
 
     /**
@@ -144,24 +145,27 @@ public class SidebarPanel extends JPanel {
         boolean shouldEnableActions = movementModel.isActionOverlayEnabled();
         boolean shouldEnableHarvest = canHarvestActiveCell();
         boolean shouldEnableClean = canCleanActiveCell();
+        boolean shouldEnableWater = canWaterActiveCell();
         if (shouldEnableActions != currentActionEnabledState
                 || shouldEnableHarvest != currentHarvestEnabledState
-                || shouldEnableClean != currentCleanEnabledState) {
-            applyButtonsEnabledState(shouldEnableActions, shouldEnableHarvest, shouldEnableClean);
+                || shouldEnableClean != currentCleanEnabledState
+                || shouldEnableWater != currentWaterEnabledState) {
+            applyButtonsEnabledState(shouldEnableActions, shouldEnableHarvest, shouldEnableClean, shouldEnableWater);
         }
     }
 
     /**
      * Active/désactive les boutons.
      */
-    private void applyButtonsEnabledState(boolean actionEnabled, boolean harvestEnabled, boolean cleanEnabled) {
+    private void applyButtonsEnabledState(boolean actionEnabled, boolean harvestEnabled, boolean cleanEnabled, boolean waterEnabled) {
         currentActionEnabledState = actionEnabled;
         currentHarvestEnabledState = harvestEnabled;
         currentCleanEnabledState = cleanEnabled;
+        currentWaterEnabledState = waterEnabled;
 
         plantButton.setEnabled(actionEnabled);
         harvestButton.setEnabled(harvestEnabled);
-        waterButton.setEnabled(actionEnabled);
+        waterButton.setEnabled(waterEnabled);
         cleanButton.setEnabled(cleanEnabled);
 
         repaint();
@@ -173,6 +177,14 @@ public class SidebarPanel extends JPanel {
     private boolean canHarvestActiveCell() {
         Culture culture = getCultureOnActiveCell();
         return culture != null && culture.getStadeCroissance() == Stade.MATURE;
+    }
+
+    /**
+     * L'arrosage n'est disponible que sur une case occupée par une culture intermédiaire et qui n'a pas encore été arrosée.
+     */
+    private boolean canWaterActiveCell() {
+        Culture culture = getCultureOnActiveCell();
+        return culture != null && culture.getStadeCroissance() == Stade.INTERMEDIAIRE && !culture.isArrosee();
     }
 
     /**
@@ -201,6 +213,10 @@ public class SidebarPanel extends JPanel {
 
     public JButton getHarvestButton() {
         return harvestButton;
+    }
+
+    public JButton getWaterButton() {
+        return waterButton;
     }
 
     public JButton getCleanButton() {

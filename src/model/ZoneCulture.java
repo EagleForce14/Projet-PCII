@@ -40,6 +40,16 @@ public class ZoneCulture {
         }
     }
 
+    /** Méthode qui arrose la culture de la zone */
+    public void arroserCulture() {
+        // Vérifie s'il y a une culture à arroser dans la zone
+        if (culture != null) {
+            culture.arroser();
+        } else {
+            throw new IllegalStateException("Il n'y a pas de culture à arroser dans cette zone.");
+        }
+    }
+
     /** Méthode qui mange la culture de la zone */
     public void mangerCulture() {
         // Vérifie s'il y a une culture à manger dans la zone

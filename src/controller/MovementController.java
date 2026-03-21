@@ -38,6 +38,9 @@ public class MovementController implements KeyListener {
         JButton harvestButton = sidebarPanel.getHarvestButton();
         harvestButton.addActionListener(this::recolterCaseActive);
 
+        JButton waterButton = sidebarPanel.getWaterButton();
+        waterButton.addActionListener(this::arroserCaseActive);
+
         JButton cleanButton = sidebarPanel.getCleanButton();
         cleanButton.addActionListener(this::nettoyerCaseActive);
 
@@ -94,6 +97,17 @@ public class MovementController implements KeyListener {
             return;
         }
         grilleCulture.nettoyerCultureFletrie(activeFieldCell.x, activeFieldCell.y);
+    }
+
+    /**
+     * L'arrosage n'est disponible que sur une case occupée par une culture intermédiaire.
+     */
+    private void arroserCaseActive(ActionEvent event) {
+        Point activeFieldCell = model.getActiveFieldCell();
+        if (activeFieldCell == null) {
+            return;
+        }
+        grilleCulture.arroserCulture(activeFieldCell.x, activeFieldCell.y);
     }
 
     /** Ouverture de la boutique dans la console POUR l'INSTANT
