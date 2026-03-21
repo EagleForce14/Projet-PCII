@@ -10,7 +10,9 @@ public class EnemyUnit {
     private static final int HITBOX_SIZE = 20;
     private static final int CULTURE_DETECTION_RADIUS = 120;
     private static final long DELAI_AVANT_MANGER_MS = 5000L;
-    // Ces listes décrivent les rotations possibles autour de la direction voulue.
+    // Le délai de retour au terrier si le lapin n'a rien trouvé. Correspond à 30s
+    private static final long DELAI_RETOUR_TERRIER_MS = 30000L;
+    // Ces listes décrivent les rotations possibles autour de la direction voulue afin de contourner la grange.
     // On teste d'abord de petits écarts, puis des virages plus forts, puis seulement un demi-tour.
     // RIGHT_HAND_OFFSETS privilégie un contournement "main droite", LEFT_HAND_OFFSETS l'inverse.
     // Le lapin garde ainsi un côté préféré le long de la grange, ce qui limite les hésitations.
@@ -41,7 +43,9 @@ public class EnemyUnit {
     private volatile boolean isInsideMap = false;
     // Indique si le lapin est en train de fuir un jardinier.
     private volatile boolean isFleeing = false;
-    // Indique si le lapin a complètement quitté l'écran après une fuite.
+    // Indique si le lapin repart vers le terrier après une recherche infructueuse.
+    private volatile boolean isReturningToBurrow = false;
+    // Indique si le lapin a complètement quitté l'écran après une sortie de carte.
     private volatile boolean hasFled = false;
     // Dernière position connue sur X, que l'on utilise pour détecter un blocage.
     private double lastX;
@@ -59,6 +63,8 @@ public class EnemyUnit {
     private int targetCultureGridY = -1;
     // Instant où le lapin a atteint la case et commence son attente de 5 secondes avant de manger.
     private long cultureWaitStartTime = -1L;
+    // Début de la période pendant laquelle le lapin ne trouve aucune culture à viser.
+    private long noCultureFoundStartTime = -1L;
 
     // Temporisateur avant de choisir une nouvelle cible de promenade.
     private int wanderTimer = 0;
@@ -144,10 +150,12 @@ public class EnemyUnit {
         // L'ordre compte:
         // 1) la fuite peut annuler une cible,
         // 2) la recherche peut réserver une culture libre,
-        // 3) le déplacement rapproche le lapin de sa case,
-        // 4) puis seulement on déclenche l'attente avant consommation.
+        // 3) au bout de 30 s sans rien trouver, le lapin repart,
+        // 4) le déplacement rapproche ensuite le lapin de sa cible,
+        // 5) puis seulement on déclenche l'attente avant consommation.
         handleFleeTrigger(enemyModel, player);
         updateCultureTarget(enemyModel, grilleCulture);
+        updateBurrowReturnState(enemyModel);
         ensureValidTarget(player);
         updateNavigationState();
         moveTowardTarget();
@@ -176,6 +184,8 @@ public class EnemyUnit {
 
         if (player.isInInfluenceZone((int) x, (int) y)) {
             isFleeing = true;
+            isReturningToBurrow = false;
+            noCultureFoundStartTime = -1L;
             // Si le joueur fait fuir le lapin, la culture redevient immédiatement disponible
             // pour un autre lapin et le délai avant consommation est perdu.
             clearCultureTarget(enemyModel);
@@ -196,8 +206,13 @@ public class EnemyUnit {
             return;
         }
 
-        if (isFleeing && player != null) {
+        if (isReturningToBurrow) {
+            updateBurrowReturnTarget();
+        } else if (isFleeing && player != null) {
             updateFleeTarget(player);
+        } else if (isFleeing) {
+            // Si le joueur n'est plus disponible, on garde au moins une sortie de secours hors carte.
+            updateBurrowReturnTarget();
         } else {
             pickNewTarget();
         }
@@ -213,13 +228,13 @@ public class EnemyUnit {
         if (!isInsideMap) {
             if (x >= -halfFieldWidth && x <= halfFieldWidth && y >= -halfFieldHeight && y <= halfFieldHeight) {
                 isInsideMap = true;
-            } else if (!isFleeing && random.nextInt(90) == 0) {
+            } else if (!isLeavingMap() && random.nextInt(90) == 0) {
                 pickFieldEntryTarget();
             }
             return;
         }
 
-        if (!isFleeing) {
+        if (!isLeavingMap()) {
             if (hasCultureTarget()) {
                 return;
             }
@@ -239,7 +254,7 @@ public class EnemyUnit {
         double dx = targetX - x;
         double dy = targetY - y;
         double distance = Math.sqrt(dx * dx + dy * dy);
-        double currentSpeed = isFleeing ? 3.0 : 1.5;
+        double currentSpeed = isActivelyLeavingMap() ? 3.0 : 1.5;
 
         if (distance > 0.0001) {
             double step = Math.min(currentSpeed, distance);
@@ -249,7 +264,7 @@ public class EnemyUnit {
             return;
         }
 
-        if (hasCultureTarget() || isFleeing) {
+        if (hasCultureTarget() || isActivelyLeavingMap()) {
             return;
         }
 
@@ -288,6 +303,8 @@ public class EnemyUnit {
         } else if (hasCultureTarget()) {
             targetX = getCultureCenterX(targetCultureGridX);
             targetY = getCultureCenterY(targetCultureGridY);
+        } else if (isReturningToBurrow) {
+            updateBurrowReturnTarget();
         } else {
             pickNewTarget();
         }
@@ -295,10 +312,10 @@ public class EnemyUnit {
     }
 
     /**
-     * Marque l'ennemi comme "fui" lorsqu'il a quitté la zone de jeu pendant une fuite.
+     * Marque l'ennemi comme "sorti" lorsqu'il a quitté la zone de jeu.
      */
     private void updateFledStatus() {
-        if (!isFleeing) {
+        if (!isActivelyLeavingMap()) {
             return;
         }
 
@@ -385,7 +402,35 @@ public class EnemyUnit {
             targetX = getCultureCenterX(bestGridX);
             targetY = getCultureCenterY(bestGridY);
             cultureWaitStartTime = -1L;
+            noCultureFoundStartTime = -1L;
         }
+    }
+
+    /**
+     * Lance le retour au terrier si le lapin n'a trouvé aucune culture pendant 30 secondes.
+     */
+    private void updateBurrowReturnState(EnemyModel enemyModel) {
+        if (isFleeing || isReturningToBurrow) {
+            noCultureFoundStartTime = -1L;
+            return;
+        }
+
+        if (hasCultureTarget()) {
+            noCultureFoundStartTime = -1L;
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        if (noCultureFoundStartTime < 0L) {
+            noCultureFoundStartTime = now;
+            return;
+        }
+
+        if ((now - noCultureFoundStartTime) < DELAI_RETOUR_TERRIER_MS) {
+            return;
+        }
+
+        startBurrowReturn(enemyModel);
     }
 
     /**
@@ -433,7 +478,9 @@ public class EnemyUnit {
             hasFled = true;
             return;
         }
-        if (!isFleeing) {
+        if (isReturningToBurrow) {
+            updateBurrowReturnTarget();
+        } else if (!isFleeing) {
             pickNewTarget();
         }
     }
@@ -552,6 +599,52 @@ public class EnemyUnit {
     }
 
     /**
+     * Bascule le lapin dans un retour simple vers l'extérieur de la carte.
+     */
+    private void startBurrowReturn(EnemyModel enemyModel) {
+        isReturningToBurrow = true;
+        clearCultureTarget(enemyModel);
+        updateBurrowReturnTarget();
+    }
+
+    /**
+     * Le terrier étant hors carte pour le jeu, on vise juste le bord visible le plus proche.
+     */
+    private void updateBurrowReturnTarget() {
+        int halfWidth = viewportWidth / 2;
+        int halfHeight = viewportHeight / 2;
+        int exitOffset = 140;
+
+        double distanceToLeft = Math.abs(x + halfWidth);
+        double distanceToRight = Math.abs(halfWidth - x);
+        double distanceToTop = Math.abs(y + halfHeight);
+        double distanceToBottom = Math.abs(halfHeight - y);
+
+        if (distanceToLeft <= distanceToRight
+            && distanceToLeft <= distanceToTop
+            && distanceToLeft <= distanceToBottom) {
+            targetX = -halfWidth - exitOffset;
+            targetY = y;
+            return;
+        }
+
+        if (distanceToRight <= distanceToTop && distanceToRight <= distanceToBottom) {
+            targetX = halfWidth + exitOffset;
+            targetY = y;
+            return;
+        }
+
+        if (distanceToTop <= distanceToBottom) {
+            targetX = x;
+            targetY = -halfHeight - exitOffset;
+            return;
+        }
+
+        targetX = x;
+        targetY = halfHeight + exitOffset;
+    }
+
+    /**
      * Permet de choisir une nouvelle destination proche dans le champ pour garder un déplacement naturel.
      */
     private void pickNewTarget() {
@@ -618,7 +711,6 @@ public class EnemyUnit {
 
     /**
      * Choisit une direction libre proche de la direction voulue.
-     * En fuite, on garde la cible lointaine; hors fuite, on publie un petit détour local.
      */
     private void redirectAroundBarn(double desiredStepX, double desiredStepY, double speed) {
         double desiredAngle = Math.atan2(desiredStepY, desiredStepX);
@@ -645,12 +737,26 @@ public class EnemyUnit {
                     preferredTurnSign = -1;
                 }
 
-                if (!isFleeing && !hasCultureTarget()) {
+                if (!isLeavingMap() && !hasCultureTarget()) {
                     setDetourTarget(angle);
                 }
                 return;
             }
         }
+    }
+
+    /**
+     * Indique si le lapin est dans un comportement de sortie de carte.
+     */
+    private boolean isLeavingMap() {
+        return isFleeing || isReturningToBurrow;
+    }
+
+    /**
+     * Pendant le retour au terrier, une culture mûre peut encore interrompre la sortie.
+     */
+    private boolean isActivelyLeavingMap() {
+        return isFleeing || (isReturningToBurrow && !hasCultureTarget());
     }
 
     private boolean canOccupy(double centerX, double centerY) {
@@ -672,7 +778,7 @@ public class EnemyUnit {
     }
 
     /**
-     * Hors fuite, on garde un petit objectif local pour que le lapin poursuive son contournement
+     * Hors sortie de carte, on garde un petit objectif local pour que le lapin poursuive son contournement
      * au lieu de retenter immédiatement de traverser le mur.
      */
     private void setDetourTarget(double angle) {
