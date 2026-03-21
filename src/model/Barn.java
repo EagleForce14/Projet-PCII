@@ -49,7 +49,7 @@ public class Barn {
     }
 
     /**
-     * Indique si une entité peut occuper librement une position centrée donnée.
+     * Vérifie qu'une entité centrée sur la position donnée ne touche pas la grange.
      */
     public static boolean canOccupyCenteredBox(double centerX, double centerY, int width, int height) {
         return !collidesWithCenteredBox(centerX, centerY, width, height);
