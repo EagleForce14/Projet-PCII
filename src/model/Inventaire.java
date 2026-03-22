@@ -135,8 +135,13 @@ public class Inventaire {
     public boolean estVide() {
         return graines.isEmpty() && installations.isEmpty();
     }
-        
 
-    
-
+    /** Méthode qui vérifie si le joueur possède une graine donnée
+     * @param type : le type de la graine à vérifier
+     * @return boolean : true si le joueur possède la graine, false sinon
+     */
+    public boolean possedeGraine(Type type) {
+        return graines.containsKey(type) && graines.get(type) > 0;
+    }
 }
+

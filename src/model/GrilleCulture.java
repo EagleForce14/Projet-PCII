@@ -96,7 +96,7 @@ public class GrilleCulture {
 
     /** Méthode qui plante une culture dans la grille */
     public void planterCulture(int x, int y, Type type, Inventaire inventaire) {
-        if (inventaire.estVide()){
+        if (!inventaire.possedeGraine(type)) {
             throw new IllegalStateException("L'inventaire est vide. Vous ne pouvez pas planter une culture. veuillez acheter des graines dans la boutique.");
         }
         if (estDansGrille(x, y)) {
