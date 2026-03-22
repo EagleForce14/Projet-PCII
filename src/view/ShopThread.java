@@ -131,7 +131,6 @@ public class ShopThread extends Thread {
      * Affichage du contenu du panier
      *
      * **/
-
     private void afficherPanier() {
         System.out.println("Panier : ");
         for (CartItem item : shop.getShoppingCard()) {
@@ -155,7 +154,7 @@ public class ShopThread extends Thread {
         if (reponse.equals("oui")) {
             run(); // relance le processus d'achat
         } else {
-            if (shop.buyProducts(playerMoney,inventaire)) {;
+            if (shop.buyProducts(playerMoney,inventaire)) {
                 System.out.println("merci pour votre achat ! Votre solde actuel est de " + playerMoney.getAmount() + "€");
                 inventaire.afficherInventaire();
                 // on ferme la boutique et on retourne au jeu

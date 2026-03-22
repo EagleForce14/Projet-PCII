@@ -29,7 +29,6 @@ public class MovementModel {
         units.add(unit);
     }
 
-
     // Définit l'unité spécifique qui sera contrôlée par le joueur
     public void setPlayerUnit(Unit unit) {
         this.playerUnit = unit;
