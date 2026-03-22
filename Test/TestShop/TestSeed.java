@@ -1,90 +1,64 @@
-/*package TestShop;
+package TestShop;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import static org.junit.jupiter.api.Assertions.*;
 
 import model.Seed;
-
-
-
-
+import model.Type;
 
 public class TestSeed{
 
     private Seed tulipe;
     private Seed rose;
+    private Seed carotte;
 
     @BeforeEach
     public void setUp() {
-        tulipe = new Seed("Tulipe", 8, 100, 16, Seed.SeedType.FLOWER);
-        rose = new Seed("Rose", 10, 100, 20, Seed.SeedType.FLOWER); 
+        tulipe = new Seed("Tulipe", 8, 100, Type.TULIPE);
+        rose = new Seed("Rose", 10, 100, Type.ROSE);
+        carotte = new Seed("Carotte", 5, 50, Type.CAROTTE);
     }
 
-    // teste de la récupération du prix de vente de la culture une fois récoltée
     @Test
-    public void testGetPrixDeVente() {
-        assertEquals(16, tulipe.getPrixDeVente());
-        assertEquals(20, rose.getPrixDeVente());
-    }
-
-    // teste de la récupération du type de la graine (fleur ou légume)
-    @Test
-    public void testGetType() {
-        assertEquals(Seed.SeedType.FLOWER, tulipe.getType());
-        assertEquals(Seed.SeedType.FLOWER, rose.getType());
-    }
-
-    // teste de la modification du prix de vente de la culture une fois récoltée
-    @Test
-    public void testSetPrixDeVente() {
-        tulipe.setPrixDeVente(18);
-        rose.setPrixDeVente(22);
-        assertEquals(18, tulipe.getPrixDeVente());
-        assertEquals(22, rose.getPrixDeVente());
-    }
-
-    //teste de la récupération du nom de la graine
-    @Test
-    public void testGetName() {
+    public void testGetters() {
         assertEquals("Tulipe", tulipe.getName());
-        assertEquals("Rose", rose.getName());
-    }
-
-    //teste de la récupération du prix de la graine
-    @Test
-    public void testGetPrice() {    
         assertEquals(8, tulipe.getPrice());
-        assertEquals(10, rose.getPrice());
-    }
-
-    //teste de la récupération de la quantité de la graine
-    @Test
-    public void testGetQuantity() {
         assertEquals(100, tulipe.getQuantity());
+
+        assertEquals("Rose", rose.getName());
+        assertEquals(10, rose.getPrice());
         assertEquals(100, rose.getQuantity());
+
+        assertEquals("Carotte", carotte.getName());
+        assertEquals(5, carotte.getPrice());
+        assertEquals(50, carotte.getQuantity());
     }
 
-    //teste de la modification du prix de la graine
     @Test
-    public void testSetPrice() {
+    public void testGetTypeAndCategory() {
+        assertEquals(Type.TULIPE, tulipe.getType());
+        assertTrue(tulipe.isFleur());
+        assertFalse(tulipe.isLegume());
+
+        assertEquals(Type.ROSE, rose.getType());
+        assertTrue(rose.isFleur());
+        assertFalse(rose.isLegume());
+
+        assertEquals(Type.CAROTTE, carotte.getType());
+        assertTrue(carotte.isLegume());
+        assertFalse(carotte.isFleur());
+    }
+
+    @Test
+    public void testSetters() {
         tulipe.setPrice(9);
-        rose.setPrice(11);
-        assertEquals(9, tulipe.getPrice());
-        assertEquals(11, rose.getPrice());
-    }
-
-    //teste de la modification de la quantité de la graine
-    @Test
-    public void testSetQuantity() {
         tulipe.setQuantity(90);
-        rose.setQuantity(90);
+        assertEquals(9, tulipe.getPrice());
         assertEquals(90, tulipe.getQuantity());
-        assertEquals(90, rose.getQuantity());
+
+        carotte.setPrice(6);
+        carotte.setQuantity(60);
+        assertEquals(6, carotte.getPrice());
+        assertEquals(60, carotte.getQuantity());
     }
-
-    
-    
-
-
 }
-*/

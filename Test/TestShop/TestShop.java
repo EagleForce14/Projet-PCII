@@ -1,101 +1,126 @@
-/*package TestShop;
+import model.Facility;
+import model.FacilityType;
 import model.Inventaire;
 import model.Money;
+import model.Seed;
 import model.Shop;
-import model.Inventaire;
-import org.junit.jupiter.api.Assertions;
+import model.Type;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestShop {
 
-    Shop shop;
-    Money money;
-    Invenaire inventaire;
+    private Shop shop;
+    private Money money;
+    private Inventaire inventaire;
 
     @BeforeEach
-    public void setUp() {
-        shop = new Shop(inventaire);
-        money = new Money(100);
+    void setUp() {
+        shop = new Shop();
+        money = new Money(200);
+        inventaire = new Inventaire();
     }
 
-    //teste de la récupération de la liste des graines disponibles dans le magasin
     @Test
-    public void testGetSeeds() {
-        Assertions.assertNotNull(shop.getSeeds());
-        // on a initialisé 3 graines dans le constructeur de la classe Shop
-        Assertions.assertEquals(3, shop.getSeeds().size());
+    void testGetSeedsInitialisesDeuxGraines() {
+        assertNotNull(shop.getSeeds());
+        assertEquals(2, shop.getSeeds().size());
+        assertEquals("Tulipe", shop.getSeeds().get(0).getName());
+        assertEquals(100, shop.getSeeds().get(0).getQuantity());
+        assertEquals(Type.TULIPE, shop.getSeeds().get(0).getType());
     }
 
-    //teste de la récupération de la liste des installations disponibles dans le magasin
     @Test
-    public void testGetFacilities() {
-        Assertions.assertNotNull(shop.getFacilities());
-        Assertions.assertEquals(3, shop.getFacilities().size());
+    void testGetFacilitiesInitialisesTroisInstallations() {
+        assertNotNull(shop.getFacilities());
+        assertEquals(3, shop.getFacilities().size());
+        assertEquals(FacilityType.CLOTURE, shop.getFacilities().get(0).getType());
+        assertEquals(20, shop.getFacilities().get(0).getQuantity());
     }
 
-    //teste de la récupération de la liste des produits que le joueur souhaite acheter
     @Test
-    public void testGetShoppingCard() {
-        Assertions.assertNotNull(shop.getShoppingCard());
-        Assertions.assertEquals(0, shop.getShoppingCard().size());
+    void testShoppingCardCommenceVide() {
+        assertNotNull(shop.getShoppingCard());
+        assertEquals(0, shop.getShoppingCard().size());
+        assertEquals(0, shop.getShoppingCardTotalPrice());
     }
 
-    //teste de l'ajout d'un produit à la liste des produits que le joueur souhaite acheter
     @Test
-    public void testAddToShoppingCard() {
-        shop.addToShoppingCard(shop.getSeeds().get(0),1);
-        shop.addToShoppingCard(shop.getFacilities().get(0),1);
-        Assertions.assertEquals(2, shop.getShoppingCard().size());
-        Assertions.assertEquals(1,shop.getSeeds().get(0).getQuantity());
-        Assertions.assertEquals(1,shop.getFacilities().get(0).getQuantity());
+    void testAddToShoppingCardAjouteSansChangerLeStock() {
+        Seed tulipe = shop.getSeeds().get(0);
+        Facility cloture = shop.getFacilities().get(0);
+
+        assertTrue(shop.addToShoppingCard(tulipe, 2));
+        assertTrue(shop.addToShoppingCard(cloture, 1));
+
+        assertEquals(2, shop.getShoppingCard().size());
+        assertEquals(100, tulipe.getQuantity()); // le stock n'est pas décrémenté avant achat
+        assertEquals(20, cloture.getQuantity());
+        assertEquals(66, shop.getShoppingCardTotalPrice()); // 2*8 + 1*50
     }
 
-    //teste du retrait d'un produit de la liste des produits que le joueur souhaite acheter
     @Test
-    public void testRemoveFromShoppingCard() {
-        shop.addToShoppingCard(shop.getSeeds().get(0),1);
-        shop.removeFromShoppingCard(shop.getSeeds().get(0));
-        Assertions.assertEquals(0, shop.getShoppingCard().size());
+    void testAddToShoppingCardRefuseQuantiteSuperieureAuStock() {
+        Facility jardinier = shop.getFacilities().get(2); // stock 10
+        assertFalse(shop.addToShoppingCard(jardinier, 15));
+        assertEquals(0, shop.getShoppingCard().size());
     }
 
-    //teste du vidage de la liste des produits que le joueur souhaite acheter
     @Test
-    public void testClearShoppingCard() {
-        shop.addToShoppingCard(shop.getSeeds().get(0),4);
-        shop.clearShoppingCard();
-        Assertions.assertEquals(0, shop.getShoppingCard().size());
-    }   
+    void testRemoveFromShoppingCardRetirePartiellementPuisCompletement() {
+        Seed tulipe = shop.getSeeds().get(0);
+        shop.addToShoppingCard(tulipe, 3);
 
-     //teste de l'achat des produits du panier
-     @Test
-     public void testBuyProducts() {
-        // on ajoute un produit au panier et on achète les produits du panier
-        // ajout de graine de tulipe au panier
-        shop.addToShoppingCard(shop.getSeeds().get(0),1);
-        shop.buyProducts(money);
+        shop.removeFromShoppingCard(tulipe, 1);
+        assertEquals(1, shop.getShoppingCard().size());
+        assertEquals(2, shop.getShoppingCard().get(0).getQuantity());
 
-        // on vérifie que l'argent du joueur a été mis à jour et que le panier est vide
-        Assertions.assertEquals(new Money(90),  money); 
-        Assertions.assertEquals(0, shop.getShoppingCard().size());
+        shop.removeFromShoppingCard(tulipe, 2);
+        assertEquals(0, shop.getShoppingCard().size());
+    }
 
+    @Test
+    void testClearShoppingCardVideLePanier() {
         shop.addToShoppingCard(shop.getSeeds().get(0), 2);
-        shop.addToShoppingCard(shop.getSeeds().get(1), 1);
         shop.addToShoppingCard(shop.getFacilities().get(0), 1);
-        shop.buyProducts(money);
-        Assertions.assertEquals(new Money(12),     money);
-        Assertions.assertEquals(0, shop.getShoppingCard().size());
+        shop.clearShoppingCard();
+        assertEquals(0, shop.getShoppingCard().size());
+        assertEquals(0, shop.getShoppingCardTotalPrice());
+    }
 
-        // cas d'achat échoué : le joueur n'a pas assez d'argent pour acheter les produits du panier
-        shop.addToShoppingCard(shop.getFacilities().get(2), 1);
-        shop.buyProducts(money);
-        Assertions.assertEquals(new Money(12), money);
-        Assertions.assertEquals(1, shop.getShoppingCard().size());
-     }
+    @Test
+    void testBuyProductsReussiMetAJourArgentStockEtInventaire() {
+        Seed tulipe = shop.getSeeds().get(0); // prix 8, stock 100
+        Facility cloture = shop.getFacilities().get(0); // prix 50, stock 20
 
-    
+        shop.addToShoppingCard(tulipe, 2); // 16
+        shop.addToShoppingCard(cloture, 1); // +50 => 66
 
+        boolean resultat = shop.buyProducts(money, inventaire);
 
+        assertTrue(resultat);
+        assertEquals(new Money(134), money); // 200 - 66
+        assertEquals(0, shop.getShoppingCard().size());
+        assertEquals(98, tulipe.getQuantity());
+        assertEquals(19, cloture.getQuantity());
+        assertEquals(2, inventaire.getGraines().get(Type.TULIPE));
+        assertEquals(1, inventaire.getInstallations().get(FacilityType.CLOTURE));
+    }
+
+    @Test
+    void testBuyProductsEchoueSiArgentInsuffisant() {
+        money = new Money(20);
+        Facility jardinier = shop.getFacilities().get(2); // prix 100, stock 10
+
+        shop.addToShoppingCard(jardinier, 1);
+        boolean resultat = shop.buyProducts(money, inventaire);
+
+        assertFalse(resultat);
+        assertEquals(new Money(20), money); // pas de débit
+        assertEquals(1, shop.getShoppingCard().size()); // panier intact
+        assertEquals(10, jardinier.getQuantity()); // stock intact
+        assertTrue(inventaire.getInstallations().isEmpty());
+    }
 }
-*/

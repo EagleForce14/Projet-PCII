@@ -117,14 +117,15 @@ public class Shop {
      * une méthode pour retirer un produit de la liste des produits que le joueur souhaite acheter
      *
      * @param product : le produit que le joueur souhaite retirer
-     * @param quantité : la quantité du produit que le joueur souhaite retirer
+     * @param quantite : la quantité du produit que le joueur souhaite retirer
      **/
 
-    public void removeFromShoppingCard(Product product,int quantité) {
-        for (CartItem item : shoppingCard) {
+    public void removeFromShoppingCard(Product product,int quantite) {
+        // Itérer sur une copie pour éviter ConcurrentModificationException si on supprime directement
+        for (CartItem item : new ArrayList<>(shoppingCard)) {
             if (item.getProduct().getName().equals(product.getName())) {
-                if (item.getQuantity() > quantité) {
-                    item.quantity -= quantité;
+                if (item.getQuantity() > quantite) {
+                    item.quantity -= quantite;
                 } else {
                     shoppingCard.remove(item);
                 }

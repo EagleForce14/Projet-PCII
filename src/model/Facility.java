@@ -29,6 +29,14 @@ public class Facility extends Product {
         return type;
     }
 
+    @Override
+    public String getName() {
+        return super.getName();
+    }
 
+    @Override
+    public boolean equals(Object obj) {
+        return super.equals(obj);
+    }
     // pas de setter pour type car inchangeable
 }

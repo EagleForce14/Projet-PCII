@@ -1,79 +1,54 @@
-/*package TestShop;
+package TestShop;
+
 import model.Facility;
+import model.FacilityType;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
 import static org.junit.jupiter.api.Assertions.*;
+
 
 public class TestFacility {
 
-    private Facility cloture;
-    private Facility engrais;
-    private Facility jardinier;
-
-    @BeforeEach
-    public void setUp() {
-        cloture = new Facility("Cloture", 50, 20, Facility.FacilityType.FENCE);
-        engrais = new Facility("Engrais", 30, 50, Facility.FacilityType.FERTILIZER);
-        jardinier = new Facility("Jardinier", 100, 10, Facility.FacilityType.GARDENER);
-    }
-
-    //teste de la récupération du nom de l'installation
-    @Test   
-    public void testGetName() {
-
-        assertEquals("Cloture", cloture.getName());
-        assertEquals("Engrais", engrais.getName());
-        assertEquals("Jardinier", jardinier.getName());
-    }
-
-    //teste de la récupération du type de l'installation
     @Test
-    public void testGetType() {
-        assertEquals(Facility.FacilityType.FENCE, cloture.getType());
-        assertEquals(Facility.FacilityType.FERTILIZER, engrais.getType());
-        assertEquals(Facility.FacilityType.GARDENER, jardinier.getType());
+    public void constructeurEtGetters() {
+        Facility f = new Facility("Cloture", 50, 20, FacilityType.CLOTURE);
+        assertEquals("Cloture", f.getName());
+        assertEquals(50, f.getPrice());
+        assertEquals(20, f.getQuantity());
+        assertEquals(FacilityType.CLOTURE, f.getType());
     }
 
-    //teste de la récupération du prix de l'installation
     @Test
-    public void testGetPrice() {
-        assertEquals(50, cloture.getPrice());
-        assertEquals(30, engrais.getPrice());
-        assertEquals(100, jardinier.getPrice());
+    public void settersMettreAJour() {
+        Facility f = new Facility("Engrais", 30, 50, FacilityType.ENGRAIS);
+        f.setPrice(45);
+        f.setQuantity(80);
+        assertEquals(45, f.getPrice());
+        assertEquals(80, f.getQuantity());
     }
-    
-    //teste de la récupération de la quantité de l'installation
+
     @Test
-    public void testGetQuantity() {
-        assertEquals(20, cloture.getQuantity());
-        assertEquals(50, engrais.getQuantity());
-        assertEquals(10, jardinier.getQuantity());
+    public void settersAcceptentValeursNegatives() {
+        Facility f = new Facility("Test", 10, 5, FacilityType.JARDINIER);
+        f.setPrice(-1);
+        f.setQuantity(-3);
+        assertEquals(-1, f.getPrice());
+        assertEquals(-3, f.getQuantity());
     }
 
-    // teste de la modification du prix de l'installation
     @Test
-    public void testSetPrice() {
-        cloture.setPrice(60);
-        engrais.setPrice(40);
-        jardinier.setPrice(110);
-        assertEquals(60, cloture.getPrice());
-        assertEquals(40, engrais.getPrice());
-        assertEquals(110, jardinier.getPrice());
+    public void typeResteImmuable() {
+        Facility f = new Facility("Cloture", 50, 20, FacilityType.CLOTURE);
+        f.setPrice(60);
+        f.setQuantity(25);
+        assertEquals(FacilityType.CLOTURE, f.getType());
     }
 
-    //teste de la modification de la quantité de l'installation
     @Test
-    public void testSetQuantity() {
-        cloture.setQuantity(25);
-        engrais.setQuantity(55);
-        jardinier.setQuantity(15);
-        assertEquals(25, cloture.getQuantity());
-        assertEquals(55, engrais.getQuantity());
-        assertEquals(15, jardinier.getQuantity());
+    public void equalsEstReferenceOnly() {
+        Facility f1 = new Facility("Cloture", 50, 20, FacilityType.CLOTURE);
+        Facility f2 = new Facility("Cloture", 50, 20, FacilityType.CLOTURE);
+        Facility f3 = f1;
+        assertNotEquals(f1, f2);   // objets distincts
+        assertEquals(f1, f3);      // même instance
     }
-
-
-
-
 }
-*/

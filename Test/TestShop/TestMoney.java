@@ -1,4 +1,4 @@
-/*package TestShop;
+package TestShop;
 
 import model.Money;
 import org.junit.jupiter.api.Assertions;
@@ -35,4 +35,3 @@ public class TestMoney {
         Assertions.assertEquals(70, money.getAmount());
     }
 }
-*/
