@@ -11,6 +11,7 @@ public class PhysicsThread extends Thread {
         this.movementModel = model;
     }
 
+    // La méthode principale du thread
     @Override
     public void run() {
         while (true) {

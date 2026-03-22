@@ -21,6 +21,7 @@ public class TopBarPanel extends JPanel {
     private final JLabel moneyLabel;
     private Jour jour;
 
+    // Le constructeur de la classe
     public TopBarPanel(Money playerMoney) {
         this.playerMoney = playerMoney;
         this.jour = new Jour();

@@ -11,6 +11,7 @@ public class EnemyPhysicsThread extends Thread {
         this.enemyModel = enemyModel;
     }
 
+    // La méthode principale du thread
     @Override
     public void run() {
         while (true) {

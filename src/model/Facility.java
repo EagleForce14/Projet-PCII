@@ -1,14 +1,12 @@
 package model;
 
+/**
+ * Classe représentant une installation du jeu.
+ * Les installations peuvent Des clôtures, des graine ou des jardiniers.
+ * Chaque installation a un nom, un prix et une quantité et un type (cloture, engrais ou jardinier).
+ *
+ **/
 public class Facility extends Product {
-    /**
-     * Classe représentant une installation du jeu.
-     * Les installations peuvent Des clôtures, des graine ou des jardiniers.
-     * Chaque installation a un nom, un prix et une quantité et un type (cloture, engrais ou jardinier).
-     *
-     **/
-
-
     // atttributs propres à une installation 
     private final FacilityType type; // type  (jardinier, cloture, engrais)
 

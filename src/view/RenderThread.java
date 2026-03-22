@@ -7,6 +7,7 @@ import java.awt.Component;
  * Il demande à la vue de se redessiner à intervalle régulier.
  */
 public class RenderThread extends Thread {
+    // Permet de savoir quel élément graphique doit être redessiné.
     private final Component component;
     private volatile boolean running = true;
     private final int DELAY = 16; // ~60 FPS
@@ -15,6 +16,7 @@ public class RenderThread extends Thread {
         this.component = component;
     }
 
+    // La méthode principale du thread
     @Override
     public void run() {
         while (running) {

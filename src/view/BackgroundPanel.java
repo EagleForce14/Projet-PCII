@@ -4,7 +4,9 @@ import javax.swing.JPanel;
 import java.awt.Graphics;
 import java.awt.Image;
 
+// Classe permettant d'afficher une image en arrière-plan de la fenêtre.
 public class BackgroundPanel extends JPanel {
+    // On définit une constante indiquant le facteur de zoom dans l'image.
     private static final double BACKGROUND_ZOOM = 1.035;
 
     private final Image backgroundImage;
