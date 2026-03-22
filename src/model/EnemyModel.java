@@ -126,9 +126,4 @@ public class EnemyModel {
     public List<EnemyUnit> getEnemyUnits() {
         return enemies;
     }
-    
-    public int getViewportWidth() { return viewportWidth; }
-    public int getViewportHeight() { return viewportHeight; }
-    public int getFieldWidth() { return fieldWidth; }
-    public int getFieldHeight() { return fieldHeight; }
 }

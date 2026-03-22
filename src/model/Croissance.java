@@ -18,9 +18,6 @@ public class Croissance extends Thread {
     /** Attribut représentant l'état actif du thread de croissance */
     private volatile boolean actif = true;
 
-    /** Attribut représentant l'instant de départ du stade courant */
-    private long debutStadeMs;
-
     /** Constructeur de la classe Croissance qui prend en argument la culture à gérer */
     public Croissance(Culture culture) {
         this.culture = culture;
@@ -56,7 +53,8 @@ public class Croissance extends Thread {
     /** Méthode run qui gère la croissance de la culture en fonction du temps */
     @Override
     public void run() {
-        debutStadeMs = System.currentTimeMillis();
+        // Attribut représentant l'instant de départ du stade courant
+        long debutStadeMs = System.currentTimeMillis();
 
         while (actif) {
             try {

@@ -98,7 +98,7 @@ public class Main {
         contentPanel.add(actionSidebarPanel, BorderLayout.EAST);
         frame.setContentPane(contentPanel);
 
-        new MovementController(model, movementView, actionSidebarPanel, grilleCulture, playerMoney , shop, inventaire);
+        new MovementController(model, movementView, enemyView, actionSidebarPanel, grilleCulture, playerMoney , shop, inventaire);
 
         frame.pack();
         frame.setLocationRelativeTo(null);

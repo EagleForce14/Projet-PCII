@@ -35,7 +35,7 @@ public class GrilleCulture {
         Type.COURGETTE, 28
     );
 
-    /** Constante représentant le delai de croissance de chaque culture */
+    /** SERA UTILISE PROCHAINEMENT. Constante représentant le delai de croissance de chaque culture */
     public static final Map<Type, Integer> DELAI_CROISSANCE_CULTURES = Map.of(
         Type.TULIPE, 5,
         Type.ROSE, 5,
@@ -66,11 +66,6 @@ public class GrilleCulture {
         }
     }
 
-    /** Fonction qui renvoie le prix d'achat d'une culture */
-    public static int getPrixAchat(Type type) {
-        return PRIX_ACHAT_CULTURES.get(type);
-    }
-
     /** Fonction qui renvoie le prix de vente d'une culture */
     public static int getPrixVente(Type type) {
         return PRIX_VENTE_CULTURES.get(type);
@@ -84,14 +79,6 @@ public class GrilleCulture {
     /** Getter qui renvoie la hauteur logique de la grille. */
     public int getHauteur() {
         return HAUTEUR_GRILLE;
-    }
-
-    /** Getter qui renvoie la zone de culture a une position donnee. */
-    public ZoneCulture getZoneCulture(int x, int y) {
-        if (estDansGrille(x, y)) {
-            return grille[x][y];
-        }
-        return null;
     }
 
     /** Méthode qui plante une culture dans la grille */

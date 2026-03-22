@@ -4,6 +4,8 @@ import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 
 import javax.swing.JButton;
 import model.*;
@@ -12,25 +14,29 @@ import view.*;
 /**
  * Le contrôleur chargé de gérer les intéractions.
  */
-public class MovementController implements KeyListener {
+public class MovementController implements KeyListener, MouseListener {
     private final MovementModel model;
     private final GrilleCulture grilleCulture;
     private final Money playerMoney;
     private final Shop shop;
     private final Inventaire inventaire;
+    private final MovementView movementView;
+    private final EnemyView enemyView;
     private ShopThread shopThread;
 
     // Constructeur de la classe
-
-    public MovementController(MovementModel model, MovementView view, SidebarPanel sidebarPanel,
+    public MovementController(MovementModel model, MovementView view, EnemyView enemyView, SidebarPanel sidebarPanel,
                               GrilleCulture grilleCulture, Money playerMoney, Shop shop, Inventaire inventaire) {
         this.model = model;
         this.grilleCulture = grilleCulture;
         this.playerMoney = playerMoney;
         this.shop = shop;
         this.inventaire = inventaire;
+        this.movementView = view;
+        this.enemyView = enemyView;
         // On s'abonne aux événements clavier.
         view.addKeyListener(this);
+        enemyView.addMouseListener(this);
 
         JButton plantButton = sidebarPanel.getPlantButton();
         plantButton.addActionListener(this::planterSurCaseActive);
@@ -177,4 +183,24 @@ public class MovementController implements KeyListener {
 
     @Override
     public void keyTyped(KeyEvent e) {}
+
+    @Override
+    public void mouseClicked(MouseEvent e) {}
+
+    @Override
+    public void mousePressed(MouseEvent e) {
+        enemyView.selectEnemyAt(e.getPoint());
+        // On rend immédiatement le focus au panneau de déplacement
+        // pour que les flèches continuent de répondre après un clic souris.
+        movementView.requestFocusInWindow();
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {}
+
+    @Override
+    public void mouseEntered(MouseEvent e) {}
+
+    @Override
+    public void mouseExited(MouseEvent e) {}
 }

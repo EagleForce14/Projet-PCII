@@ -2,7 +2,7 @@ package model;
 
 import java.awt.Rectangle;
 
-/** EN COURS
+/**
  * Représente la grange, un obstacle fixe situé en haut du champ.
  * Les entités (Unité, Ennemis) ne peuvent pas la traverser.
  */

@@ -22,20 +22,13 @@ import java.awt.Point;
 public class SidebarPanel extends JPanel {
     public static final int SIDEBAR_WIDTH = 320;
     private static final int ACTIONS_CONTENT_HEIGHT = 230;
-
     // Le chemin pour accéder à la police personnalisée
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
-
     // On référence au modèle car la vue lit uniquement un état booléen d'activation.
     private final MovementModel movementModel;
     private final GrilleCulture grilleCulture;
-    private final Shop shop;
-    private final Inventaire inventaire;
-
-
     // Texture de fond en bois (chargée via la classe utilitaire du projet).
     private final Image woodBackground;
-
     // Les 4 boutons de contrôle des actions des unités déplaçables.
     private final JButton plantButton;
     private final JButton harvestButton;
@@ -54,8 +47,6 @@ public class SidebarPanel extends JPanel {
     public SidebarPanel(MovementModel movementModel, GrilleCulture grilleCulture, Shop shop, Inventaire inventaire) {
         this.movementModel = movementModel;
         this.grilleCulture = grilleCulture;
-        this.shop = shop;
-        this.inventaire = inventaire;
         this.woodBackground = ImageLoader.load("/assets/bois.png");
 
         // Le panneau est transparent hors de sa zone peinte personnalisée.

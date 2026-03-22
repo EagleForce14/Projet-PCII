@@ -64,13 +64,6 @@ public class MovementModel {
     }
 
     /**
-     * Setter pour activer / désactiver les boutons.
-     */
-    public void setActionOverlayEnabled(boolean actionOverlayEnabled) {
-        this.actionOverlayEnabled = actionOverlayEnabled;
-    }
-
-    /**
      * Mémorise la case active du champ. Le contrôleur s'appuie dessus pour
      * déclencher les actions au bon endroit sans lire directement la vue.
      */

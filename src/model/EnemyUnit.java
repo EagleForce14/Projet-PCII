@@ -4,11 +4,18 @@ import java.awt.Rectangle;
 import java.util.Random;
 
 /**
- * Représente un ennemi (IA ennemie).
+ * Classe représentant un lapin autonome.
+ * Son cycle de vie est toujours le même :
+ * apparition hors écran, entrée dans le champ, promenade, éventuelle recherche d'une culture,
+ * attente de 5 secondes sur la culture avant de manger, ou retour/fuite vers l'extérieur.
  */
 public class EnemyUnit {
+    // La taille de la zone de "sécurité" autour de la grange (on ne peut pas traverser cette zone i.e.
+    // on ne peut pas traverser la grange)
     private static final int HITBOX_SIZE = 20;
+    // Le rayon de détection d'une culture par un lapin
     private static final int CULTURE_DETECTION_RADIUS = 120;
+    // Le délai de 5s avant de manger la culture une fois que l'on est positionné dessus.
     private static final long DELAI_AVANT_MANGER_MS = 5000L;
     // Le délai de retour au terrier si le lapin n'a rien trouvé. Correspond à 30s
     private static final long DELAI_RETOUR_TERRIER_MS = 30000L;
@@ -95,7 +102,7 @@ public class EnemyUnit {
     }
     
     /**
-     * On fait apparaître l'unité ennemie aléatoirement en dehors des limites de la carte.
+     * Choisit un point de spawn hors écran et une première direction plausible vers le champ.
      */
     private void spawnOutside() {
         // On le place au milieu de la fenêtre
@@ -141,8 +148,11 @@ public class EnemyUnit {
     }
     
     /**
-     * On met à jour la position et le comportement du ennemi.
-     * @param player Le joueur (pour vérifier la zone d'influence)
+     * La méthode centrale
+     * Elle orchestre toute la frame dans un ordre précis pour éviter des états incohérents
+     * entre fuite, recherche de culture, retour au terrier et consommation.
+     *
+     * @param player joueur utilisé pour déclencher la fuite si le lapin entre dans sa zone d'influence
      */
     public synchronized void update(EnemyModel enemyModel, Unit player, GrilleCulture grilleCulture, int viewportWidth, int viewportHeight,
                                     int fieldWidth, int fieldHeight) {
@@ -165,7 +175,8 @@ public class EnemyUnit {
     }
 
     /**
-     * Met à jour les dimensions de référence utilisées par l'IA sur cette frame.
+     * Synchronise les dimensions de travail de l'IA des lapins avec la fenêtre réellement visible.
+     * Le lapin s'appuie ensuite sur ces valeurs pour choisir ses cibles et savoir quand il a quitté l'écran.
      */
     private void refreshDimensions(int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight) {
         this.viewportWidth = viewportWidth;
@@ -175,7 +186,8 @@ public class EnemyUnit {
     }
 
     /**
-     * Passe le lapin en état de fuite si le joueur entre dans sa zone d'influence.
+     * Déclenche la fuite si le lapin entre dans la zone d'influence du joueur.
+     * Cette méthode a priorité sur le reste : un lapin en fuite abandonne immédiatement sa culture et son déplacement normal.
      */
     private void handleFleeTrigger(EnemyModel enemyModel, Unit player) {
         if (player == null || isFleeing) {
@@ -194,7 +206,9 @@ public class EnemyUnit {
     }
 
     /**
-     * Garantit que la cible courante est valide; sinon, recalcule une cible adaptée à l'état.
+     * Vérifie que le lapin a toujours une destination exploitable.
+     * Si la cible est invalide, on en reconstruit une cohérente avec son état actuel
+     * (fuite, retour au terrier ou simple promenade).
      */
     private void ensureValidTarget(Unit player) {
         if (hasCultureTarget()) {
@@ -219,7 +233,9 @@ public class EnemyUnit {
     }
 
     /**
-     * Gère l'état de navigation: entrée dans le champ, puis promenade aléatoire hors fuite.
+     * Gère la phase de navigation "normale".
+     * Tant que le lapin n'est pas occupé à fuir ou à sortir, on le fait entrer dans le champ
+     * puis on lui donne de petites destinations de promenade pour éviter un mouvement robotique.
      */
     private void updateNavigationState() {
         int halfFieldWidth = fieldWidth / 2;
@@ -228,13 +244,13 @@ public class EnemyUnit {
         if (!isInsideMap) {
             if (x >= -halfFieldWidth && x <= halfFieldWidth && y >= -halfFieldHeight && y <= halfFieldHeight) {
                 isInsideMap = true;
-            } else if (!isLeavingMap() && random.nextInt(90) == 0) {
+            } else if (isLeavingMap() && random.nextInt(90) == 0) {
                 pickFieldEntryTarget();
             }
             return;
         }
 
-        if (!isLeavingMap()) {
+        if (isLeavingMap()) {
             if (hasCultureTarget()) {
                 return;
             }
@@ -248,7 +264,8 @@ public class EnemyUnit {
     }
 
     /**
-     * Calcule le pas de déplacement vers la cible et applique les collisions avec la grange.
+     * Transforme la cible actuelle en un petit pas de déplacement concret.
+     * C'est ici qu'on choisit aussi la vitesse normale ou la vitesse plus rapide de sortie.
      */
     private void moveTowardTarget() {
         double dx = targetX - x;
@@ -274,7 +291,8 @@ public class EnemyUnit {
     }
 
     /**
-     * Détecte un blocage (l'unité ennemie est quasi immobile) et force donc une relance de cible pour débloquer l'ennemi.
+     * Surveille les situations où le lapin semble coincé.
+     * Si son mouvement devient quasi nul pendant plusieurs frames, on relance une cible adaptée pour le débloquer.
      */
     private void updateStagnationAndRecover(Unit player) {
         if (hasCultureTarget() && cultureWaitStartTime >= 0L) {
@@ -312,7 +330,8 @@ public class EnemyUnit {
     }
 
     /**
-     * Marque l'ennemi comme "sorti" lorsqu'il a quitté la zone de jeu.
+     * Marque définitivement le lapin comme sorti quand il a réellement quitté l'écran.
+     * Le modèle pourra alors le retirer de la liste active.
      */
     private void updateFledStatus() {
         if (!isActivelyLeavingMap()) {
@@ -325,18 +344,10 @@ public class EnemyUnit {
             hasFled = true;
         }
     }
-    
-    /**
-     * Surcharge pour la compatibilité si on n'a pas de joueur. A VOIR SI ON SUPPRIME (PROBABLEMENT)
-     */
-    public synchronized void update() {
-        // On réutilise la méthode principale avec les dimensions déjà connues.
-        update(null, null, null, viewportWidth, viewportHeight, fieldWidth, fieldHeight);
-    }
 
     /**
-     * Cherche une culture mature proche, tente de la réserver, puis fixe cette case
-     * comme nouvelle cible du lapin.
+     * Cherche une culture mature intéressante à proximité.
+     * Si une bonne candidate existe, le lapin la réserve et la transforme en vraie cible de navigation.
      */
     private void updateCultureTarget(EnemyModel enemyModel, GrilleCulture grilleCulture) {
         if (grilleCulture == null || isFleeing) {
@@ -345,7 +356,7 @@ public class EnemyUnit {
         }
 
         if (hasCultureTarget()) {
-            if (!isCultureAvailable(grilleCulture, targetCultureGridX, targetCultureGridY)) {
+            if (isCultureAvailable(grilleCulture, targetCultureGridX, targetCultureGridY)) {
                 clearCultureTarget(enemyModel);
                 return;
             }
@@ -362,7 +373,7 @@ public class EnemyUnit {
 
         for (int gridX = 0; gridX < grilleCulture.getLargeur(); gridX++) {
             for (int gridY = 0; gridY < grilleCulture.getHauteur(); gridY++) {
-                if (!isCultureAvailable(grilleCulture, gridX, gridY)) {
+                if (isCultureAvailable(grilleCulture, gridX, gridY)) {
                     continue;
                 }
                 // Une culture mature déjà réservée par un autre lapin est ignorée.
@@ -386,7 +397,7 @@ public class EnemyUnit {
 
                 // Si on vient de trouver une culture plus proche, on relâche l'ancienne
                 // réservation pour ne pas bloquer inutilement cette case.
-                if (bestGridX >= 0 && bestGridY >= 0 && enemyModel != null) {
+                if (bestGridX >= 0 && enemyModel != null) {
                     enemyModel.releaseCultureReservation(bestGridX, bestGridY, this);
                 }
 
@@ -396,7 +407,7 @@ public class EnemyUnit {
             }
         }
 
-        if (bestGridX >= 0 && bestGridY >= 0) {
+        if (bestGridX >= 0) {
             targetCultureGridX = bestGridX;
             targetCultureGridY = bestGridY;
             targetX = getCultureCenterX(bestGridX);
@@ -407,7 +418,8 @@ public class EnemyUnit {
     }
 
     /**
-     * Lance le retour au terrier si le lapin n'a trouvé aucune culture pendant 30 secondes.
+     * Gère le chrono des 30 secondes si le lapin n'est pas sur une culture.
+     * Tant qu'aucune cible n'est trouvée, cette méthode prépare puis déclenche le retour vers l'extérieur.
      */
     private void updateBurrowReturnState(EnemyModel enemyModel) {
         if (isFleeing || isReturningToBurrow) {
@@ -434,15 +446,15 @@ public class EnemyUnit {
     }
 
     /**
-     * Gère l'attente de 5 secondes une fois le lapin arrivé sur la culture ciblée.
-     * Si la culture disparaît ou si la cible est annulée avant la fin, rien n'est mangé.
+     * Gère l'attente de 5 secondes avant la consommation d'une culture.
+     * C'est aussi cette méthode qui maintient le chrono affiché dans l'overlay (quand on clique sur le lapin) quand le lapin est posé sur la case.
      */
     private void updateCultureWaiting(EnemyModel enemyModel, GrilleCulture grilleCulture) {
         if (!hasCultureTarget() || grilleCulture == null) {
             return;
         }
 
-        if (!isCultureAvailable(grilleCulture, targetCultureGridX, targetCultureGridY)) {
+        if (isCultureAvailable(grilleCulture, targetCultureGridX, targetCultureGridY)) {
             clearCultureTarget(enemyModel);
             return;
         }
@@ -486,15 +498,16 @@ public class EnemyUnit {
     }
 
     /**
-     * Indique si une culture existe encore sur cette case et si elle est mature.
+     * Vérifie rapidement si une case contient encore une culture mature exploitable.
      */
     private boolean isCultureAvailable(GrilleCulture grilleCulture, int gridX, int gridY) {
         Culture culture = grilleCulture.getCulture(gridX, gridY);
-        return culture != null && culture.getStadeCroissance() == Stade.MATURE;
+        return culture == null || culture.getStadeCroissance() != Stade.MATURE;
     }
 
     /**
-     * Vérifie si le lapin est exactement arrivé au centre de la case ciblée.
+     * Indique si le lapin est vraiment posé sur le centre de sa culture cible.
+     * L'attente de 5 secondes ne doit démarrer qu'à ce moment précis.
      */
     private boolean isOnTargetCultureCell() {
         if (!hasCultureTarget()) {
@@ -507,7 +520,7 @@ public class EnemyUnit {
     }
 
     /**
-     * Convertit la colonne logique d'une culture en coordonnée X dans le repère du lapin.
+     * Transforme une colonne de grille en coordonnée X dans le repère interne du lapin.
      */
     private double getCultureCenterX(int gridX) {
         double tileWidth = (double) fieldWidth / GrilleCulture.LARGEUR_GRILLE;
@@ -515,7 +528,8 @@ public class EnemyUnit {
     }
 
     /**
-     * Convertit la ligne logique d'une culture en coordonnée Y dans le repère du lapin.
+     * Même idée que getCultureCenterX, mais pour l'axe vertical.
+     * On vise toujours le centre visuel de la case et non son coin.
      */
     private double getCultureCenterY(int gridY) {
         double tileHeight = (double) fieldHeight / GrilleCulture.HAUTEUR_GRILLE;
@@ -523,14 +537,15 @@ public class EnemyUnit {
     }
 
     /**
-     * Indique si le lapin poursuit actuellement une culture.
+     * Sert de test rapide pour savoir si l'IA a déjà une culture réservée en ligne de mire.
      */
     private boolean hasCultureTarget() {
         return targetCultureGridX >= 0 && targetCultureGridY >= 0;
     }
 
     /**
-     * Abandonne la culture ciblée et libère sa réservation éventuelle.
+     * Annule proprement la cible culture en cours.
+     * Toute sortie de ce "mini état" passe par ici afin de ne jamais oublier de libérer la réservation.
      */
     private void clearCultureTarget(EnemyModel enemyModel) {
         // La libération se fait ici pour centraliser tous les cas de sortie:
@@ -544,7 +559,8 @@ public class EnemyUnit {
     }
     
     /**
-     * Permet de choisir un point d'entree aleatoire dans le champ.
+     * Choisit un premier point d'entrée crédible dans le champ, en évitant la grange.
+     * Le but n'est pas d'être optimal, mais d'obtenir une entrée naturelle et sans collision.
      */
     private void pickFieldEntryTarget() {
         // Moitié de la largeur du champ.
@@ -574,7 +590,8 @@ public class EnemyUnit {
     }
 
     /**
-     * Recalcule une direction de fuite loin du joueur.
+     * Recalcule une cible de fuite très lointaine opposée au joueur.
+     * En visant loin, on simplifie la logique: le lapin continue juste tout droit jusqu'à sortir.
      */
     private void updateFleeTarget(Unit player) {
         // Vecteur horizontal qui va du joueur vers l'unité ennemie.
@@ -599,7 +616,8 @@ public class EnemyUnit {
     }
 
     /**
-     * Bascule le lapin dans un retour simple vers l'extérieur de la carte.
+     * Bascule l'IA dans son mode "retour au terrier".
+     * Dans le jeu, ce terrier est abstrait: on simule simplement une sortie vers un bord de l'écran.
      */
     private void startBurrowReturn(EnemyModel enemyModel) {
         isReturningToBurrow = true;
@@ -608,7 +626,7 @@ public class EnemyUnit {
     }
 
     /**
-     * Le terrier étant hors carte pour le jeu, on vise juste le bord visible le plus proche.
+     * Choisit le bord de sortie le plus proche pour matérialiser le retour au terrier.
      */
     private void updateBurrowReturnTarget() {
         int halfWidth = viewportWidth / 2;
@@ -645,7 +663,8 @@ public class EnemyUnit {
     }
 
     /**
-     * Permet de choisir une nouvelle destination proche dans le champ pour garder un déplacement naturel.
+     * Donne au lapin une petite destination aléatoire de promenade.
+     * Le mélange entre cible locale et biais global nous permet de garder un mouvement vivant sans sortir complètement du champ.
      */
     private void pickNewTarget() {
         // Moitié de la largeur de la fenêtre.
@@ -682,6 +701,9 @@ public class EnemyUnit {
         targetY = nextTargetY;
     }
 
+    /**
+     * Tente d'appliquer le pas voulu. Si la grange bloque, on délègue à la logique de contournement.
+     */
     private void moveWithBarnCollision(double stepX, double stepY, double speed) {
         if (tryMove(stepX, stepY)) {
             return;
@@ -691,8 +713,8 @@ public class EnemyUnit {
     }
 
     /**
-     * Applique uniquement un déplacement complet valide.
-     * Si le pas demandé traverse la grange, il est refusé et une autre direction sera cherchée.
+     * Applique un déplacement seulement s'il laisse le lapin dans une zone autorisée.
+     * C'est le point central qui filtre toutes les collisions avec la grange.
      */
     private boolean tryMove(double stepX, double stepY) {
         double nextX = x + stepX;
@@ -710,7 +732,8 @@ public class EnemyUnit {
     }
 
     /**
-     * Choisit une direction libre proche de la direction voulue.
+     * Cherche une petite déviation libre quand la trajectoire directe tape la grange.
+     * On garde ainsi un contournement doux au lieu d'un arrêt brutal.
      */
     private void redirectAroundBarn(double desiredStepX, double desiredStepY, double speed) {
         double desiredAngle = Math.atan2(desiredStepY, desiredStepX);
@@ -737,7 +760,7 @@ public class EnemyUnit {
                     preferredTurnSign = -1;
                 }
 
-                if (!isLeavingMap() && !hasCultureTarget()) {
+                if (isLeavingMap() && !hasCultureTarget()) {
                     setDetourTarget(angle);
                 }
                 return;
@@ -746,25 +769,30 @@ public class EnemyUnit {
     }
 
     /**
-     * Indique si le lapin est dans un comportement de sortie de carte.
+     * Répond simplement à la question: "le lapin est-il dans une logique de sortie ?".
      */
     private boolean isLeavingMap() {
-        return isFleeing || isReturningToBurrow;
+        return !isFleeing && !isReturningToBurrow;
     }
 
     /**
-     * Pendant le retour au terrier, une culture mûre peut encore interrompre la sortie.
+     * Variante plus stricte de l'état de sortie: ici on parle d'un départ effectivement en cours.
+     * Pendant un retour au terrier, une culture peut encore annuler la sortie tant qu'elle n'est pas perdue.
      */
     private boolean isActivelyLeavingMap() {
         return isFleeing || (isReturningToBurrow && !hasCultureTarget());
     }
 
+    /**
+     * Encapsule le test de collision avec la grange pour garder le reste du code lisible.
+     */
     private boolean canOccupy(double centerX, double centerY) {
         return Barn.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE);
     }
 
     /**
-     * Évite qu'un lapin oscille bêtement entre deux directions opposées au contact du mur.
+     * Détecte un demi-tour immédiat par rapport au pas précédent.
+     * Cela évite l'effet "ping-pong" contre la grange quand plusieurs directions sont techniquement possibles.
      */
     private boolean isImmediateReverse(double stepX, double stepY) {
         double lastMagnitude = Math.sqrt((lastMoveX * lastMoveX) + (lastMoveY * lastMoveY));
@@ -778,8 +806,8 @@ public class EnemyUnit {
     }
 
     /**
-     * Hors sortie de carte, on garde un petit objectif local pour que le lapin poursuive son contournement
-     * au lieu de retenter immédiatement de traverser le mur.
+     * Prolonge légèrement le détour choisi autour de la grange.
+     * Sans ça, le lapin risquerait de repointer tout de suite vers l'obstacle à la frame suivante.
      */
     private void setDetourTarget(double angle) {
         double detourDistance = 180 + random.nextDouble() * 60;
@@ -792,6 +820,10 @@ public class EnemyUnit {
         targetY = Math.max(-halfViewportHeight + 20, Math.min(halfViewportHeight - 20, nextTargetY));
     }
 
+    /**
+     * Petit helper géométrique: il définit la "zone à éviter" autour de la grange au moment
+     * de choisir des cibles approximatives dans le champ.
+     */
     private boolean isInsideBarnAvoidanceZone(double candidateX, double candidateY, Rectangle barnBounds, int margin) {
         return candidateX >= barnBounds.x - margin
             && candidateX <= barnBounds.x + barnBounds.width + margin
@@ -799,10 +831,89 @@ public class EnemyUnit {
             && candidateY <= barnBounds.y + barnBounds.height + margin;
     }
     
-    // Retourne la position entière actuelle sur X pour l'affichage.
+    /**
+     * Expose la position X arrondie pour l'affichage de la vue.
+     */
     public synchronized int getX() { return (int) x; }
-    // Retourne la position entière actuelle sur Y pour l'affichage.
+
+    /**
+     * Expose la position Y arrondie pour l'affichage de la vue.
+     */
     public synchronized int getY() { return (int) y; }
-    // Indique si l'unité ennemie a quitté la fenêtre ou doit disparaître.
+
+    /**
+     * Indique au modèle si ce lapin peut être retiré de la liste active.
+     */
     public synchronized boolean hasFled() { return hasFled; }
+
+    /**
+     * Indique à l'overlay si le chrono pertinent est actuellement celui de la consommation.
+     */
+    public synchronized boolean isEatingCultureCountdownActive() {
+        return hasCultureTarget() && isOnTargetCultureCell();
+    }
+
+    /**
+     * Donne la durée totale du chrono affiché.
+     * L'overlay peut ainsi calculer sa progression sans connaître les détails métier.
+     */
+    public synchronized long getOverlayCountdownMaxMs() {
+        if (isEatingCultureCountdownActive()) {
+            return DELAI_AVANT_MANGER_MS;
+        }
+
+        if (!isFleeing && !isReturningToBurrow && !hasCultureTarget()) {
+            return DELAI_RETOUR_TERRIER_MS;
+        }
+
+        return -1L;
+    }
+
+    /**
+     * Renvoie le temps restant du chrono que l'interface doit montrer maintenant.
+     * La valeur dépend donc du vrai comportement courant du lapin, et non d'un état UI artificiel.
+     */
+    public synchronized long getOverlayCountdownMs() {
+        if (isEatingCultureCountdownActive()) {
+            if (cultureWaitStartTime < 0L) {
+                return DELAI_AVANT_MANGER_MS;
+            }
+
+            long elapsedMs = System.currentTimeMillis() - cultureWaitStartTime;
+            return Math.max(0L, DELAI_AVANT_MANGER_MS - elapsedMs);
+        }
+
+        if (isFleeing || isReturningToBurrow || hasCultureTarget()) {
+            return -1L;
+        }
+
+        if (noCultureFoundStartTime < 0L) {
+            return DELAI_RETOUR_TERRIER_MS;
+        }
+
+        long elapsedMs = System.currentTimeMillis() - noCultureFoundStartTime;
+        return Math.max(0L, DELAI_RETOUR_TERRIER_MS - elapsedMs);
+    }
+
+    /**
+     * Fournit un libellé très simple pour résumer le comportement courant dans l'overlay.
+     */
+    public synchronized String getOverlayStatus() {
+        if (hasFled) {
+            return "Disparu";
+        }
+        if (isFleeing) {
+            return "En fuite";
+        }
+        if (isReturningToBurrow) {
+            return "Retour en cours";
+        }
+        if (isEatingCultureCountdownActive()) {
+            return "Mange la culture";
+        }
+        if (hasCultureTarget()) {
+            return "Culture trouvee";
+        }
+        return "Recherche";
+    }
 }
