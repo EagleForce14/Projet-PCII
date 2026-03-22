@@ -43,11 +43,6 @@ public class MovementModel {
     public void update() {
         for (Unit u : units) {
             u.updatePosition();
-            
-            // Petit log console si le joueur se déplace
-            if (u == playerUnit && u.isMoving()) {
-                System.out.println("Joueur Pos: (" + u.getX() + ", " + u.getY() + ")");
-            }
         }
     }
 

@@ -149,7 +149,7 @@ public class ShopThread extends Thread {
         System.out.println("Voulez-vous continuer à acheter ? (oui,non)");
         String reponse = SCANNER.nextLine().trim().toLowerCase();
         while (!reponse.equals("oui") && !reponse.equals("non")) {
-            System.out.println("Veuillez répondre par 'oui' ou 'non'. Voulez-vous continuer à acheter ? (oui,non)");
+            System.out.println("Veuillez répondre par 'oui' ou 'non'. Voulez-vous continuer à acheter (vous ne serez débité qu'une fois pour la totalité lorsque que vous aurez fini vos achats) ? (oui,non)");
             reponse = SCANNER.nextLine().trim().toLowerCase();
         }
         if (reponse.equals("oui")) {

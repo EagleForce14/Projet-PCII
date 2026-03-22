@@ -20,20 +20,42 @@ import java.util.Objects;
  * Panneau d'affichage du champ, compose d'une grille d'images.
  */
 public class FieldPanel extends JPanel {
+    // Taille préférée du panneau qui contient le champ.
     private static final int PREF_WIDTH = 1010;
     private static final int PREF_HEIGHT = 580;
+
+    // Marge intérieure laissée autour de la grille pour éviter qu'elle colle au bord du panneau.
     private static final int INNER_PADDING = 24;
+
+    // Petit décalage vertical pour positionner visuellement le champ un peu plus bas que le centre.
     private static final int VERTICAL_OFFSET = 34;
+
+    // Couleurs utilisées pour surligner la case actuellement occupée par le joueur.
     private static final Color HIGHLIGHT_FILL = new Color(255, 255, 120, 90);
     private static final Color HIGHLIGHT_BORDER = new Color(255, 215, 0, 210);
 
-    // La vue ne porte plus sa propre grille: elle affiche directement celle du modèle.
+    // Couleurs de l'effet visuel affiché après un arrosage réussi.
+    private static final Color WATERED_FILL = new Color(70, 170, 255);
+    private static final Color WATERED_BORDER = new Color(220, 245, 255);
+
+    // Vitesse de pulsation de l'animation d'arrosage.
+    // Plus la valeur est grande, plus le halo "respire" vite.
+    private static final double WATER_PULSE_SPEED = 0.008;
+
+    // On lit directement l'état réel des cultures.
     private final GrilleCulture grilleCulture;
+
+    // Image de fond d'une case de terre.
     private final Image tileImage;
+
+    // Images associées aux différents stades visuels d'une culture.
     private final Image jeunePousseImage;
     private final Image croissanceInterImage;
     private final Image maturiteImage;
     private final Image fletrieImage;
+
+    // Coordonnées de la case actuellement surlignée.
+    // Cette valeur vaut null quand aucune case n'est activable.
     private Point highlightedCell;
 
     /**
@@ -209,6 +231,47 @@ public class FieldPanel extends JPanel {
     }
 
     /**
+     * L'animation d'arrosage ne doit exister que juste après un arrosage réussi.
+     * On la cale donc sur l'état métier déjà présent dans le modèle:
+     * la culture doit être encore au stade intermédiaire et marquée comme arrosée.
+     * Dès que le stade change, cette méthode renvoie false et l'effet disparaît tout seul.
+     */
+    private boolean shouldAnimateWateredCell(Culture culture) {
+        return culture != null
+                && culture.getStadeCroissance() == Stade.INTERMEDIAIRE
+                && culture.isArrosee();
+    }
+
+    /**
+     * Dessine un halo bleu pulsé sur la case.
+     * On fait simplement varier l'opacité avec le temps courant.
+     */
+    private void drawWateringAnimation(Graphics2D g2, int x, int y, int tileSize) {
+        // La sinusoïde produit un va-et-vient doux entre 0 et 1.
+        double pulse = (Math.sin(System.currentTimeMillis() * WATER_PULSE_SPEED) + 1.0) / 2.0;
+
+        // On garde des valeurs modestes pour que la plante reste visible sous l'effet.
+        int fillAlpha = 35 + (int) Math.round(pulse * 55);
+        int borderAlpha = 110 + (int) Math.round(pulse * 100);
+
+        // On dessine le halo légèrement à l'intérieur de la case pour conserver un petit cadre.
+        int inset = Math.max(4, tileSize / 10);
+
+        // Taille réelle de la zone animée une fois la marge intérieure retirée.
+        int size = tileSize - (2 * inset);
+
+        // Rayon des coins arrondis du halo.
+        int arc = Math.max(10, tileSize / 4);
+
+        g2.setColor(new Color(WATERED_FILL.getRed(), WATERED_FILL.getGreen(), WATERED_FILL.getBlue(), fillAlpha));
+        g2.fillRoundRect(x + inset, y + inset, size, size, arc, arc);
+
+        g2.setColor(new Color(WATERED_BORDER.getRed(), WATERED_BORDER.getGreen(), WATERED_BORDER.getBlue(), borderAlpha));
+        g2.drawRoundRect(x + inset, y + inset, size - 1, size - 1, arc, arc);
+        g2.drawRoundRect(x + inset + 2, y + inset + 2, size - 5, size - 5, arc, arc);
+    }
+
+    /**
      * Dessine l'image dans la case sans la déformer.
      */
     private void drawCultureImage(Graphics2D g2, Image cultureImage, int x, int y, int tileSize) {
@@ -248,8 +311,13 @@ public class FieldPanel extends JPanel {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g.create();
 
+        // Rectangle total occupé par la grille dans le panneau.
         Rectangle fieldBounds = getFieldBounds();
+
+        // Taille d'une case carrée à l'écran.
         int tileSize = fieldBounds.width / getColumnCount();
+
+        // Point d'origine de la grille dans le panneau.
         int startX = fieldBounds.x;
         int startY = fieldBounds.y;
 
@@ -270,6 +338,12 @@ public class FieldPanel extends JPanel {
                 Image cultureImage = getCultureImage(culture);
                 if (cultureImage != null) {
                     drawCultureImage(g2, cultureImage, x, y, tileSize);
+                }
+
+                // Si la culture vient d'être arrosée, on ajoute un halo pulsé sur la case.
+                // L'effet persiste tant que l'état du modèle reste "intermédiaire + arrosée".
+                if (shouldAnimateWateredCell(culture)) {
+                    drawWateringAnimation(g2, x, y, tileSize);
                 }
 
                 // La case active est surlignée uniquement quand le rectangle du joueur
