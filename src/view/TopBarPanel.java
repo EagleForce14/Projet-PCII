@@ -19,7 +19,7 @@ public class TopBarPanel extends JPanel {
     private final Money playerMoney;
     private final JLabel dayLabel;
     private final JLabel moneyLabel;
-    private Jour jour;
+    private final Jour jour;
 
     // Le constructeur de la classe
     public TopBarPanel(Money playerMoney) {
@@ -31,8 +31,8 @@ public class TopBarPanel extends JPanel {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setBorder(BorderFactory.createEmptyBorder(18, 24, 0, 0));
 
-        dayLabel = createLabel("", 14.0f);
-        moneyLabel = createLabel("", 18.0f);
+        dayLabel = createLabel(14.0f);
+        moneyLabel = createLabel(18.0f);
 
         add(dayLabel);
         add(moneyLabel);
@@ -44,8 +44,8 @@ public class TopBarPanel extends JPanel {
     /**
      * Construit un label simple avec le style de la barre du haut.
      */
-    private JLabel createLabel(String text, float fontSize) {
-        JLabel label = new JLabel(text);
+    private JLabel createLabel(float fontSize) {
+        JLabel label = new JLabel("");
         label.setForeground(new Color(255, 248, 220));
         label.setFont(CustomFontLoader.loadFont(FONT_PATH, fontSize));
         label.setAlignmentX(LEFT_ALIGNMENT);
