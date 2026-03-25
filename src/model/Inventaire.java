@@ -97,9 +97,6 @@ public class Inventaire {
         
         }
 
-
-
-
         /**
         * UseInstallation : méthode pour utiliser une installation
         * @param nomInstallation : le nom de l'installation à utiliser
@@ -117,18 +114,6 @@ public class Inventaire {
             }
         }
 
-    // afficher l'inventaire
-        public void afficherInventaire() {
-            System.out.println("Inventaire du joueur :");
-            System.out.println("Graines  :");
-            for (Type type : graines.keySet()) {
-                System.out.println("- " + type + " : " + graines.get(type));
-            }
-            System.out.println("Installations :");
-            for (FacilityType type : installations.keySet()) {
-                System.out.println("- " + type + " : " + installations.get(type));
-            }
-        }
     /** estVide : méthode pour vérifier si l'inventaire du joueur est vide ou pas
          * @return boolean : true si l'inventaire est vide, false sinon
      * **/
@@ -143,5 +128,22 @@ public class Inventaire {
     public boolean possedeGraine(Type type) {
         return graines.containsKey(type) && graines.get(type) > 0;
     }
-}
 
+    /**
+     * Petit helper de lecture :
+     * on renvoie simplement 0 si la graine n'a jamais ete achetée,
+     * ce qui évite de faire trainer des tests null partout dans le code.
+     */
+    public int getQuantiteGraine(Type type) {
+        Integer quantite = graines.get(type);
+        return quantite == null ? 0 : quantite;
+    }
+
+    /**
+     * Meme idée pour les installations.
+     */
+    public int getQuantiteInstallation(FacilityType type) {
+        Integer quantite = installations.get(type);
+        return quantite == null ? 0 : quantite;
+    }
+}

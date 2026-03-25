@@ -92,11 +92,6 @@ public class GrilleCulture {
 
         // retirer la graine de l'inventaire
         inventaire.UseGraineFleure(type);
-
-        // afficher l'inventaire après la plantation
-
-        inventaire.afficherInventaire();
-
     }
 
     /** Méthode qui recolte une culture de la grille */

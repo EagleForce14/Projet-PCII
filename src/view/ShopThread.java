@@ -156,7 +156,6 @@ public class ShopThread extends Thread {
         } else {
             if (shop.buyProducts(playerMoney,inventaire)) {
                 System.out.println("merci pour votre achat ! Votre solde actuel est de " + playerMoney.getAmount() + "€");
-                inventaire.afficherInventaire();
                 // on ferme la boutique et on retourne au jeu
 
             } else {

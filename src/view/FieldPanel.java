@@ -28,7 +28,9 @@ public class FieldPanel extends JPanel {
     private static final int INNER_PADDING = 24;
 
     // Petit décalage vertical pour positionner visuellement le champ un peu plus bas que le centre.
-    private static final int VERTICAL_OFFSET = 34;
+    // On garde toujours un petit biais vers le bas, mais moins prononce qu'avant,
+    // pour liberer davantage d'espace a la hotbar placee en bas de l'ecran.
+    private static final int VERTICAL_OFFSET = 18;
 
     // Couleurs utilisées pour surligner la case actuellement occupée par le joueur.
     private static final Color HIGHLIGHT_FILL = new Color(255, 255, 120, 90);

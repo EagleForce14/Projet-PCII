@@ -9,8 +9,8 @@ public class Shop {
      * Achat des graines, de clotures et de main d'oeuvre.
      *
      **/
-    private ArrayList<Seed> seeds; // liste des graines disponibles dans le magasin
-    private ArrayList<Facility> facilities; // liste des installations disponibles dans le magasin 
+    private final ArrayList<Seed> seeds; // liste des graines disponibles dans le magasin
+    private final ArrayList<Facility> facilities; // liste des installations disponibles dans le magasin
     // panier avec des item différents du stock pour éviter de modifier les quantités du stock avant l'achat
     private ArrayList<CartItem> shoppingCard; // liste des produits que le joueur souhaite acheter
 

@@ -36,6 +36,9 @@ public class MovementController implements KeyListener, MouseListener {
         this.enemyView = enemyView;
         // On s'abonne aux événements clavier.
         view.addKeyListener(this);
+        // On s'abonne aussi a la couche du joueur.
+        // Selon l'ordre des couches Swing, c'est parfois elle qui recoit le clic.
+        view.addMouseListener(this);
         enemyView.addMouseListener(this);
 
         JButton plantButton = sidebarPanel.getPlantButton();
@@ -189,7 +192,7 @@ public class MovementController implements KeyListener, MouseListener {
 
     @Override
     public void mousePressed(MouseEvent e) {
-        enemyView.selectEnemyAt(e.getPoint());
+        enemyView.handleWorldClick(e.getPoint());
         // On rend immédiatement le focus au panneau de déplacement
         // pour que les flèches continuent de répondre après un clic souris.
         movementView.requestFocusInWindow();

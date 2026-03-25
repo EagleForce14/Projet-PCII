@@ -58,7 +58,7 @@ public class Main {
         // Les actions contextuelles sont affichées dans une sidebar dédiée, hors du jeu.
         SidebarPanel actionSidebarPanel = new SidebarPanel(model, grilleCulture, shop, inventaire);
 
-        EnemyView enemyView = new EnemyView(enemyModel, fieldPanel);
+        EnemyView enemyView = new EnemyView(enemyModel, fieldPanel, inventaire);
         enemyView.setAlignmentX(0.5f);
         enemyView.setAlignmentY(0.5f);
 
@@ -73,8 +73,10 @@ public class Main {
         fieldLayer.setAlignmentY(0.5f);
         
         java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
-        // On repousse le champ vers le bas pour qu'il soit moins centré
-        gbc.insets = new java.awt.Insets(100, 0, 0, 0); 
+        // Petit decalage supplementaire:
+        // on redescend legerement le champ et la grange tout en gardant
+        // suffisamment d'air au-dessus de la hotbar.
+        gbc.insets = new java.awt.Insets(56, 0, 0, 0); 
         fieldLayer.add(fieldPanel, gbc);
 
         JPanel gamePanel = createGamePanel(backgroundImage);
