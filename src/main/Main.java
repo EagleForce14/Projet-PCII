@@ -2,8 +2,17 @@ package main;
 
 import controller.MovementController;
 
-import model.*;
+import model.culture.GrilleCulture;
+import model.enemy.EnemyModel;
+import model.enemy.EnemyPhysicsThread;
+import model.movement.MovementModel;
+import model.movement.PhysicsThread;
+import model.movement.Unit;
+import model.management.Inventaire;
+import model.management.Money;
+import model.shop.Shop;
 import view.*;
+import view.shop.ShopOverlay;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -106,7 +115,10 @@ public class Main {
         contentPanel.add(actionSidebarPanel, BorderLayout.EAST);
         frame.setContentPane(contentPanel);
 
-        new MovementController(model, movementView, enemyView, actionSidebarPanel, grilleCulture, playerMoney , shop, inventaire);
+        ShopOverlay shopOverlay = new ShopOverlay(shop, playerMoney, inventaire, movementView);
+        frame.setGlassPane(shopOverlay);
+
+        new MovementController(model, movementView, enemyView, actionSidebarPanel, grilleCulture, playerMoney , shop, inventaire, shopOverlay);
 
         frame.pack();
         frame.setLocationRelativeTo(null);

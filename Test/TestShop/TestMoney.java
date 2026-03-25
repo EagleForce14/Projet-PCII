@@ -1,6 +1,6 @@
 package TestShop;
 
-import model.Money;
+import model.management.Money;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

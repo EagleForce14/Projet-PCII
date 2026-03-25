@@ -1,6 +1,6 @@
 package view;
 
-import model.EnemyUnit;
+import model.enemy.EnemyUnit;
 
 import java.awt.Color;
 import java.awt.Font;

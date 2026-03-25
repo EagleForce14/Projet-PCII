@@ -1,4 +1,4 @@
-package model;
+package model.management;
 
 public class Money {
     /**

@@ -1,7 +1,7 @@
 package TestShop;
 
-import model.Facility;
-import model.FacilityType;
+import model.shop.Facility;
+import model.shop.FacilityType;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

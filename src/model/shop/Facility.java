@@ -1,4 +1,4 @@
-package model;
+package model.shop;
 
 /**
  * Classe représentant une installation du jeu.

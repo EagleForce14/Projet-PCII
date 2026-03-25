@@ -1,4 +1,10 @@
-package model;
+package model.enemy;
+
+import model.culture.GrilleCulture;
+import model.culture.Culture;
+import model.culture.Stade;
+import model.movement.Barn;
+import model.movement.Unit;
 
 import java.awt.Rectangle;
 import java.util.Random;

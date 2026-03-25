@@ -1,5 +1,7 @@
 package view;
 
+import model.movement.Barn;
+
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
@@ -37,11 +39,11 @@ public class EnvironmentView extends JPanel {
             int centerY = fieldBounds.y + (fieldBounds.height / 2);
 
             // On récupère les coordonnées logiques de la grange
-            int drawX = centerX + model.Barn.X;
-            int drawY = centerY + model.Barn.Y;
+            int drawX = centerX + Barn.X;
+            int drawY = centerY + Barn.Y;
 
             // On dessine l'image de la grange
-            g2.drawImage(barnImage, drawX, drawY, model.Barn.WIDTH, model.Barn.HEIGHT, null);
+            g2.drawImage(barnImage, drawX, drawY, Barn.WIDTH, Barn.HEIGHT, null);
             
             g2.dispose();
         }

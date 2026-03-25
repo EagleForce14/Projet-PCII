@@ -1,4 +1,9 @@
-package model;
+package model.management;
+
+import model.culture.Type;
+import model.shop.Facility;
+import model.shop.FacilityType;
+import model.shop.Seed;
 
 import java.util.HashMap;
 public class Inventaire {

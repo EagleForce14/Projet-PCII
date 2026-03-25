@@ -1,5 +1,6 @@
 package view;
-import model.*;
+import model.movement.MovementModel;
+import model.movement.Unit;
 
 import javax.swing.*;
 import java.awt.*;

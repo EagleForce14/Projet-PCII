@@ -1,4 +1,4 @@
-package model;
+package model.culture;
 
 /**
  * Enumération unique des cultures du jeu.

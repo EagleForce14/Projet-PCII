@@ -1,10 +1,10 @@
-import model.Facility;
-import model.FacilityType;
-import model.Inventaire;
-import model.Money;
-import model.Seed;
-import model.Shop;
-import model.Type;
+import model.culture.Type;
+import model.management.Inventaire;
+import model.management.Money;
+import model.shop.Facility;
+import model.shop.FacilityType;
+import model.shop.Seed;
+import model.shop.Shop;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

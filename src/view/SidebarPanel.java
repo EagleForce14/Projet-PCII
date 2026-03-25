@@ -1,6 +1,11 @@
 package view;
 
-import model.*;
+import model.culture.Culture;
+import model.culture.GrilleCulture;
+import model.culture.Stade;
+import model.movement.MovementModel;
+import model.management.Inventaire;
+import model.shop.Shop;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;

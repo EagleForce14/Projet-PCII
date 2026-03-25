@@ -1,4 +1,4 @@
-package model;
+package model.culture;
 
 /** Enumération représentant les différents stades de croissance d'une culture */
 public enum Stade {

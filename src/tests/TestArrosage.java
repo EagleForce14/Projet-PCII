@@ -1,8 +1,8 @@
 package tests;
 
-import model.Culture;
-import model.Stade;
-import model.Type;
+import model.culture.Culture;
+import model.culture.Stade;
+import model.culture.Type;
 
 /**
  * Classe de test pour l'arrosage des cultures

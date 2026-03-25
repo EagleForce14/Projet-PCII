@@ -1,4 +1,6 @@
-package model; 
+package model.shop;
+
+import model.culture.Type;
 
 public class Seed extends Product {
 

@@ -1,11 +1,11 @@
 package TestShop;
 
 
-import model.Inventaire;
-import model.Seed;
-import model.Facility;
-import model.Type;
-import model.FacilityType;
+import model.culture.Type;
+import model.management.Inventaire;
+import model.shop.Facility;
+import model.shop.FacilityType;
+import model.shop.Seed;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

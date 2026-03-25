@@ -1,4 +1,6 @@
-package model;
+package model.culture;
+
+import model.management.Inventaire;
 
 import java.util.Map;
 

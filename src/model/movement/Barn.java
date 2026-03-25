@@ -1,4 +1,4 @@
-package model;
+package model.movement;
 
 import java.awt.Rectangle;
 

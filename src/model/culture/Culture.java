@@ -1,4 +1,4 @@
-package model;
+package model.culture;
 
 /** Classe représentant une culture */
 public class Culture {

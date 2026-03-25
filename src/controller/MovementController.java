@@ -8,8 +8,18 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 
 import javax.swing.JButton;
-import model.*;
+import model.culture.Culture;
+import model.culture.GrilleCulture;
+import model.culture.Stade;
+import model.culture.Type;
+import model.movement.MovementModel;
+import model.movement.Unit;
+import model.management.Inventaire;
+import model.management.Money;
+import model.runtime.GamePauseController;
+import model.shop.Shop;
 import view.*;
+import view.shop.ShopOverlay;
 
 /**
  * Le contrôleur chargé de gérer les intéractions.
@@ -22,11 +32,13 @@ public class MovementController implements KeyListener, MouseListener {
     private final Inventaire inventaire;
     private final MovementView movementView;
     private final EnemyView enemyView;
-    private ShopThread shopThread;
+    private final ShopOverlay shopOverlay;
+    private final GamePauseController pauseController;
 
     // Constructeur de la classe
     public MovementController(MovementModel model, MovementView view, EnemyView enemyView, SidebarPanel sidebarPanel,
-                              GrilleCulture grilleCulture, Money playerMoney, Shop shop, Inventaire inventaire) {
+                              GrilleCulture grilleCulture, Money playerMoney, Shop shop, Inventaire inventaire,
+                              ShopOverlay shopOverlay) {
         this.model = model;
         this.grilleCulture = grilleCulture;
         this.playerMoney = playerMoney;
@@ -34,6 +46,8 @@ public class MovementController implements KeyListener, MouseListener {
         this.inventaire = inventaire;
         this.movementView = view;
         this.enemyView = enemyView;
+        this.shopOverlay = shopOverlay;
+        this.pauseController = GamePauseController.getInstance();
         // On s'abonne aux événements clavier.
         view.addKeyListener(this);
         // On s'abonne aussi a la couche du joueur.
@@ -62,6 +76,10 @@ public class MovementController implements KeyListener, MouseListener {
      * Pour le moment, le bouton utilise un type par défaut unique.
      */
     private void planterSurCaseActive(ActionEvent event) {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
         Point activeFieldCell = model.getActiveFieldCell();
         if (activeFieldCell == null) {
             return;
@@ -77,6 +95,10 @@ public class MovementController implements KeyListener, MouseListener {
      * La récolte ne s'exécute que sur une plante mature, puis on crédite le joueur.
      */
     private void recolterCaseActive(ActionEvent event) {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
         Point activeFieldCell = model.getActiveFieldCell();
         // Si le jardinier n'est sur aucune case du champ, il n'y a rien à récolter.
         if (activeFieldCell == null) {
@@ -101,6 +123,10 @@ public class MovementController implements KeyListener, MouseListener {
      * Le bouton nettoyer retire uniquement une culture flétrie sur la case du jardinier.
      */
     private void nettoyerCaseActive(ActionEvent event) {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
         Point activeFieldCell = model.getActiveFieldCell();
         if (activeFieldCell == null) {
             return;
@@ -112,6 +138,10 @@ public class MovementController implements KeyListener, MouseListener {
      * L'arrosage n'est disponible que sur une case occupée par une culture intermédiaire.
      */
     private void arroserCaseActive(ActionEvent event) {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
         Point activeFieldCell = model.getActiveFieldCell();
         if (activeFieldCell == null) {
             return;
@@ -119,23 +149,25 @@ public class MovementController implements KeyListener, MouseListener {
         grilleCulture.arroserCulture(activeFieldCell.x, activeFieldCell.y);
     }
 
-    /** Ouverture de la boutique dans la console POUR l'INSTANT
-     * Affichage de tout ce que la boutique contient (graines et installations)
-     * Affichage des prix de chaque objet, de la quantité dispo et de l'argent du joueur
-     * et affichage du panier
-     **/
+    /**
+     * Ouvre la boutique plein écran et fige le jeu tant que le panneau reste visible.
+     */
     private void ouvrirBoutique(ActionEvent event) {
-        if (shopThread != null && shopThread.isAlive()) {
-            System.out.println("La boutique est deja ouverte dans le terminal.");
+        if (pauseController.isPaused()) {
             return;
         }
 
-        (new ShopThread(shop, playerMoney,inventaire)).start();
+        stopPlayerMovement();
+        shopOverlay.openShop();
     }
 
     // On implémente KeyListener (Gestion des Touches)
     @Override
     public void keyPressed(KeyEvent e) {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
         int key = e.getKeyCode();
         
         // On récupère l'unité du joueur "actif" à contrôler
@@ -172,6 +204,11 @@ public class MovementController implements KeyListener, MouseListener {
     // Désactivation de tous les flags de déplacement de l'unité lors du relâchement d’une touche.
     @Override
     public void keyReleased(KeyEvent e) {
+        if (pauseController.isPaused()) {
+            stopPlayerMovement();
+            return;
+        }
+
         int key = e.getKeyCode();
         
         Unit player = model.getPlayerUnit();
@@ -192,6 +229,10 @@ public class MovementController implements KeyListener, MouseListener {
 
     @Override
     public void mousePressed(MouseEvent e) {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
         enemyView.handleWorldClick(e.getPoint());
         // On rend immédiatement le focus au panneau de déplacement
         // pour que les flèches continuent de répondre après un clic souris.
@@ -206,4 +247,20 @@ public class MovementController implements KeyListener, MouseListener {
 
     @Override
     public void mouseExited(MouseEvent e) {}
+
+    /**
+     * On remet tous les flags a false pour eviter qu'une direction reste "collee"
+     * pendant l'ouverture de la boutique.
+     */
+    private void stopPlayerMovement() {
+        Unit player = model.getPlayerUnit();
+        if (player == null) {
+            return;
+        }
+
+        player.setMoveUp(false);
+        player.setMoveDown(false);
+        player.setMoveLeft(false);
+        player.setMoveRight(false);
+    }
 }

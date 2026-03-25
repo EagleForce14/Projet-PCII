@@ -1,4 +1,6 @@
-package model;
+package model.culture;
+
+import model.runtime.GamePauseController;
 
 /** Thread gérant automatiquement la croissance d'une culture */
 public class Croissance extends Thread {
@@ -17,10 +19,12 @@ public class Croissance extends Thread {
 
     /** Attribut représentant l'état actif du thread de croissance */
     private volatile boolean actif = true;
+    private final GamePauseController pauseController;
 
     /** Constructeur de la classe Croissance qui prend en argument la culture à gérer */
     public Croissance(Culture culture) {
         this.culture = culture;
+        this.pauseController = GamePauseController.getInstance();
     }
 
     /** Méthode pour arrêter le thread de croissance */
@@ -65,7 +69,7 @@ public class Croissance extends Thread {
                 long delaiRestant = delaiCible - delaiEcoule;
 
                 if (delaiRestant > 0) {
-                    Thread.sleep(delaiRestant);
+                    pauseController.sleep(delaiRestant);
                 }
 
                 Stade nouveauStade = culture.grandir();

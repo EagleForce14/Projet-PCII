@@ -1,4 +1,8 @@
-package model;
+package model.shop;
+
+import model.culture.Type;
+import model.management.Inventaire;
+import model.management.Money;
 
 import java.util.ArrayList;
 
@@ -24,12 +28,15 @@ public class Shop {
         facilities = new ArrayList<>();
         shoppingCard = new ArrayList<>();
 
-        // initialisation des produits disponibles dans le magasin
-        /** pour l'instant, les autres types sont commenté 
-
-         */
-        seeds.add(new Seed("Tulipe", 8, 100, Type.TULIPE));
-        seeds.add(new Seed("Carrote", 5, 100, Type.CAROTTE));
+        // Toutes les graines partagees avec l'inventaire sont visibles en boutique.
+        addSeed("Tulipe", 8, Type.TULIPE);
+        addSeed("Rose", 8, Type.ROSE);
+        addSeed("Marguerite", 8, Type.MARGUERITE);
+        addSeed("Orchidee", 8, Type.ORCHIDEE);
+        addSeed("Carotte", 5, Type.CAROTTE);
+        addSeed("Tomate", 5, Type.TOMATE);
+        addSeed("Poivron", 5, Type.POIVRON);
+        addSeed("Courgette", 5, Type.COURGETTE);
         facilities.add(new Facility("Cloture", 50, 20, FacilityType.CLOTURE));
         facilities.add(new Facility("Engrais", 30, 50, FacilityType.ENGRAIS));
         facilities.add(new Facility("Jardinier", 100, 10, FacilityType.JARDINIER));
@@ -64,17 +71,14 @@ public class Shop {
      * @return ArrayList<CartItem> : la liste des produits que le joueur souhaite acheter
      *
      **/
-    public ArrayList<CartItem> getShoppingCard() {
-        // si le panier est null, on initialise une nouvelle liste de produits à acheter
+    public synchronized ArrayList<CartItem> getShoppingCard() {
         if (shoppingCard == null) {
             shoppingCard = new ArrayList<>();
-        } else if (shoppingCard.size() == 0) {
-            System.out.println("Le panier est vide");
         }
-        return shoppingCard;
+        return new ArrayList<>(shoppingCard);
     }
 
-    public int getShoppingCardTotalPrice() {
+    public synchronized int getShoppingCardTotalPrice() {
         int totalPrice = 0;
         for (CartItem item : shoppingCard) {
             totalPrice += item.totalPrice();
@@ -89,28 +93,13 @@ public class Shop {
      * @param product : le produit que le joueur souhaite acheter
      *
      **/
-    public Boolean addToShoppingCard(Product product, int quantity) {
-        // on vérifie que la quantité demandée est disponible dans le magasin
-        if (product.getQuantity() < quantity) {
-            System.out.println("La quantité demandée n'est pas disponible dans le magasin. Veuillez choisir une quantité inférieure ou égale à " + product.getQuantity());
+    public synchronized Boolean addToShoppingCard(Product product, int quantity) {
+        if (product == null || quantity <= 0) {
             return false;
         }
 
-
-        // on ajoute au panier sans modifier l'objet de stock
-
-        // on vérifie le nom du produit pour éviter les doublons dans le panier
-        for (CartItem item : shoppingCard) {
-            if (item.getProduct().getName().equals(product.getName())) {
-                // si le produit est déjà dedans on change juste la quantité
-                item.quantity += quantity;
-                return true;
-            }
-        }
-
-        // sinon on ajoute le nouvel item
-        shoppingCard.add(new CartItem(product, quantity));
-        return true;
+        int desiredQuantity = getShoppingCardQuantity(product) + quantity;
+        return setShoppingCardQuantity(product, desiredQuantity);
     }
 
     /**
@@ -120,27 +109,59 @@ public class Shop {
      * @param quantite : la quantité du produit que le joueur souhaite retirer
      **/
 
-    public void removeFromShoppingCard(Product product,int quantite) {
-        // Itérer sur une copie pour éviter ConcurrentModificationException si on supprime directement
-        for (CartItem item : new ArrayList<>(shoppingCard)) {
-            if (item.getProduct().getName().equals(product.getName())) {
-                if (item.getQuantity() > quantite) {
-                    item.quantity -= quantite;
-                } else {
-                    shoppingCard.remove(item);
-                }
-                break;
-            }
+    public synchronized void removeFromShoppingCard(Product product,int quantite) {
+        if (product == null || quantite <= 0) {
+            return;
         }
 
+        int nextQuantity = Math.max(0, getShoppingCardQuantity(product) - quantite);
+        setShoppingCardQuantity(product, nextQuantity);
     }
 
     /**
      * une méthode pour vider la liste des produits que le joueur souhaite acheter
      *
      **/
-    public void clearShoppingCard() {
+    public synchronized void clearShoppingCard() {
         shoppingCard.clear();
+    }
+
+    public synchronized int getShoppingCardQuantity(Product product) {
+        CartItem item = findCartItem(product);
+        return item == null ? 0 : item.getQuantity();
+    }
+
+    public synchronized int getRemainingStock(Product product) {
+        if (product == null) {
+            return 0;
+        }
+        return Math.max(0, product.getQuantity() - getShoppingCardQuantity(product));
+    }
+
+    /**
+     * Fixe la quantité exacte présente dans le panier.
+     * Une quantité à 0 retire naturellement l'article.
+     */
+    public synchronized boolean setShoppingCardQuantity(Product product, int quantity) {
+        if (product == null || quantity < 0 || quantity > product.getQuantity()) {
+            return false;
+        }
+
+        CartItem existingItem = findCartItem(product);
+        if (quantity == 0) {
+            if (existingItem != null) {
+                shoppingCard.remove(existingItem);
+            }
+            return true;
+        }
+
+        if (existingItem != null) {
+            existingItem.quantity = quantity;
+            return true;
+        }
+
+        shoppingCard.add(new CartItem(product, quantity));
+        return true;
     }
 
     /**
@@ -151,7 +172,10 @@ public class Shop {
      *
      **/
 
-    public boolean buyProducts(Money playerMoney,Inventaire inventaire) {
+    public synchronized boolean buyProducts(Money playerMoney,Inventaire inventaire) {
+        if (shoppingCard.isEmpty()) {
+            return false;
+        }
 
         int totalPrice = 0;
         int playerAmount = playerMoney.getAmount();
@@ -211,6 +235,23 @@ public class Shop {
         }
 
 
+    }
+
+    private CartItem findCartItem(Product product) {
+        if (product == null) {
+            return null;
+        }
+
+        for (CartItem item : shoppingCard) {
+            if (item.getProduct().getName().equals(product.getName())) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    private void addSeed(String name, int price, Type type) {
+        seeds.add(new Seed(name, price, 100, type));
     }
 
 

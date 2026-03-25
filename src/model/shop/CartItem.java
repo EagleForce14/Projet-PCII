@@ -1,4 +1,4 @@
-package model;
+package model.shop;
 
 /** Classe représentant un élément du panier d'achat du magasin.
  * Un élément du panier est composé d'un produit et d'une quantité.

@@ -1,4 +1,4 @@
-package model;
+package model.movement;
 
 /**
  * Représente une entité déplaçable.

@@ -1,4 +1,4 @@
-package model;
+package model.shop;
 
 /**
  * Énumération représentant les différents types d'installations.

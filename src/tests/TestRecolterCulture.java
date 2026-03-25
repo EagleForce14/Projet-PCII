@@ -1,16 +1,20 @@
 package tests;
 
+import model.culture.Stade;
+import model.culture.Type;
+import model.culture.ZoneCulture;
+
 /** Classe de test pour la fonctionnalité de récolte des cultures */
 public class TestRecolterCulture {
     public static void main(String[] args) {
 
         /** Test si la culture est à maturité */
         // Créer une zone de culture et planter une culture de type TULIPE
-        model.ZoneCulture zone1 = new model.ZoneCulture();
-        zone1.planterCulture(model.Type.TULIPE);
+        ZoneCulture zone1 = new ZoneCulture();
+        zone1.planterCulture(Type.TULIPE);
         
         // Attendre que la culture atteigne le stade de récolte
-        while (zone1.getCulture().getStadeCroissance() != model.Stade.MATURE) {
+        while (zone1.getCulture().getStadeCroissance() != Stade.MATURE) {
             try {
                 Thread.sleep(1000); // Attendre 1 seconde
             } catch (InterruptedException e) {
@@ -35,8 +39,8 @@ public class TestRecolterCulture {
         }
 
         /** Test si la culture n'est pas à maturité */
-        model.ZoneCulture zone2 = new model.ZoneCulture();
-        zone2.planterCulture(model.Type.TULIPE);
+        ZoneCulture zone2 = new ZoneCulture();
+        zone2.planterCulture(Type.TULIPE);
 
         try {
             zone2.recolterCulture();
@@ -46,7 +50,7 @@ public class TestRecolterCulture {
         }
 
         /** Test s'il n'y a pas de culture à récolter */
-        model.ZoneCulture zone3 = new model.ZoneCulture();
+        ZoneCulture zone3 = new ZoneCulture();
         try {
             zone3.recolterCulture();
             System.out.println("Erreur : Il n'y a pas de culture à récolter.");

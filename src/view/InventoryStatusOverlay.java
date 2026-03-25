@@ -1,8 +1,8 @@
 package view;
 
-import model.FacilityType;
-import model.Inventaire;
-import model.Type;
+import model.culture.Type;
+import model.management.Inventaire;
+import model.shop.FacilityType;
 
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
@@ -142,9 +142,9 @@ public class InventoryStatusOverlay extends JPanel {
         int iconX = x + ((size - iconArtSize) / 2);
         int iconY = y + 9;
         if (slotIndex < INVENTORY_SEED_ORDER.length) {
-            drawPixelArt(g2d, INVENTORY_SEED_ORDER[slotIndex], iconX, iconY, iconPixelSize);
+            ProductPixelArt.drawSeed(g2d, INVENTORY_SEED_ORDER[slotIndex], iconX, iconY, iconPixelSize);
         } else {
-            drawFence(g2d, iconX, iconY, iconPixelSize);
+            ProductPixelArt.drawFacility(g2d, INVENTORY_FACILITY, iconX, iconY, iconPixelSize);
         }
 
         if (!hasStock) {
@@ -178,145 +178,5 @@ public class InventoryStatusOverlay extends JPanel {
             return inventaire.getQuantiteGraine(INVENTORY_SEED_ORDER[slotIndex]);
         }
         return inventaire.getQuantiteInstallation(INVENTORY_FACILITY);
-    }
-
-    /**
-     * Dessine une petite icône pixel-art à partir du Type métier.
-     */
-    private void drawPixelArt(Graphics2D g2d, Type type, int x, int y, int pixelSize) {
-        switch (type) {
-            case TULIPE:
-                drawTulip(g2d, x, y, pixelSize);
-                break;
-            case ROSE:
-                drawRose(g2d, x, y, pixelSize);
-                break;
-            case MARGUERITE:
-                drawDaisy(g2d, x, y, pixelSize);
-                break;
-            case ORCHIDEE:
-                drawOrchid(g2d, x, y, pixelSize);
-                break;
-            case CAROTTE:
-                drawCarrot(g2d, x, y, pixelSize);
-                break;
-            case TOMATE:
-                drawTomato(g2d, x, y, pixelSize);
-                break;
-            case POIVRON:
-                drawPepper(g2d, x, y, pixelSize);
-                break;
-            case COURGETTE:
-                drawZucchini(g2d, x, y, pixelSize);
-                break;
-            default:
-                break;
-        }
-    }
-
-    private void drawTulip(Graphics2D g2d, int x, int y, int pixelSize) {
-        drawStem(g2d, x, y, pixelSize);
-        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(226, 73, 126));
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(255, 154, 190));
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(255, 120, 165));
-        fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, new Color(255, 154, 190));
-    }
-
-    private void drawRose(Graphics2D g2d, int x, int y, int pixelSize) {
-        drawStem(g2d, x, y, pixelSize);
-        fillPixel(g2d, x + pixelSize, y, pixelSize, new Color(174, 41, 66));
-        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(212, 61, 84));
-        fillPixel(g2d, x, y + pixelSize, pixelSize, new Color(174, 41, 66));
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(234, 91, 114));
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(212, 61, 84));
-    }
-
-    private void drawDaisy(Graphics2D g2d, int x, int y, int pixelSize) {
-        drawStem(g2d, x, y, pixelSize);
-        Color petal = new Color(245, 239, 227);
-        fillPixel(g2d, x + pixelSize, y, pixelSize, petal);
-        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, petal);
-        fillPixel(g2d, x, y + pixelSize, pixelSize, petal);
-        fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, petal);
-        fillPixel(g2d, x + pixelSize, y + (2 * pixelSize), pixelSize, petal);
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, petal);
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(236, 201, 72));
-    }
-
-    private void drawOrchid(Graphics2D g2d, int x, int y, int pixelSize) {
-        drawStem(g2d, x, y, pixelSize);
-        Color purple = new Color(170, 110, 214);
-        Color lightPurple = new Color(213, 170, 244);
-        fillPixel(g2d, x + pixelSize, y, pixelSize, purple);
-        fillPixel(g2d, x + (3 * pixelSize), y, pixelSize, purple);
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, lightPurple);
-        fillPixel(g2d, x, y + (2 * pixelSize), pixelSize, purple);
-        fillPixel(g2d, x + (4 * pixelSize), y + (2 * pixelSize), pixelSize, purple);
-    }
-
-    private void drawCarrot(Graphics2D g2d, int x, int y, int pixelSize) {
-        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(70, 155, 67));
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(92, 187, 85));
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(92, 187, 85));
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(239, 132, 45));
-        fillPixel(g2d, x + pixelSize, y + (3 * pixelSize), pixelSize, new Color(226, 115, 28));
-        fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, new Color(239, 132, 45));
-        fillPixel(g2d, x + pixelSize, y + (4 * pixelSize), pixelSize, new Color(202, 95, 19));
-    }
-
-    private void drawTomato(Graphics2D g2d, int x, int y, int pixelSize) {
-        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(76, 144, 55));
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(220, 64, 49));
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(235, 89, 73));
-        fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, new Color(220, 64, 49));
-        fillPixel(g2d, x + pixelSize, y + (2 * pixelSize), pixelSize, new Color(220, 64, 49));
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(248, 112, 96));
-        fillPixel(g2d, x + (3 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(220, 64, 49));
-    }
-
-    private void drawPepper(Graphics2D g2d, int x, int y, int pixelSize) {
-        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(76, 144, 55));
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(226, 186, 57));
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(245, 214, 88));
-        fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, new Color(226, 186, 57));
-        fillPixel(g2d, x + pixelSize, y + (2 * pixelSize), pixelSize, new Color(226, 186, 57));
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(245, 214, 88));
-        fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, new Color(226, 186, 57));
-    }
-
-    private void drawZucchini(Graphics2D g2d, int x, int y, int pixelSize) {
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(72, 146, 71));
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(92, 173, 91));
-        fillPixel(g2d, x + (3 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(72, 146, 71));
-        fillPixel(g2d, x + pixelSize, y + (2 * pixelSize), pixelSize, new Color(72, 146, 71));
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(92, 173, 91));
-        fillPixel(g2d, x + (3 * pixelSize), y + (3 * pixelSize), pixelSize, new Color(72, 146, 71));
-    }
-
-    private void drawFence(Graphics2D g2d, int x, int y, int pixelSize) {
-        Color wood = new Color(176, 118, 60);
-        Color darkWood = new Color(118, 73, 35);
-
-        fillPixel(g2d, x, y + pixelSize, pixelSize, wood);
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, wood);
-        fillPixel(g2d, x + (4 * pixelSize), y + pixelSize, pixelSize, wood);
-        fillPixel(g2d, x, y + (2 * pixelSize), pixelSize, darkWood);
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, darkWood);
-        fillPixel(g2d, x + (4 * pixelSize), y + (2 * pixelSize), pixelSize, darkWood);
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, wood);
-        fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, wood);
-        fillPixel(g2d, x + pixelSize, y + (2 * pixelSize), pixelSize, darkWood);
-        fillPixel(g2d, x + (3 * pixelSize), y + (2 * pixelSize), pixelSize, darkWood);
-    }
-
-    private void drawStem(Graphics2D g2d, int x, int y, int pixelSize) {
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(79, 163, 78));
-        fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, new Color(63, 137, 63));
-        fillPixel(g2d, x + pixelSize, y + (3 * pixelSize), pixelSize, new Color(103, 188, 93));
-    }
-
-    private void fillPixel(Graphics2D g2d, int x, int y, int pixelSize, Color color) {
-        g2d.setColor(color);
-        g2d.fillRect(x, y, pixelSize, pixelSize);
     }
 }

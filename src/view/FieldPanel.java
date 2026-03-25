@@ -1,9 +1,9 @@
 package view;
 
-import model.Culture;
-import model.GrilleCulture;
-import model.Stade;
-import model.Unit;
+import model.culture.Culture;
+import model.culture.GrilleCulture;
+import model.culture.Stade;
+import model.movement.Unit;
 
 import javax.swing.JPanel;
 import java.awt.Color;

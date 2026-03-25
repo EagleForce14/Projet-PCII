@@ -3,8 +3,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import static org.junit.jupiter.api.Assertions.*;
 
-import model.Seed;
-import model.Type;
+import model.culture.Type;
+import model.shop.Seed;
 
 public class TestSeed{
 

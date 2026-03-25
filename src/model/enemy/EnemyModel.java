@@ -1,4 +1,7 @@
-package model;
+package model.enemy;
+
+import model.culture.GrilleCulture;
+import model.movement.Unit;
 
 import java.awt.Point;
 import java.util.HashMap;

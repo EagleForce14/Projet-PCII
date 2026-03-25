@@ -1,7 +1,7 @@
 package view;
 
-import model.EnemyModel;
-import model.EnemyUnit;
+import model.enemy.EnemyModel;
+import model.enemy.EnemyUnit;
 
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;

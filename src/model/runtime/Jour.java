@@ -1,4 +1,4 @@
-package model;
+package model.runtime;
 
 /** Thread qui fait avancer le temps dans le jeu */
 public class Jour extends Thread {
@@ -11,11 +11,13 @@ public class Jour extends Thread {
 
     /** Attribut représentant l'état du thread */
     private boolean actif;
+    private final GamePauseController pauseController;
 
     /** Constructeur de la classe Jour */
     public Jour() {
         this.jour = 1; // Le jeu commence au jour 1
-        actif = true;
+        this.actif = true;
+        this.pauseController = GamePauseController.getInstance();
     }
 
     /** Méthode run qui fait avancer le temps dans le jeu */
@@ -23,9 +25,10 @@ public class Jour extends Thread {
     public void run() {
         while (actif) {
             try {
-                Thread.sleep(DELAI_JOUR); // Attendre le délai entre deux jours
+                pauseController.sleep(DELAI_JOUR); // Attendre le délai entre deux jours
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                interrupt();
+                return;
             }
             jour++; // Incrémenter le jour
         }  

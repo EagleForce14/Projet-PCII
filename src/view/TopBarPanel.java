@@ -1,7 +1,7 @@
 package view;
 
-import model.Jour;
-import model.Money;
+import model.management.Money;
+import model.runtime.Jour;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;

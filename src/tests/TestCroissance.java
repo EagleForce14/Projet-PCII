@@ -1,11 +1,13 @@
 package tests;
-import model.Culture;
+import model.culture.Culture;
+import model.culture.Stade;
+import model.culture.Type;
 
 /** Classe de test pour la fonctionnalité de croissance */
 public class TestCroissance {
 
     public static void main(String[] args) {
-        Culture culture = new Culture(model.Type.TULIPE); // Créer une culture de type TULIPE
+        Culture culture = new Culture(Type.TULIPE); // Créer une culture de type TULIPE
 
         // Affiche dans la console le stade de croissance de la culture toutes les 3 secondes
         while (true) {
@@ -14,7 +16,7 @@ public class TestCroissance {
                 System.out.println("Stade de croissance : " + culture.getStadeCroissance());
 
                 // Arrêter le test lorsque la culture est flétrie
-                if (culture.getStadeCroissance() == model.Stade.FLETRIE) {
+                if (culture.getStadeCroissance() == Stade.FLETRIE) {
                     break;
                 }
             } catch (InterruptedException e) {
