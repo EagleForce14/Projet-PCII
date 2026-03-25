@@ -4,24 +4,23 @@ import model.FacilityType;
 import model.Inventaire;
 import model.Type;
 
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import java.awt.Color;
 import java.awt.Font;
-import java.awt.Rectangle;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
 
 /**
- * Classe permettant d'afficher l'inventaire.
- *
- * On affiche une barre fixe, compacte et toujours visible,
- * centrée tout en bas de l'écran.
+ * Vue dédiée à l'inventaire affiché en bas de l'écran.
  */
-public class InventoryStatusOverlay {
+public class InventoryStatusOverlay extends JPanel {
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
 
-    // L'ordre de la barre reste stable pour que le joueur memorise vite les emplacements.
-    // On ne duplique plus un "mini modele" dans la vue:
-    // la hotbar sait juste dans quel ordre afficher les types existants du vrai Inventaire.
-    private static final Type[] HOTBAR_SEED_ORDER = {
+    // L'ordre d'affichage reste fixe pour que le joueur se fabrique vite des repères.
+    private static final Type[] INVENTORY_SEED_ORDER = {
             Type.TULIPE,
             Type.ROSE,
             Type.MARGUERITE,
@@ -31,20 +30,47 @@ public class InventoryStatusOverlay {
             Type.POIVRON,
             Type.COURGETTE
     };
-    private static final FacilityType HOTBAR_FACILITY = FacilityType.CLOTURE;
+    // Pour l'instant on n'expose qu'une seule installation dans la barre d'inventaire.
+    private static final FacilityType INVENTORY_FACILITY = FacilityType.CLOTURE;
 
+    // Le FieldPanel nous sert uniquement de point d'ancrage géométrique:
+    private final FieldPanel fieldPanel;
+    // Pour alimenter le contenu de la barre
+    private final Inventaire inventaire;
     private final Font quantityFont;
 
     // Le constructeur de la classe
-    public InventoryStatusOverlay() {
+    public InventoryStatusOverlay(FieldPanel fieldPanel, Inventaire inventaire) {
+        this.fieldPanel = fieldPanel;
+        this.inventaire = inventaire;
         this.quantityFont = CustomFontLoader.loadFont(FONT_PATH, 8.0f);
+        this.setOpaque(false);
+        this.setDoubleBuffered(true);
     }
 
     /**
-     * Le dessin de l'inventaire
-     * On tient compte de la position du champ pour eviter de recouvrir la grille.
+     * Recalcule les bornes visibles du champ dans le repère de cette couche.
+     * Cela nous permet ensuite de garder un petit espace de sécurité entre la grille et la barre.
      */
-    public void paint(Graphics2D g2d, Inventaire inventaire, Rectangle fieldBounds, int viewWidth, int viewHeight) {
+    private Rectangle getFieldBoundsInView() {
+        return SwingUtilities.convertRectangle(fieldPanel, fieldPanel.getFieldBounds(), this);
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        Graphics2D g2d = (Graphics2D) g.create();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        paintInventory(g2d, getFieldBoundsInView(), getWidth(), getHeight());
+        g2d.dispose();
+    }
+
+    /**
+     * Dessine la barre complète d'inventaire.
+     * On la maintient centrée tout en bas de l'écran.
+     */
+    private void paintInventory(Graphics2D g2d, Rectangle fieldBounds, int viewWidth, int viewHeight) {
         if (inventaire == null || viewWidth <= 0 || viewHeight <= 0) {
             return;
         }
@@ -52,33 +78,31 @@ public class InventoryStatusOverlay {
         int slotSize = 48;
         int slotGap = 6;
         int outerPadding = 10;
-        int slotCount = getHotbarSlotCount();
+        int slotCount = getInventorySlotCount();
         int barWidth = (slotCount * slotSize) + ((slotCount - 1) * slotGap) + (outerPadding * 2);
         int barHeight = slotSize + (outerPadding * 2);
         int barX = (viewWidth - barWidth) / 2;
 
-        // L'affichage est tout en bas, mais avec une légère marge pour ne pas coller au bord inférieur de la fenêtre.
+        // La barre reste basse avec un petit padding inférieur,
+        // tout en évitant de remonter au-dessus de la grille si la fenêtre est serrée.
         int desiredY = viewHeight - barHeight - 10;
         int minimumClearY = fieldBounds == null ? desiredY : fieldBounds.y + fieldBounds.height + 12;
         int barY = Math.max(desiredY, minimumClearY);
         barY = Math.min(barY, viewHeight - barHeight - 10);
 
-        drawHotbarShell(g2d, barX, barY, barWidth, barHeight);
+        drawInventoryShell(g2d, barX, barY, barWidth, barHeight);
 
-        // Les slots sont dessines sur une seule ligne, comme une vraie hotbar.
-        // C'est beaucoup plus discret qu'un panneau entier et bien plus rapide a lire.
         for (int index = 0; index < slotCount; index++) {
             int slotX = barX + outerPadding + (index * (slotSize + slotGap));
             int slotY = barY + outerPadding;
-            drawSlot(g2d, inventaire, index, slotX, slotY, slotSize);
+            drawSlot(g2d, index, slotX, slotY, slotSize);
         }
     }
 
     /**
-     * Dessine la "coque" (i.e. le background) de l'inventaire.
-     * On va utiliser un style "retro-bois"
+     * Dessine le fond général de la barre.
      */
-    private void drawHotbarShell(Graphics2D g2d, int x, int y, int width, int height) {
+    private void drawInventoryShell(Graphics2D g2d, int x, int y, int width, int height) {
         g2d.setColor(new Color(0, 0, 0, 90));
         g2d.fillRoundRect(x + 4, y + 4, width, height, 18, 18);
 
@@ -93,13 +117,10 @@ public class InventoryStatusOverlay {
     }
 
     /**
-     * Dessine un emplacement pour un élément.
-     *
-     * Un emplacement qui ne contient pas 0 élément est mis en lumière.
-     * Un emplacement qui contient 0 élément est toujours affiché mais de manière plus sombre.
+     * Dessine un emplacement unique de l'inventaire.
      */
-    private void drawSlot(Graphics2D g2d, Inventaire inventaire, int slotIndex, int x, int y, int size) {
-        int quantity = getQuantityForSlot(inventaire, slotIndex);
+    private void drawSlot(Graphics2D g2d, int slotIndex, int x, int y, int size) {
+        int quantity = getQuantityForSlot(slotIndex);
         boolean hasStock = quantity > 0;
 
         Color slotFill = hasStock ? new Color(76, 56, 34, 245) : new Color(50, 39, 28, 220);
@@ -116,18 +137,16 @@ public class InventoryStatusOverlay {
         g2d.setColor(slotBorder);
         g2d.drawRoundRect(x, y, size - 1, size - 1, 10, 10);
 
-        // On laisse l'icône occuper l'essentiel de l'emplacement.
         int iconPixelSize = hasStock ? 5 : 4;
         int iconArtSize = 5 * iconPixelSize;
         int iconX = x + ((size - iconArtSize) / 2);
         int iconY = y + 9;
-        if (slotIndex < HOTBAR_SEED_ORDER.length) {
-            drawPixelArt(g2d, HOTBAR_SEED_ORDER[slotIndex], iconX, iconY, iconPixelSize);
+        if (slotIndex < INVENTORY_SEED_ORDER.length) {
+            drawPixelArt(g2d, INVENTORY_SEED_ORDER[slotIndex], iconX, iconY, iconPixelSize);
         } else {
             drawFence(g2d, iconX, iconY, iconPixelSize);
         }
 
-        // Sur un emplacement vide, on assombrit légèrement.
         if (!hasStock) {
             g2d.setColor(new Color(20, 15, 10, 95));
             g2d.fillRoundRect(x + 2, y + 2, size - 4, size - 4, 8, 8);
@@ -147,29 +166,22 @@ public class InventoryStatusOverlay {
         g2d.drawString(quantityText, textX, textY);
     }
 
-    /**
-     * La hotbar expose 8 slots de graines plus 1 slot pour la cloture.
-     * Ce calcul reste tres simple mais il dit explicitement
-     * qu'on derive l'affichage depuis le modele existant, pas depuis une structure parallele.
-     */
-    private int getHotbarSlotCount() {
-        return HOTBAR_SEED_ORDER.length + 1;
+    private int getInventorySlotCount() {
+        return INVENTORY_SEED_ORDER.length + 1;
     }
 
     /**
-     * Lit la quantite directement sur le vrai Inventaire.
-     * La vue ne transporte donc plus son propre "InventoryEntry" prive.
+     * Lit directement la quantité depuis le modèle.
      */
-    private int getQuantityForSlot(Inventaire inventaire, int slotIndex) {
-        if (slotIndex < HOTBAR_SEED_ORDER.length) {
-            return inventaire.getQuantiteGraine(HOTBAR_SEED_ORDER[slotIndex]);
+    private int getQuantityForSlot(int slotIndex) {
+        if (slotIndex < INVENTORY_SEED_ORDER.length) {
+            return inventaire.getQuantiteGraine(INVENTORY_SEED_ORDER[slotIndex]);
         }
-        return inventaire.getQuantiteInstallation(HOTBAR_FACILITY);
+        return inventaire.getQuantiteInstallation(INVENTORY_FACILITY);
     }
 
     /**
-     * Permet de dessiner une mini icone simple en pixel-art a partir du Type.
-     * Le choix du dessin repose donc directement sur le type metier deja present dans le modele.
+     * Dessine une petite icône pixel-art à partir du Type métier.
      */
     private void drawPixelArt(Graphics2D g2d, Type type, int x, int y, int pixelSize) {
         switch (type) {
@@ -202,7 +214,6 @@ public class InventoryStatusOverlay {
         }
     }
 
-    // Pour dessiner une tulipe
     private void drawTulip(Graphics2D g2d, int x, int y, int pixelSize) {
         drawStem(g2d, x, y, pixelSize);
         fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(226, 73, 126));
@@ -211,7 +222,6 @@ public class InventoryStatusOverlay {
         fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, new Color(255, 154, 190));
     }
 
-    // Pour dessiner une rose
     private void drawRose(Graphics2D g2d, int x, int y, int pixelSize) {
         drawStem(g2d, x, y, pixelSize);
         fillPixel(g2d, x + pixelSize, y, pixelSize, new Color(174, 41, 66));
@@ -221,7 +231,6 @@ public class InventoryStatusOverlay {
         fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(212, 61, 84));
     }
 
-    // Pour dessiner une marguerite
     private void drawDaisy(Graphics2D g2d, int x, int y, int pixelSize) {
         drawStem(g2d, x, y, pixelSize);
         Color petal = new Color(245, 239, 227);
@@ -234,7 +243,6 @@ public class InventoryStatusOverlay {
         fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(236, 201, 72));
     }
 
-    // Pour dessiner une orchidée
     private void drawOrchid(Graphics2D g2d, int x, int y, int pixelSize) {
         drawStem(g2d, x, y, pixelSize);
         Color purple = new Color(170, 110, 214);
@@ -246,7 +254,6 @@ public class InventoryStatusOverlay {
         fillPixel(g2d, x + (4 * pixelSize), y + (2 * pixelSize), pixelSize, purple);
     }
 
-    // Pour dessiner une carotte
     private void drawCarrot(Graphics2D g2d, int x, int y, int pixelSize) {
         fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(70, 155, 67));
         fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(92, 187, 85));
@@ -257,7 +264,6 @@ public class InventoryStatusOverlay {
         fillPixel(g2d, x + pixelSize, y + (4 * pixelSize), pixelSize, new Color(202, 95, 19));
     }
 
-    // Pour dessiner une tomate
     private void drawTomato(Graphics2D g2d, int x, int y, int pixelSize) {
         fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(76, 144, 55));
         fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(220, 64, 49));
@@ -268,7 +274,6 @@ public class InventoryStatusOverlay {
         fillPixel(g2d, x + (3 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(220, 64, 49));
     }
 
-    // Pour dessiner un poivron jaune
     private void drawPepper(Graphics2D g2d, int x, int y, int pixelSize) {
         fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(76, 144, 55));
         fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(226, 186, 57));
@@ -279,7 +284,6 @@ public class InventoryStatusOverlay {
         fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, new Color(226, 186, 57));
     }
 
-    // Pour dessiner une courgette
     private void drawZucchini(Graphics2D g2d, int x, int y, int pixelSize) {
         fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(72, 146, 71));
         fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(92, 173, 91));
@@ -289,7 +293,6 @@ public class InventoryStatusOverlay {
         fillPixel(g2d, x + (3 * pixelSize), y + (3 * pixelSize), pixelSize, new Color(72, 146, 71));
     }
 
-    // Pour dessiner une clôture
     private void drawFence(Graphics2D g2d, int x, int y, int pixelSize) {
         Color wood = new Color(176, 118, 60);
         Color darkWood = new Color(118, 73, 35);
@@ -306,10 +309,6 @@ public class InventoryStatusOverlay {
         fillPixel(g2d, x + (3 * pixelSize), y + (2 * pixelSize), pixelSize, darkWood);
     }
 
-    /**
-     * Petite tige commune aux fleurs.
-     * C'est un detail minime, mais ca suffit a rendre les silhouettes plus lisibles.
-     */
     private void drawStem(Graphics2D g2d, int x, int y, int pixelSize) {
         fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(79, 163, 78));
         fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, new Color(63, 137, 63));

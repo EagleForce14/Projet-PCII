@@ -58,9 +58,13 @@ public class Main {
         // Les actions contextuelles sont affichées dans une sidebar dédiée, hors du jeu.
         SidebarPanel actionSidebarPanel = new SidebarPanel(model, grilleCulture, shop, inventaire);
 
-        EnemyView enemyView = new EnemyView(enemyModel, fieldPanel, inventaire);
+        EnemyView enemyView = new EnemyView(enemyModel, fieldPanel);
         enemyView.setAlignmentX(0.5f);
         enemyView.setAlignmentY(0.5f);
+
+        InventoryStatusOverlay inventoryStatusOverlay = new InventoryStatusOverlay(fieldPanel, inventaire);
+        inventoryStatusOverlay.setAlignmentX(0.5f);
+        inventoryStatusOverlay.setAlignmentY(0.5f);
 
         // Cette vue couvre toute la fenêtre et affiche les éléments de décor fixes
         EnvironmentView environmentView = new EnvironmentView(fieldPanel);
@@ -83,6 +87,7 @@ public class Main {
         gamePanel.setLayout(new OverlayLayout(gamePanel));
         gamePanel.add(movementView);
         gamePanel.add(enemyView);
+        gamePanel.add(inventoryStatusOverlay);
         gamePanel.add(environmentView); // S'affiche derrière les ennemis
         gamePanel.add(fieldLayer); // S'affiche derrière l'environnement
 
@@ -94,6 +99,7 @@ public class Main {
         hudPanel.add(new TopBarPanel(playerMoney), BorderLayout.NORTH);
         gamePanel.add(hudPanel);
         gamePanel.setComponentZOrder(hudPanel, 0);
+        gamePanel.setComponentZOrder(inventoryStatusOverlay, 1);
 
         JPanel contentPanel = new JPanel(new BorderLayout());
         contentPanel.add(gamePanel, BorderLayout.CENTER);

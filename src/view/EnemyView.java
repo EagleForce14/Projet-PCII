@@ -2,7 +2,6 @@ package view;
 
 import model.EnemyModel;
 import model.EnemyUnit;
-import model.Inventaire;
 
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
@@ -34,10 +33,6 @@ public class EnemyView extends JPanel {
     private final FieldPanel fieldPanel;
     // Renderer dédié à la carte d'information du lapin sélectionné.
     private final EnemyStatusOverlay statusOverlay;
-    // La vue dédiée à l'inventaire de la grange.
-    private final InventoryStatusOverlay inventoryOverlay;
-    // Le modele de stock est lu directement a chaque frame pour rester synchronise avec la boutique.
-    private final Inventaire inventaire;
     // Lapin actuellement sélectionné par un clic utilisateur.
     private EnemyUnit selectedEnemy;
 
@@ -45,12 +40,10 @@ public class EnemyView extends JPanel {
      * Prépare uniquement l'état graphique de la vue.
      * Le branchement des listeners souris est fait dans le contrôleur.
      */
-    public EnemyView(EnemyModel model, FieldPanel fieldPanel, Inventaire inventaire) {
+    public EnemyView(EnemyModel model, FieldPanel fieldPanel) {
         this.model = model;
         this.fieldPanel = fieldPanel;
-        this.inventaire = inventaire;
         this.statusOverlay = new EnemyStatusOverlay();
-        this.inventoryOverlay = new InventoryStatusOverlay();
         this.setOpaque(false);
         this.setDoubleBuffered(true); // Évite les clignotements
     }
@@ -240,10 +233,5 @@ public class EnemyView extends JPanel {
         // L'overlay reste fixe à l'écran pour être lisible,
         // même quand le lapin continue à marcher ou change d'état.
         statusOverlay.paint(g2d, selectedEnemy, getWidth());
-
-        // La hotbar d'inventaire est toujours visible.
-        // On la place tout en bas et on lui passe aussi les bornes du champ
-        // pour s'assurer qu'elle ne vienne pas mordre sur la grille.
-        inventoryOverlay.paint(g2d, inventaire, fieldBounds, getWidth(), getHeight());
     }
 }
