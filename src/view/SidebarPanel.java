@@ -3,6 +3,7 @@ package view;
 import model.culture.Culture;
 import model.culture.GrilleCulture;
 import model.culture.Stade;
+import model.culture.Type;
 import model.movement.MovementModel;
 import model.management.Inventaire;
 import model.shop.Shop;
@@ -50,7 +51,7 @@ public class SidebarPanel extends JPanel {
 
 
     // Petit cache local pour éviter d'appliquer setEnabled en boucle inutilement.
-    private boolean currentActionEnabledState;
+    private boolean currentPlantEnabledState;
     private boolean currentHarvestEnabledState;
     private boolean currentCleanEnabledState;
     private boolean currentWaterEnabledState;
@@ -147,33 +148,47 @@ public class SidebarPanel extends JPanel {
      * Lit l'état dans le modèle et applique visuellement l'activation si nécessaire.
      */
     private void syncFromModel() {
-        boolean shouldEnableActions = movementModel.isActionOverlayEnabled();
+        boolean shouldEnablePlant = canPlantActiveCell();
         boolean shouldEnableHarvest = canHarvestActiveCell();
         boolean shouldEnableClean = canCleanActiveCell();
         boolean shouldEnableWater = canWaterActiveCell();
-        if (shouldEnableActions != currentActionEnabledState
+        if (shouldEnablePlant != currentPlantEnabledState
                 || shouldEnableHarvest != currentHarvestEnabledState
                 || shouldEnableClean != currentCleanEnabledState
                 || shouldEnableWater != currentWaterEnabledState) {
-            applyButtonsEnabledState(shouldEnableActions, shouldEnableHarvest, shouldEnableClean, shouldEnableWater);
+            applyButtonsEnabledState(shouldEnablePlant, shouldEnableHarvest, shouldEnableClean, shouldEnableWater);
         }
     }
 
     /**
      * Active/désactive les boutons.
      */
-    private void applyButtonsEnabledState(boolean actionEnabled, boolean harvestEnabled, boolean cleanEnabled, boolean waterEnabled) {
-        currentActionEnabledState = actionEnabled;
+    private void applyButtonsEnabledState(boolean plantEnabled, boolean harvestEnabled, boolean cleanEnabled, boolean waterEnabled) {
+        currentPlantEnabledState = plantEnabled;
         currentHarvestEnabledState = harvestEnabled;
         currentCleanEnabledState = cleanEnabled;
         currentWaterEnabledState = waterEnabled;
 
-        plantButton.setEnabled(actionEnabled);
+        plantButton.setEnabled(plantEnabled);
         harvestButton.setEnabled(harvestEnabled);
         waterButton.setEnabled(waterEnabled);
         cleanButton.setEnabled(cleanEnabled);
 
         repaint();
+    }
+
+    /**
+     * On ne peut planter que si une graine précise est sélectionnée,
+     * qu'il en reste au moins une, et que la case active est vide.
+     */
+    private boolean canPlantActiveCell() {
+        Point activeFieldCell = movementModel.getActiveFieldCell();
+        Type selectedSeedType = movementModel.getSelectedSeedType();
+        if (activeFieldCell == null || selectedSeedType == null || !inventaire.possedeGraine(selectedSeedType)) {
+            return false;
+        }
+
+        return grilleCulture.getCulture(activeFieldCell.x, activeFieldCell.y) == null;
     }
 
     /**

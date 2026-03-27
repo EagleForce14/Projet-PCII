@@ -2,11 +2,33 @@ package model.culture;
 
 import model.management.Inventaire;
 import model.objective.GestionnaireObjectifs;
+import model.shop.FacilityType;
 
 import java.util.Map;
 
 /** Classe représentant la grille de culture */
 public class GrilleCulture {
+
+    /**
+     * Une clôture n'occupe pas toute la case:
+     * on mémorise simplement sur quel bord extérieur elle a été posée.
+     */
+    public enum CellSide {
+        TOP(0, -1, 1),
+        RIGHT(1, 0, 1 << 1),
+        BOTTOM(0, 1, 1 << 2),
+        LEFT(-1, 0, 1 << 3);
+
+        private final int deltaX;
+        private final int deltaY;
+        private final int mask;
+
+        CellSide(int deltaX, int deltaY, int mask) {
+            this.deltaX = deltaX;
+            this.deltaY = deltaY;
+            this.mask = mask;
+        }
+    }
 
     /** Constante représentant la largeur de la grille */
     public static final int LARGEUR_GRILLE = 10;
@@ -53,6 +75,9 @@ public class GrilleCulture {
     /** Attribut représentant la grille de culture */
     ZoneCulture[][] grille;
 
+    // Chaque bit représente un segment de clôture posé sur un des 4 bords d'une case.
+    private final int[][] fenceMasks;
+
     /** Attribut représentant le gestionnaire d'objectifs */
     private GestionnaireObjectifs gestionnaireObjectifs;
 
@@ -65,6 +90,7 @@ public class GrilleCulture {
     public GrilleCulture(GestionnaireObjectifs gestionnaireObjectifs) {
         this.gestionnaireObjectifs = gestionnaireObjectifs;
         this.grille = new ZoneCulture[LARGEUR_GRILLE][HAUTEUR_GRILLE];
+        this.fenceMasks = new int[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         // Initialiser chaque zone de culture de la grille
         for (int i = 0; i < LARGEUR_GRILLE; i++) {
             for (int j = 0; j < HAUTEUR_GRILLE; j++) {
@@ -86,6 +112,51 @@ public class GrilleCulture {
     /** Getter qui renvoie la hauteur logique de la grille. */
     public int getHauteur() {
         return HAUTEUR_GRILLE;
+    }
+
+    /**
+     * Un bord est "extérieur" si, en avançant dans sa direction,
+     * on tombe hors de la grille.
+     */
+    public boolean isOuterSide(int x, int y, CellSide side) {
+        if (side == null || !estDansGrille(x, y)) {
+            return false;
+        }
+
+        return !estDansGrille(x + side.deltaX, y + side.deltaY);
+    }
+
+    public boolean hasFence(int x, int y, CellSide side) {
+        if (side == null || !estDansGrille(x, y)) {
+            return false;
+        }
+
+        return (fenceMasks[x][y] & side.mask) != 0;
+    }
+
+    /**
+     * Une clôture ne peut être posée que sur un bord extérieur encore libre.
+     */
+    public boolean canPlaceFence(int x, int y, CellSide side) {
+        return isOuterSide(x, y, side) && !hasFence(x, y, side);
+    }
+
+    /**
+     * La pose consomme une clôture de l'inventaire uniquement après validation complète.
+     */
+    public void placeFence(int x, int y, CellSide side, Inventaire inventaire) {
+        if (side == null) {
+            throw new IllegalStateException("Aucun cote de cloture n'a ete selectionne.");
+        }
+        if (inventaire == null || inventaire.possedeInstallation(FacilityType.CLOTURE)) {
+            throw new IllegalStateException("Aucune cloture n'est disponible dans l'inventaire.");
+        }
+        if (!canPlaceFence(x, y, side)) {
+            throw new IllegalStateException("Cette cloture doit etre posee sur un bord exterieur libre.");
+        }
+
+        fenceMasks[x][y] |= side.mask;
+        inventaire.UseInstallation(FacilityType.CLOTURE);
     }
 
     /** Méthode qui plante une culture dans la grille */

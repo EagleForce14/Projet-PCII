@@ -2,6 +2,7 @@ package view;
 
 import model.culture.Culture;
 import model.culture.GrilleCulture;
+import model.culture.GrilleCulture.CellSide;
 import model.culture.Stade;
 import model.movement.Unit;
 
@@ -40,6 +41,22 @@ public class FieldPanel extends JPanel {
     private static final Color WATERED_FILL = new Color(70, 170, 255);
     private static final Color WATERED_BORDER = new Color(220, 245, 255);
 
+    // Couleurs du survol dédié au placement des clôtures.
+    private static final Color FENCE_PREVIEW_FILL = new Color(255, 232, 151, 130);
+    private static final Color FENCE_PREVIEW_BORDER = new Color(255, 201, 74, 230);
+
+    // Palette bois utilisée pour les clôtures rendues directement sur le champ.
+    private static final Color FENCE_OUTLINE = new Color(27, 20, 15);
+    private static final Color FENCE_CAP_DARK = new Color(70, 54, 43);
+    private static final Color FENCE_CAP_LIGHT = new Color(94, 72, 58);
+    private static final Color FENCE_WOOD_LIGHT = new Color(216, 177, 118);
+    private static final Color FENCE_WOOD_MID = new Color(173, 126, 77);
+    private static final Color FENCE_WOOD_DARK = new Color(112, 73, 42);
+    private static final Color FENCE_SLAT_FILL = new Color(240, 132, 42);
+    private static final Color FENCE_SLAT_LIGHT = new Color(255, 170, 72);
+    private static final Color FENCE_SLAT_DARK = new Color(174, 78, 18);
+    private static final Color FENCE_WOOD_SHADOW = new Color(73, 46, 25, 95);
+
     // Vitesse de pulsation de l'animation d'arrosage.
     // Plus la valeur est grande, plus le halo "respire" vite.
     private static final double WATER_PULSE_SPEED = 0.008;
@@ -59,6 +76,31 @@ public class FieldPanel extends JPanel {
     // Coordonnées de la case actuellement surlignée.
     // Cette valeur vaut null quand aucune case n'est activable.
     private Point highlightedCell;
+
+    // Le preview mémorise à la fois la case survolée et le bord réellement visé.
+    private FencePreview fencePreview;
+
+    /**
+     * Petit objet immuable qui représente un placement de clôture "en attente".
+     * On le garde volontairement minuscule pour pouvoir le recalculer souvent au survol.
+     */
+    public static final class FencePreview {
+        private final Point cell;
+        private final CellSide side;
+
+        public FencePreview(Point cell, CellSide side) {
+            this.cell = cell == null ? null : new Point(cell);
+            this.side = side;
+        }
+
+        public Point getCell() {
+            return cell == null ? null : new Point(cell);
+        }
+
+        public CellSide getSide() {
+            return side;
+        }
+    }
 
     /**
      * Initialise le champ et charge l'image d'une parcelle.
@@ -113,6 +155,59 @@ public class FieldPanel extends JPanel {
 
         this.highlightedCell = highlightedCell == null ? null : new Point(highlightedCell);
         repaint();
+    }
+
+    /**
+     * Le contrôleur lit ce preview juste avant de valider un clic.
+     * On renvoie une copie pour rester cohérents avec les autres getters du panneau.
+     */
+    public FencePreview getFencePreview() {
+        if (fencePreview == null) {
+            return null;
+        }
+
+        return new FencePreview(fencePreview.getCell(), fencePreview.getSide());
+    }
+
+    /**
+     * Met à jour le survol de clôture.
+     * Rien n'est affiché si la souris n'est sur aucune case de bord libre.
+     */
+    public void setFencePreview(FencePreview fencePreview) {
+        if (sameFencePreview(this.fencePreview, fencePreview)) {
+            return;
+        }
+
+        this.fencePreview = fencePreview == null
+                ? null
+                : new FencePreview(fencePreview.getCell(), fencePreview.getSide());
+        repaint();
+    }
+
+    public void clearFencePreview() {
+        setFencePreview(null);
+    }
+
+    /**
+     * Traduit la position réelle de la souris en preview de clôture.
+     * Sur une case d'angle, on choisit simplement le bord extérieur libre le plus proche du curseur.
+     */
+    public FencePreview getFencePreviewAt(Point pointInFieldPanel) {
+        if (pointInFieldPanel == null) {
+            return null;
+        }
+
+        Point cell = getGridPositionAt(pointInFieldPanel.x, pointInFieldPanel.y);
+        if (cell == null) {
+            return null;
+        }
+
+        CellSide side = findClosestPlaceableFenceSide(cell, pointInFieldPanel.x, pointInFieldPanel.y);
+        if (side == null) {
+            return null;
+        }
+
+        return new FencePreview(cell, side);
     }
 
     /**
@@ -273,6 +368,59 @@ public class FieldPanel extends JPanel {
         g2.drawRoundRect(x + inset + 2, y + inset + 2, size - 5, size - 5, arc, arc);
     }
 
+    private boolean sameFencePreview(FencePreview first, FencePreview second) {
+        if (first == second) {
+            return true;
+        }
+        if (first == null || second == null) {
+            return false;
+        }
+
+        return Objects.equals(first.getCell(), second.getCell()) && first.getSide() == second.getSide();
+    }
+
+    /**
+     * On ne retient que les bords vraiment plaçables.
+     * Cela permet, par exemple, de garder un coin utilisable même si un de ses deux côtés a déjà reçu une clôture.
+     */
+    private CellSide findClosestPlaceableFenceSide(Point cell, int pixelX, int pixelY) {
+        Rectangle cellBounds = getCellBounds(cell.x, cell.y);
+        if (cellBounds == null) {
+            return null;
+        }
+
+        CellSide bestSide = null;
+        int bestDistance = Integer.MAX_VALUE;
+        for (CellSide side : CellSide.values()) {
+            if (!grilleCulture.canPlaceFence(cell.x, cell.y, side)) {
+                continue;
+            }
+
+            int distance = distanceToSide(cellBounds, side, pixelX, pixelY);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestSide = side;
+            }
+        }
+
+        return bestSide;
+    }
+
+    private int distanceToSide(Rectangle cellBounds, CellSide side, int pixelX, int pixelY) {
+        switch (side) {
+            case TOP:
+                return Math.abs(pixelY - cellBounds.y);
+            case RIGHT:
+                return Math.abs(pixelX - (cellBounds.x + cellBounds.width));
+            case BOTTOM:
+                return Math.abs(pixelY - (cellBounds.y + cellBounds.height));
+            case LEFT:
+                return Math.abs(pixelX - cellBounds.x);
+            default:
+                return Integer.MAX_VALUE;
+        }
+    }
+
     /**
      * Dessine l'image dans la case sans la déformer.
      */
@@ -303,6 +451,247 @@ public class FieldPanel extends JPanel {
 
         g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g2.drawImage(cultureImage, drawX, drawY, drawWidth, drawHeight, this);
+    }
+
+    /**
+     * Le survol de pose doit épouser le bord visé, pas la case entière.
+     * On dessine donc une bande fine exactement à l'endroit où la clôture pourrait arriver.
+     */
+    private void drawFencePreview(Graphics2D g2, Rectangle cellBounds, CellSide side) {
+        int stripThickness = Math.max(6, cellBounds.width / 8);
+        int inset = Math.max(4, cellBounds.width / 10);
+
+        g2.setColor(FENCE_PREVIEW_FILL);
+        switch (side) {
+            case TOP:
+                g2.fillRoundRect(cellBounds.x + inset, cellBounds.y, cellBounds.width - (2 * inset), stripThickness, 8, 8);
+                break;
+            case RIGHT:
+                g2.fillRoundRect(cellBounds.x + cellBounds.width - stripThickness, cellBounds.y + inset,
+                        stripThickness, cellBounds.height - (2 * inset), 8, 8);
+                break;
+            case BOTTOM:
+                g2.fillRoundRect(cellBounds.x + inset, cellBounds.y + cellBounds.height - stripThickness,
+                        cellBounds.width - (2 * inset), stripThickness, 8, 8);
+                break;
+            case LEFT:
+                g2.fillRoundRect(cellBounds.x, cellBounds.y + inset, stripThickness, cellBounds.height - (2 * inset), 8, 8);
+                break;
+            default:
+                return;
+        }
+
+        g2.setColor(FENCE_PREVIEW_BORDER);
+        switch (side) {
+            case TOP:
+                g2.drawLine(cellBounds.x + inset, cellBounds.y + stripThickness - 1,
+                        cellBounds.x + cellBounds.width - inset, cellBounds.y + stripThickness - 1);
+                break;
+            case RIGHT:
+                g2.drawLine(cellBounds.x + cellBounds.width - stripThickness, cellBounds.y + inset,
+                        cellBounds.x + cellBounds.width - stripThickness, cellBounds.y + cellBounds.height - inset);
+                break;
+            case BOTTOM:
+                g2.drawLine(cellBounds.x + inset, cellBounds.y + cellBounds.height - stripThickness,
+                        cellBounds.x + cellBounds.width - inset, cellBounds.y + cellBounds.height - stripThickness);
+                break;
+            case LEFT:
+                g2.drawLine(cellBounds.x + stripThickness - 1, cellBounds.y + inset,
+                        cellBounds.x + stripThickness - 1, cellBounds.y + cellBounds.height - inset);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void drawFence(Graphics2D g2, int cellX, int cellY, Rectangle cellBounds, CellSide side) {
+        switch (side) {
+            case TOP:
+                drawHorizontalFence(g2, cellX, cellY, cellBounds, false);
+                break;
+            case RIGHT:
+                drawVerticalFence(g2, cellX, cellY, cellBounds, true);
+                break;
+            case BOTTOM:
+                drawHorizontalFence(g2, cellX, cellY, cellBounds, true);
+                break;
+            case LEFT:
+                drawVerticalFence(g2, cellX, cellY, cellBounds, false);
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
+     * Cette version colle vraiment au bord de la case.
+     * L'ombre côté intérieur aide à comprendre que la clôture est debout,
+     * pas couchée sur la terre.
+     */
+    private void drawHorizontalFence(Graphics2D g2, int cellX, int cellY, Rectangle cellBounds, boolean bottomSide) {
+        int tileSize = cellBounds.width;
+        CellSide side = bottomSide ? CellSide.BOTTOM : CellSide.TOP;
+        boolean connectedLeft = grilleCulture.hasFence(cellX - 1, cellY, side);
+        boolean connectedRight = grilleCulture.hasFence(cellX + 1, cellY, side);
+
+        int outsideDepth = Math.max(2, tileSize / 18);
+        int insideDepth = Math.max(6, tileSize / 9);
+        int bandHeight = outsideDepth + insideDepth;
+        int bandY = bottomSide
+                ? cellBounds.y + cellBounds.height - insideDepth
+                : cellBounds.y - outsideDepth;
+
+        int slatThickness = Math.max(2, bandHeight / 3);
+        int slatGap = Math.max(1, tileSize / 20);
+        int postWidth = Math.max(7, tileSize / 8);
+        int postHeight = bandHeight + Math.max(4, tileSize / 12);
+        int leftPostX = cellBounds.x - (postWidth / 2);
+        int rightPostX = cellBounds.x + cellBounds.width - (postWidth / 2);
+        int postY = bandY - ((postHeight - bandHeight) / 2);
+
+        int railStartX = connectedLeft ? cellBounds.x : leftPostX + postWidth - 1;
+        int railEndX = connectedRight ? cellBounds.x + cellBounds.width : rightPostX + 1;
+        int railWidth = Math.max(2, railEndX - railStartX);
+        int firstSlatY = bandY + 1;
+        int secondSlatY = bandY + bandHeight - slatThickness - 1;
+
+        drawHorizontalSlat(g2, railStartX, firstSlatY, railWidth, slatThickness, !bottomSide);
+        if (secondSlatY - firstSlatY >= slatThickness + slatGap) {
+            drawHorizontalSlat(g2, railStartX, secondSlatY, railWidth, slatThickness, !bottomSide);
+        }
+
+        if (!connectedLeft) {
+            drawHorizontalPost(g2, leftPostX, postY, postWidth, postHeight, !bottomSide);
+        }
+        if (!connectedRight) {
+            drawHorizontalPost(g2, rightPostX, postY, postWidth, postHeight, !bottomSide);
+        }
+
+        g2.setColor(FENCE_WOOD_SHADOW);
+        int shadowY = bottomSide ? bandY - 1 : bandY + bandHeight;
+        g2.fillRect(cellBounds.x + 2, shadowY, Math.max(2, cellBounds.width - 4), Math.max(2, tileSize / 18));
+    }
+
+    private void drawVerticalFence(Graphics2D g2, int cellX, int cellY, Rectangle cellBounds, boolean rightSide) {
+        int tileSize = cellBounds.width;
+        CellSide side = rightSide ? CellSide.RIGHT : CellSide.LEFT;
+        boolean connectedTop = grilleCulture.hasFence(cellX, cellY - 1, side);
+        boolean connectedBottom = grilleCulture.hasFence(cellX, cellY + 1, side);
+
+        int outsideDepth = Math.max(2, tileSize / 18);
+        int insideDepth = Math.max(6, tileSize / 9);
+        int bandWidth = outsideDepth + insideDepth;
+        int bandX = rightSide
+                ? cellBounds.x + cellBounds.width - insideDepth
+                : cellBounds.x - outsideDepth;
+
+        int slatThickness = Math.max(2, bandWidth / 3);
+        int slatGap = Math.max(1, tileSize / 20);
+        int postHeight = Math.max(7, tileSize / 8);
+        int postWidth = bandWidth + Math.max(4, tileSize / 12);
+        int topPostY = cellBounds.y - (postHeight / 2);
+        int bottomPostY = cellBounds.y + cellBounds.height - (postHeight / 2);
+        int postX = bandX - ((postWidth - bandWidth) / 2);
+
+        int railStartY = connectedTop ? cellBounds.y : topPostY + postHeight - 1;
+        int railEndY = connectedBottom ? cellBounds.y + cellBounds.height : bottomPostY + 1;
+        int railHeight = Math.max(2, railEndY - railStartY);
+        int firstSlatX = bandX + 1;
+        int secondSlatX = bandX + bandWidth - slatThickness - 1;
+
+        drawVerticalSlat(g2, firstSlatX, railStartY, slatThickness, railHeight, rightSide);
+        if (secondSlatX - firstSlatX >= slatThickness + slatGap) {
+            drawVerticalSlat(g2, secondSlatX, railStartY, slatThickness, railHeight, rightSide);
+        }
+
+        if (!connectedTop) {
+            drawVerticalPost(g2, postX, topPostY, postWidth, postHeight, rightSide);
+        }
+        if (!connectedBottom) {
+            drawVerticalPost(g2, postX, bottomPostY, postWidth, postHeight, rightSide);
+        }
+
+        g2.setColor(FENCE_WOOD_SHADOW);
+        int shadowX = rightSide ? bandX - 1 : bandX + bandWidth;
+        g2.fillRect(shadowX, cellBounds.y + 2, Math.max(2, tileSize / 18), Math.max(2, cellBounds.height - 4));
+    }
+
+    private void drawHorizontalPost(Graphics2D g2, int x, int y, int width, int height, boolean outerOnTop) {
+        g2.setColor(FENCE_OUTLINE);
+        g2.fillRect(x, y, width, height);
+
+        g2.setColor(FENCE_WOOD_MID);
+        g2.fillRect(x + 1, y + 1, Math.max(1, width - 2), Math.max(1, height - 2));
+
+        g2.setColor(FENCE_WOOD_LIGHT);
+        g2.fillRect(x + 1, y + 1, Math.max(2, width / 3), Math.max(1, height - 2));
+
+        g2.setColor(FENCE_WOOD_DARK);
+        g2.fillRect(x + width - 2, y + 1, 1, Math.max(1, height - 2));
+
+        int capY = outerOnTop ? y : y + height - Math.max(3, height / 3);
+        int capHeight = Math.max(3, height / 3);
+        g2.setColor(FENCE_CAP_DARK);
+        g2.fillRect(x + 1, capY, Math.max(1, width - 2), capHeight);
+
+        g2.setColor(FENCE_CAP_LIGHT);
+        g2.fillRect(x + 2, capY + 1, Math.max(1, width - 4), 1);
+    }
+
+    private void drawVerticalPost(Graphics2D g2, int x, int y, int width, int height, boolean outerOnRight) {
+        g2.setColor(FENCE_OUTLINE);
+        g2.fillRect(x, y, width, height);
+
+        g2.setColor(FENCE_WOOD_MID);
+        g2.fillRect(x + 1, y + 1, Math.max(1, width - 2), Math.max(1, height - 2));
+
+        g2.setColor(FENCE_WOOD_LIGHT);
+        g2.fillRect(x + 1, y + 1, Math.max(1, width - 2), Math.max(2, height / 3));
+
+        g2.setColor(FENCE_WOOD_DARK);
+        g2.fillRect(x + 1, y + height - 2, Math.max(1, width - 2), 1);
+
+        int capX = outerOnRight ? x + width - Math.max(3, width / 3) : x;
+        int capWidth = Math.max(3, width / 3);
+        g2.setColor(FENCE_CAP_DARK);
+        g2.fillRect(capX, y + 1, capWidth, Math.max(1, height - 2));
+
+        g2.setColor(FENCE_CAP_LIGHT);
+        g2.fillRect(capX + (outerOnRight ? 0 : 1), y + 2, 1, Math.max(1, height - 4));
+    }
+
+    private void drawHorizontalSlat(Graphics2D g2, int x, int y, int width, int height, boolean outerOnTop) {
+        g2.setColor(FENCE_OUTLINE);
+        g2.fillRect(x, y, width, height);
+
+        // Les lattes sont volontairement plus orangées que les poteaux
+        // pour se détacher immédiatement de la terre du champ.
+        g2.setColor(FENCE_SLAT_FILL);
+        g2.fillRect(x + 1, y + 1, Math.max(1, width - 2), Math.max(1, height - 2));
+
+        g2.setColor(outerOnTop ? FENCE_SLAT_LIGHT : FENCE_SLAT_DARK);
+        g2.fillRect(x + 1, outerOnTop ? y + 1 : y + height - 2, Math.max(1, width - 2), 1);
+
+        if (height >= 4) {
+            g2.setColor(FENCE_SLAT_DARK);
+            g2.fillRect(x + Math.max(2, width / 3), y + 1, 1, Math.max(1, height - 2));
+        }
+    }
+
+    private void drawVerticalSlat(Graphics2D g2, int x, int y, int width, int height, boolean outerOnRight) {
+        g2.setColor(FENCE_OUTLINE);
+        g2.fillRect(x, y, width, height);
+
+        g2.setColor(FENCE_SLAT_FILL);
+        g2.fillRect(x + 1, y + 1, Math.max(1, width - 2), Math.max(1, height - 2));
+
+        g2.setColor(outerOnRight ? FENCE_SLAT_DARK : FENCE_SLAT_LIGHT);
+        g2.fillRect(outerOnRight ? x + width - 2 : x + 1, y + 1, 1, Math.max(1, height - 2));
+
+        if (width >= 4) {
+            g2.setColor(FENCE_SLAT_DARK);
+            g2.fillRect(x + 1, y + Math.max(2, height / 3), Math.max(1, width - 2), 1);
+        }
     }
 
     /**
@@ -357,6 +746,30 @@ public class FieldPanel extends JPanel {
                     g2.drawRect(x, y, tileSize - 1, tileSize - 1);
                     g2.drawRect(x + 1, y + 1, tileSize - 3, tileSize - 3);
                 }
+            }
+        }
+
+        // On dessine les clôtures après le contenu des cases pour qu'elles restent bien lisibles.
+        for (int r = 0; r < getRowCount(); r++) {
+            for (int c = 0; c < getColumnCount(); c++) {
+                Rectangle cellBounds = getCellBounds(c, r);
+                if (cellBounds == null) {
+                    continue;
+                }
+
+                for (CellSide side : CellSide.values()) {
+                    if (grilleCulture.hasFence(c, r, side)) {
+                        drawFence(g2, c, r, cellBounds, side);
+                    }
+                }
+            }
+        }
+
+        if (fencePreview != null) {
+            Point previewCell = fencePreview.getCell();
+            Rectangle previewBounds = previewCell == null ? null : getCellBounds(previewCell.x, previewCell.y);
+            if (previewBounds != null) {
+                drawFencePreview(g2, previewBounds, fencePreview.getSide());
             }
         }
 

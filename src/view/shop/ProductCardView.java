@@ -128,9 +128,10 @@ public class ProductCardView extends JPanel {
         g2d.fillRoundRect(16, 16, 88, 88, 18, 18);
 
         int pixelSize = 7;
-        int artSize = 5 * pixelSize;
-        int artX = 16 + ((88 - artSize) / 2);
-        int artY = 16 + ((88 - artSize) / 2);
+        int artWidth = ProductPixelArt.getProductArtWidth(product, pixelSize);
+        int artHeight = ProductPixelArt.getProductArtHeight(product, pixelSize);
+        int artX = 16 + ((88 - artWidth) / 2);
+        int artY = 16 + ((88 - artHeight) / 2);
         ProductPixelArt.drawProduct(g2d, product, artX, artY, pixelSize);
 
         g2d.setFont(labelFont);

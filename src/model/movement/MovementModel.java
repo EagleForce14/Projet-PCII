@@ -1,4 +1,7 @@
 package model.movement;
+import model.culture.Type;
+import model.shop.FacilityType;
+
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +22,11 @@ public class MovementModel {
 
     // La case sur laquelle le joueur est réellement positionné dans le champ.
     private volatile Point activeFieldCell;
+
+    // Une seule entrée d'inventaire peut être active à la fois :
+    // soit une graine, soit une installation.
+    private volatile Type selectedSeedType;
+    private volatile FacilityType selectedFacilityType;
 
     public MovementModel() {
         units = new ArrayList<>();
@@ -71,6 +79,33 @@ public class MovementModel {
      */
     public Point getActiveFieldCell() {
         return activeFieldCell == null ? null : new Point(activeFieldCell);
+    }
+
+    public void selectSeed(Type type) {
+        selectedSeedType = type;
+        selectedFacilityType = null;
+    }
+
+    public void selectFacility(FacilityType type) {
+        selectedFacilityType = type;
+        selectedSeedType = null;
+    }
+
+    public void clearSelectedInventoryItem() {
+        selectedSeedType = null;
+        selectedFacilityType = null;
+    }
+
+    public Type getSelectedSeedType() {
+        return selectedSeedType;
+    }
+
+    public FacilityType getSelectedFacilityType() {
+        return selectedFacilityType;
+    }
+
+    public boolean isFencePlacementSelected() {
+        return selectedFacilityType != FacilityType.CLOTURE;
     }
 
     // Accesseur pour la vue (qui a besoin d'afficher TOUTES les unités)

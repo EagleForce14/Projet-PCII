@@ -2,6 +2,7 @@ package view;
 
 import model.culture.Type;
 import model.management.Inventaire;
+import model.movement.MovementModel;
 import model.shop.FacilityType;
 
 import javax.swing.JPanel;
@@ -10,6 +11,7 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 
@@ -18,6 +20,9 @@ import java.awt.RenderingHints;
  */
 public class InventoryStatusOverlay extends JPanel {
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
+    private static final int SLOT_SIZE = 48;
+    private static final int SLOT_GAP = 6;
+    private static final int OUTER_PADDING = 10;
 
     // L'ordre d'affichage reste fixe pour que le joueur se fabrique vite des repères.
     private static final Type[] INVENTORY_SEED_ORDER = {
@@ -37,12 +42,14 @@ public class InventoryStatusOverlay extends JPanel {
     private final FieldPanel fieldPanel;
     // Pour alimenter le contenu de la barre
     private final Inventaire inventaire;
+    private final MovementModel movementModel;
     private final Font quantityFont;
 
     // Le constructeur de la classe
-    public InventoryStatusOverlay(FieldPanel fieldPanel, Inventaire inventaire) {
+    public InventoryStatusOverlay(FieldPanel fieldPanel, Inventaire inventaire, MovementModel movementModel) {
         this.fieldPanel = fieldPanel;
         this.inventaire = inventaire;
+        this.movementModel = movementModel;
         this.quantityFont = CustomFontLoader.loadFont(FONT_PATH, 8.0f);
         this.setOpaque(false);
         this.setDoubleBuffered(true);
@@ -54,6 +61,16 @@ public class InventoryStatusOverlay extends JPanel {
      */
     private Rectangle getFieldBoundsInView() {
         return SwingUtilities.convertRectangle(fieldPanel, fieldPanel.getFieldBounds(), this);
+    }
+
+    /**
+     * L'overlay couvre tout l'écran pour le rendu, mais il ne doit capturer
+     * les clics que sur la barre visible d'inventaire.
+     */
+    @Override
+    public boolean contains(int x, int y) {
+        Rectangle barBounds = getInventoryBarBounds(getFieldBoundsInView(), getWidth(), getHeight());
+        return barBounds.contains(x, y);
     }
 
     @Override
@@ -75,12 +92,22 @@ public class InventoryStatusOverlay extends JPanel {
             return;
         }
 
-        int slotSize = 48;
-        int slotGap = 6;
-        int outerPadding = 10;
+        Rectangle barBounds = getInventoryBarBounds(fieldBounds, viewWidth, viewHeight);
+
+        drawInventoryShell(g2d, barBounds.x, barBounds.y, barBounds.width, barBounds.height);
+
+        for (int index = 0; index < getInventorySlotCount(); index++) {
+            Rectangle slotBounds = getSlotBounds(index, barBounds);
+            if (slotBounds != null) {
+                drawSlot(g2d, index, slotBounds.x, slotBounds.y, slotBounds.width);
+            }
+        }
+    }
+
+    private Rectangle getInventoryBarBounds(Rectangle fieldBounds, int viewWidth, int viewHeight) {
         int slotCount = getInventorySlotCount();
-        int barWidth = (slotCount * slotSize) + ((slotCount - 1) * slotGap) + (outerPadding * 2);
-        int barHeight = slotSize + (outerPadding * 2);
+        int barWidth = (slotCount * SLOT_SIZE) + ((slotCount - 1) * SLOT_GAP) + (OUTER_PADDING * 2);
+        int barHeight = SLOT_SIZE + (OUTER_PADDING * 2);
         int barX = (viewWidth - barWidth) / 2;
 
         // La barre reste basse avec un petit padding inférieur,
@@ -89,14 +116,41 @@ public class InventoryStatusOverlay extends JPanel {
         int minimumClearY = fieldBounds == null ? desiredY : fieldBounds.y + fieldBounds.height + 12;
         int barY = Math.max(desiredY, minimumClearY);
         barY = Math.min(barY, viewHeight - barHeight - 10);
+        return new Rectangle(barX, barY, barWidth, barHeight);
+    }
 
-        drawInventoryShell(g2d, barX, barY, barWidth, barHeight);
-
-        for (int index = 0; index < slotCount; index++) {
-            int slotX = barX + outerPadding + (index * (slotSize + slotGap));
-            int slotY = barY + outerPadding;
-            drawSlot(g2d, index, slotX, slotY, slotSize);
+    private Rectangle getSlotBounds(int slotIndex, Rectangle barBounds) {
+        if (slotIndex < 0 || slotIndex >= getInventorySlotCount() || barBounds == null) {
+            return null;
         }
+
+        int slotX = barBounds.x + OUTER_PADDING + (slotIndex * (SLOT_SIZE + SLOT_GAP));
+        int slotY = barBounds.y + OUTER_PADDING;
+        return new Rectangle(slotX, slotY, SLOT_SIZE, SLOT_SIZE);
+    }
+
+    /**
+     * Le contrôleur appelle ce helper pour transformer un clic dans l'overlay
+     * en numéro de slot d'inventaire.
+     */
+    public int getSlotIndexAt(Point point) {
+        if (point == null) {
+            return -1;
+        }
+
+        Rectangle barBounds = getInventoryBarBounds(getFieldBoundsInView(), getWidth(), getHeight());
+        if (!barBounds.contains(point)) {
+            return -1;
+        }
+
+        for (int slotIndex = 0; slotIndex < getInventorySlotCount(); slotIndex++) {
+            Rectangle slotBounds = getSlotBounds(slotIndex, barBounds);
+            if (slotBounds != null && slotBounds.contains(point)) {
+                return slotIndex;
+            }
+        }
+
+        return -1;
     }
 
     /**
@@ -122,10 +176,17 @@ public class InventoryStatusOverlay extends JPanel {
     private void drawSlot(Graphics2D g2d, int slotIndex, int x, int y, int size) {
         int quantity = getQuantityForSlot(slotIndex);
         boolean hasStock = quantity > 0;
+        boolean selected = isSlotSelected(slotIndex);
 
-        Color slotFill = hasStock ? new Color(76, 56, 34, 245) : new Color(50, 39, 28, 220);
-        Color slotInner = hasStock ? new Color(109, 80, 49, 180) : new Color(69, 55, 42, 120);
-        Color slotBorder = hasStock ? new Color(241, 220, 154) : new Color(126, 106, 81);
+        Color slotFill = selected
+                ? new Color(108, 74, 37, 248)
+                : hasStock ? new Color(76, 56, 34, 245) : new Color(50, 39, 28, 220);
+        Color slotInner = selected
+                ? new Color(166, 122, 60, 190)
+                : hasStock ? new Color(109, 80, 49, 180) : new Color(69, 55, 42, 120);
+        Color slotBorder = selected
+                ? new Color(255, 230, 132)
+                : hasStock ? new Color(241, 220, 154) : new Color(126, 106, 81);
         Color quantityFill = hasStock ? new Color(255, 249, 228) : new Color(185, 175, 161);
 
         g2d.setColor(slotFill);
@@ -136,11 +197,19 @@ public class InventoryStatusOverlay extends JPanel {
 
         g2d.setColor(slotBorder);
         g2d.drawRoundRect(x, y, size - 1, size - 1, 10, 10);
+        if (selected) {
+            g2d.drawRoundRect(x + 1, y + 1, size - 3, size - 3, 9, 9);
+        }
 
         int iconPixelSize = hasStock ? 5 : 4;
-        int iconArtSize = 5 * iconPixelSize;
-        int iconX = x + ((size - iconArtSize) / 2);
-        int iconY = y + 9;
+        int iconArtWidth = slotIndex < INVENTORY_SEED_ORDER.length
+                ? 5 * iconPixelSize
+                : ProductPixelArt.getFacilityArtWidth(INVENTORY_FACILITY, iconPixelSize);
+        int iconArtHeight = slotIndex < INVENTORY_SEED_ORDER.length
+                ? 5 * iconPixelSize
+                : ProductPixelArt.getFacilityArtHeight(INVENTORY_FACILITY, iconPixelSize);
+        int iconX = x + ((size - iconArtWidth) / 2);
+        int iconY = y + ((size - iconArtHeight) / 2) + 1;
         if (slotIndex < INVENTORY_SEED_ORDER.length) {
             ProductPixelArt.drawSeed(g2d, INVENTORY_SEED_ORDER[slotIndex], iconX, iconY, iconPixelSize);
         } else {
@@ -168,6 +237,28 @@ public class InventoryStatusOverlay extends JPanel {
 
     private int getInventorySlotCount() {
         return INVENTORY_SEED_ORDER.length + 1;
+    }
+
+    private boolean isSeedSlot(int slotIndex) {
+        return slotIndex >= 0 && slotIndex < INVENTORY_SEED_ORDER.length;
+    }
+
+    public Type getSeedTypeForSlot(int slotIndex) {
+        return isSeedSlot(slotIndex) ? INVENTORY_SEED_ORDER[slotIndex] : null;
+    }
+
+    public FacilityType getFacilityTypeForSlot(int slotIndex) {
+        return slotIndex == INVENTORY_SEED_ORDER.length ? INVENTORY_FACILITY : null;
+    }
+
+    private boolean isSlotSelected(int slotIndex) {
+        if (movementModel == null) {
+            return false;
+        }
+        if (isSeedSlot(slotIndex)) {
+            return getSeedTypeForSlot(slotIndex) == movementModel.getSelectedSeedType();
+        }
+        return getFacilityTypeForSlot(slotIndex) == movementModel.getSelectedFacilityType();
     }
 
     /**

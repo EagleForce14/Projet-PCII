@@ -15,9 +15,35 @@ import java.awt.Graphics2D;
  * partagent exactement les memes illustrations.
  */
 public final class ProductPixelArt {
+    private static final int DEFAULT_ART_COLUMNS = 5;
+    private static final int DEFAULT_ART_ROWS = 5;
+    private static final int FENCE_ART_COLUMNS = 9;
+    private static final int FENCE_ART_ROWS = 7;
 
     // Le constructeur de la classe
     private ProductPixelArt() {}
+
+    public static int getProductArtWidth(Product product, int pixelSize) {
+        if (product instanceof Facility) {
+            return getFacilityArtWidth(((Facility) product).getType(), pixelSize);
+        }
+        return DEFAULT_ART_COLUMNS * pixelSize;
+    }
+
+    public static int getProductArtHeight(Product product, int pixelSize) {
+        if (product instanceof Facility) {
+            return getFacilityArtHeight(((Facility) product).getType(), pixelSize);
+        }
+        return DEFAULT_ART_ROWS * pixelSize;
+    }
+
+    public static int getFacilityArtWidth(FacilityType type, int pixelSize) {
+        return (type == FacilityType.CLOTURE ? FENCE_ART_COLUMNS : DEFAULT_ART_COLUMNS) * pixelSize;
+    }
+
+    public static int getFacilityArtHeight(FacilityType type, int pixelSize) {
+        return (type == FacilityType.CLOTURE ? FENCE_ART_ROWS : DEFAULT_ART_ROWS) * pixelSize;
+    }
 
     public static void drawProduct(Graphics2D g2d, Product product, int x, int y, int pixelSize) {
         if (product instanceof Seed) {
@@ -154,19 +180,32 @@ public final class ProductPixelArt {
     }
 
     private static void drawFence(Graphics2D g2d, int x, int y, int pixelSize) {
-        Color wood = new Color(176, 118, 60);
-        Color darkWood = new Color(118, 73, 35);
+        Color cap = new Color(72, 56, 46);
+        Color woodLight = new Color(255, 173, 49);
+        Color wood = new Color(255, 155, 36);
+        Color woodDark = new Color(219, 128, 11);
+        Color slat = new Color(239, 117, 34);
+        Color slatDark = new Color(191, 86, 21);
 
-        fillPixel(g2d, x, y + pixelSize, pixelSize, wood);
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, wood);
-        fillPixel(g2d, x + (4 * pixelSize), y + pixelSize, pixelSize, wood);
-        fillPixel(g2d, x, y + (2 * pixelSize), pixelSize, darkWood);
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, darkWood);
-        fillPixel(g2d, x + (4 * pixelSize), y + (2 * pixelSize), pixelSize, darkWood);
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, wood);
-        fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, wood);
-        fillPixel(g2d, x + pixelSize, y + (2 * pixelSize), pixelSize, darkWood);
-        fillPixel(g2d, x + (3 * pixelSize), y + (2 * pixelSize), pixelSize, darkWood);
+        // Les deux poteaux sont volontairement dessinés avec exactement le même motif.
+        fillGridRect(g2d, x, y, pixelSize, 1, 0, 2, 1, cap);
+        fillGridRect(g2d, x, y, pixelSize, 6, 0, 2, 1, cap);
+
+        fillGridRect(g2d, x, y, pixelSize, 1, 1, 2, 5, wood);
+        fillGridRect(g2d, x, y, pixelSize, 6, 1, 2, 5, wood);
+        fillGridRect(g2d, x, y, pixelSize, 1, 1, 1, 5, woodLight);
+        fillGridRect(g2d, x, y, pixelSize, 6, 1, 1, 5, woodLight);
+        fillGridRect(g2d, x, y, pixelSize, 2, 3, 1, 2, woodDark);
+        fillGridRect(g2d, x, y, pixelSize, 7, 3, 1, 2, woodDark);
+
+        fillGridRect(g2d, x, y, pixelSize, 3, 2, 3, 1, slat);
+        fillGridRect(g2d, x, y, pixelSize, 3, 4, 3, 1, slat);
+        fillGridRect(g2d, x, y, pixelSize, 3, 2, 3, 1, slatDark);
+        fillGridRect(g2d, x, y, pixelSize, 3, 4, 3, 1, slatDark);
+        fillGridRect(g2d, x, y, pixelSize, 3, 2, 3, 1, slat);
+        fillGridRect(g2d, x, y, pixelSize, 3, 4, 3, 1, slat);
+        fillGridRect(g2d, x, y, pixelSize, 3, 2, 1, 1, new Color(255, 145, 61));
+        fillGridRect(g2d, x, y, pixelSize, 3, 4, 1, 1, new Color(255, 145, 61));
     }
 
     private static void drawFertilizer(Graphics2D g2d, int x, int y, int pixelSize) {
@@ -214,5 +253,16 @@ public final class ProductPixelArt {
     private static void fillPixel(Graphics2D g2d, int x, int y, int pixelSize, Color color) {
         g2d.setColor(color);
         g2d.fillRect(x, y, pixelSize, pixelSize);
+    }
+
+    private static void fillGridRect(Graphics2D g2d, int originX, int originY, int pixelSize,
+                                     int gridX, int gridY, int gridWidth, int gridHeight, Color color) {
+        g2d.setColor(color);
+        g2d.fillRect(
+                originX + (gridX * pixelSize),
+                originY + (gridY * pixelSize),
+                gridWidth * pixelSize,
+                gridHeight * pixelSize
+        );
     }
 }

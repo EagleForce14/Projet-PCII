@@ -50,9 +50,6 @@ public class Main {
         Shop shop = new Shop();
         FieldPanel fieldPanel = new FieldPanel(grilleCulture);
 
-        
-        
-
         MovementModel model = new MovementModel();
         // Le joueur démarre hors du champ, près du coin haut-gauche de la grille.
         Point initialPlayerOffset = fieldPanel.getInitialPlayerOffset();
@@ -73,7 +70,7 @@ public class Main {
         enemyView.setAlignmentX(0.5f);
         enemyView.setAlignmentY(0.5f);
 
-        InventoryStatusOverlay inventoryStatusOverlay = new InventoryStatusOverlay(fieldPanel, inventaire);
+        InventoryStatusOverlay inventoryStatusOverlay = new InventoryStatusOverlay(fieldPanel, inventaire, model);
         inventoryStatusOverlay.setAlignmentX(0.5f);
         inventoryStatusOverlay.setAlignmentY(0.5f);
 
@@ -120,7 +117,18 @@ public class Main {
         ShopOverlay shopOverlay = new ShopOverlay(shop, playerMoney, inventaire, movementView);
         frame.setGlassPane(shopOverlay);
 
-        new MovementController(model, movementView, enemyView, actionSidebarPanel, grilleCulture, playerMoney , shop, inventaire, shopOverlay);
+        new MovementController(
+                model,
+                movementView,
+                enemyView,
+                actionSidebarPanel,
+                grilleCulture,
+                playerMoney,
+                inventaire,
+                fieldPanel,
+                inventoryStatusOverlay,
+                shopOverlay
+        );
 
         frame.pack();
         frame.setLocationRelativeTo(null);

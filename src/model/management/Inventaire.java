@@ -135,6 +135,14 @@ public class Inventaire {
     }
 
     /**
+     * Même principe que pour les graines :
+     * on veut pouvoir interroger l'inventaire sans répéter la même condition partout.
+     */
+    public boolean possedeInstallation(FacilityType type) {
+        return !installations.containsKey(type) || installations.get(type) <= 0;
+    }
+
+    /**
      * Petit helper de lecture :
      * on renvoie simplement 0 si la graine n'a jamais ete achetée,
      * ce qui évite de faire trainer des tests null partout dans le code.

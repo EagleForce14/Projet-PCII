@@ -45,9 +45,10 @@ public class ProductPreview extends JPanel {
 
         if (product != null) {
             int pixelSize = 8;
-            int artSize = 5 * pixelSize;
-            int artX = (getWidth() - artSize) / 2;
-            int artY = (getHeight() - artSize) / 2;
+            int artWidth = ProductPixelArt.getProductArtWidth(product, pixelSize);
+            int artHeight = ProductPixelArt.getProductArtHeight(product, pixelSize);
+            int artX = (getWidth() - artWidth) / 2;
+            int artY = (getHeight() - artHeight) / 2;
             ProductPixelArt.drawProduct(g2d, product, artX, artY, pixelSize);
         }
 
