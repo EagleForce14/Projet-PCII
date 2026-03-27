@@ -33,10 +33,16 @@ public class ObjectifTauxRecolte implements ObjectifJournalier {
         return tauxCible;
     }
 
+    /** Getter qui renvoie la progression de l'objectif sous forme de chaîne de caractères */
+    @Override
+    public String getProgressionString() {
+        return calculerTauxRecolte() + "%/" + tauxCible + "%"; // Calcule le taux de récolte en pourcentage
+    }
+
     /** Getter qui renvoie la progression de l'objectif */
     @Override
-    public String getProgression() {
-        return calculerTauxRecolte() + "%/" + tauxCible + "%"; // Calcule le taux de récolte en pourcentage
+    public int getProgression() {
+        return calculerTauxRecolte(); // Calcule le taux de récolte en pourcentage
     }
 
     /** Méthode qui calcule le taux de récolte */

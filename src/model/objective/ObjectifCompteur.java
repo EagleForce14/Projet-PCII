@@ -30,10 +30,16 @@ public class ObjectifCompteur implements ObjectifJournalier {
         return valeurCible;
     }
 
+    /** Getter qui renvoie la progression de l'objectif sous forme de chaîne de caractères */
+    @Override
+    public String getProgressionString() {
+        return progression + " / " + valeurCible; // Affiche la progression sous la forme "progression / valeur cible"
+    }
+
     /** Getter qui renvoie la progression de l'objectif */
     @Override
-    public String getProgression() {
-        return progression + " / " + valeurCible; // Affiche la progression sous la forme "progression / valeur cible"
+    public int getProgression() {
+        return progression;
     }
 
     /** Méthode qui vérifie si l'objectif est atteint */

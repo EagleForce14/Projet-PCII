@@ -4,6 +4,7 @@ package model.objective;
 public interface ObjectifJournalier {
 
     TypeObjectif getType();
-    String getProgression();
+    int getProgression();
+    String getProgressionString();
     boolean estAtteint();
 }

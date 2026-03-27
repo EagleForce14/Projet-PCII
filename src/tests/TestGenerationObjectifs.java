@@ -12,7 +12,7 @@ public class TestGenerationObjectifs {
         jour.start(); // Démarre le thread du jour pour faire avancer le temps
         for (int i = 0; i < 10; i++) { // Test sur les 10 premiers jours
             try {
-                Thread.sleep(6000); // Attendre un peu plus de 5 secondes pour s'assurer que le jour a avancé
+                Thread.sleep(3000); // Attendre un peu plus de 3 secondes
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

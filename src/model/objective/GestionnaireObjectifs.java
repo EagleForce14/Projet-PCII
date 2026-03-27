@@ -95,7 +95,7 @@ public class GestionnaireObjectifs {
 
     /** Méthode qui renvoie si le jour est validé, c'est-à-dire si au moins un certain nombre d'objectifs sont atteints en fonction du jour*/
     public boolean estJourValide() {
-        int nombreMinimumObjectifsAtteints = (int) (jour.getJour() * 0.5); // Nombre minimum d'objectifs à atteindre pour valider le jour
+        int nombreMinimumObjectifsAtteints = getNombreMinimumObjectifsAtteints(); // Nombre minimum d'objectifs à atteindre pour valider le jour
         System.out.println("Nombre minimum d'objectifs à atteindre pour valider le jour : " + nombreMinimumObjectifsAtteints);
         if (nombreMinimumObjectifsAtteints > objectifs.size()) {
             nombreMinimumObjectifsAtteints = objectifs.size(); // Limite le nombre minimum d'objectifs à atteindre au nombre total d'objectifs disponibles
@@ -109,11 +109,16 @@ public class GestionnaireObjectifs {
         return objectifsAtteints >= nombreMinimumObjectifsAtteints;
     }
 
+    /** Méthode qui renvoie le nombre minimum d'objectifs à atteindre pour valider le jour */
+    public int getNombreMinimumObjectifsAtteints() {
+        return 1 + (int) (jour.getJour() * 0.5);
+    }
+
     /** Méthode qui renvoie la progression de chaque objectif sous forme d'une map */
     public Map<TypeObjectif, String> getProgressionObjectifs() {
         Map<TypeObjectif, String> progression = new HashMap<>();
         for (ObjectifJournalier objectif : objectifs.values()) {
-            progression.put(objectif.getType(), objectif.getType() + " : " + objectif.getProgression());
+            progression.put(objectif.getType(), objectif.getType() + " : " + objectif.getProgressionString());
         }
         return progression;
     }
