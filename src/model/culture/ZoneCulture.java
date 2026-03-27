@@ -19,14 +19,14 @@ public class ZoneCulture {
      * @param type : le type concret de la culture à planter
      * @throws IllegalStateException si la zone de culture est déjà occupée par une culture
     **/
-    public void planterCulture(Type type) {
+    public boolean planterCulture(Type type) {
 
         // Vérifie s'il n'y a pas déjà une culture dans la zone avant de planter une nouvelle culture
         if (culture != null) {
             throw new IllegalStateException("Il y a déjà une culture plantée dans cette zone.");
         } else {
-
             this.culture = new Culture(type); // Plante une nouvelle culture du type demandé
+            return true; // Indique que la culture a été plantée avec succès
         }
 
 

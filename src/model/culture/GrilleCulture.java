@@ -1,6 +1,7 @@
 package model.culture;
 
 import model.management.Inventaire;
+import model.objective.GestionnaireObjectifs;
 
 import java.util.Map;
 
@@ -52,13 +53,17 @@ public class GrilleCulture {
     /** Attribut représentant la grille de culture */
     ZoneCulture[][] grille;
 
+    /** Attribut représentant le gestionnaire d'objectifs */
+    private GestionnaireObjectifs gestionnaireObjectifs;
+
     // Centralise la validation des coordonnées pour que vue et logique manipulent la même grille.
     private boolean estDansGrille(int x, int y) {
         return x >= 0 && x < LARGEUR_GRILLE && y >= 0 && y < HAUTEUR_GRILLE;
     }
 
     /** Constructeur de la grille de culture */
-    public GrilleCulture() {
+    public GrilleCulture(GestionnaireObjectifs gestionnaireObjectifs) {
+        this.gestionnaireObjectifs = gestionnaireObjectifs;
         this.grille = new ZoneCulture[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         // Initialiser chaque zone de culture de la grille
         for (int i = 0; i < LARGEUR_GRILLE; i++) {
@@ -88,8 +93,11 @@ public class GrilleCulture {
         if (!inventaire.possedeGraine(type)) {
             throw new IllegalStateException("L'inventaire est vide. Vous ne pouvez pas planter une culture. veuillez acheter des graines dans la boutique.");
         }
-        if (estDansGrille(x, y)) {
-            grille[x][y].planterCulture(type);
+        if (estDansGrille(x, y) && grille[x][y].planterCulture(type)) {
+            // Met à jour les objectifs liés à la plantation de cultures
+            gestionnaireObjectifs.mettreAJourObjectifsPlanter(type);
+        } else {
+            throw new IllegalStateException("Coordonnées hors de la grille ou la zone est déjà occupée.");
         }
 
         // retirer la graine de l'inventaire

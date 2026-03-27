@@ -16,7 +16,7 @@ public class TestGenerationObjectifs {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            gestionnaireObjectifs.genererObjectifs(); // Génère les objectifs pour le jour actuel
+            gestionnaireObjectifs.appliquerChangementsJour(); // Applique les changements liés au jour
             System.out.println("Jour " + jour.getJour() + " :");
             gestionnaireObjectifs.getProgressionObjectifs().forEach((type, progression) -> {
                 System.out.println(progression);

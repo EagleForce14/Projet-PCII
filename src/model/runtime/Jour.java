@@ -1,5 +1,7 @@
 package model.runtime;
 
+import model.objective.GestionnaireObjectifs;
+
 /** Thread qui fait avancer le temps dans le jeu */
 public class Jour extends Thread {
 
@@ -13,11 +15,16 @@ public class Jour extends Thread {
     private boolean actif;
     private final GamePauseController pauseController;
 
+    /** Attribut représentant le gestionnaire d'objectifs */
+    private GestionnaireObjectifs gestionnaireObjectifs;
+
     /** Constructeur de la classe Jour */
     public Jour() {
         this.jour = 1; // Le jeu commence au jour 1
         this.actif = true;
         this.pauseController = GamePauseController.getInstance();
+        this.gestionnaireObjectifs = new GestionnaireObjectifs(this);
+
     }
 
     /** Méthode run qui fait avancer le temps dans le jeu */
@@ -31,6 +38,7 @@ public class Jour extends Thread {
                 return;
             }
             jour++; // Incrémenter le jour
+            notifierChangementJour(); // Notifier le gestionnaire d'objectifs du changement de jour
         }  
     }
 
@@ -42,5 +50,15 @@ public class Jour extends Thread {
     /** Méthode pour arrêter le thread */
     public void arreter() {
         actif = false;
+    }
+
+    /** Getter sur le gestionnaire d'objectifs */
+    public GestionnaireObjectifs getGestionnaireObjectifs() {
+        return gestionnaireObjectifs;
+    }
+
+    /** Méthode qui notifie le gestionnaire d'objectifs du changement de jour */
+    public void notifierChangementJour() {
+        gestionnaireObjectifs.appliquerChangementsJour();
     }
 }

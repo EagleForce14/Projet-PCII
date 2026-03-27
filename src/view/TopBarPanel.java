@@ -22,9 +22,9 @@ public class TopBarPanel extends JPanel {
     private final Jour jour;
 
     // Le constructeur de la classe
-    public TopBarPanel(Money playerMoney) {
+    public TopBarPanel(Money playerMoney, Jour jour) {
         this.playerMoney = playerMoney;
-        this.jour = new Jour();
+        this.jour = jour;
         jour.start();
 
         setOpaque(false);

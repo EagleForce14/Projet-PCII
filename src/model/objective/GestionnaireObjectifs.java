@@ -32,10 +32,11 @@ public class GestionnaireObjectifs {
     public GestionnaireObjectifs(Jour jour) {
         this.jour = jour;
         this.objectifs = new HashMap<>();
+        genererObjectifs(); // Génère les objectifs pour le jour actuel lors de l'initialisation du gestionnaire d'objectifs
     }
 
     /** Méthode qui génère les objectifs en fonction du jour */
-    public void genererObjectifs() {
+    private void genererObjectifs() {
         // Vide les objectifs précédents pour générer de nouveaux objectifs pour le nouveau jour
         objectifs.clear();
         int nombreObjectifs = 3 + (int) (jour.getJour() * 0.4); // Nombre d'objectifs à générer en fonction du jour, augmente avec le temps pour rendre le jeu plus difficile
@@ -122,4 +123,43 @@ public class GestionnaireObjectifs {
         }
         return progression;
     }
+
+    /** Méthode qui met à jour les objectifs */
+    public void mettreAJourObjectifsPlanter(Type typeCulture) {
+        for (ObjectifJournalier objectif : objectifs.values()) {
+            switch (objectif.getType()) {
+                case PLANTER_CULTURES:
+                    ((ObjectifCompteur) objectif).mettreAJourProgression(1); // Incrémente la progression de l'objectif PLANTER_CULTURES de 1 à chaque plantation de culture
+                    break;
+                case PLANTER_TYPES_CULTURE:
+                    ((ObjectifCompteurTypes) objectif).mettreAJourProgression(typeCulture);
+                    break;
+                case TAUX_RECOLTE_CULTURES:
+                    ((ObjectifTauxRecolte) objectif).mettreAJourNombreCulturesPlantees();
+                    break;
+                default:
+                    break;
+            }
+        }
+        afficherProgressionObjectifs(); // Affiche la progression de chaque objectif dans la console après la mise à jour
+    }
+
+    /** Méthode qui affiche dans la console la progression de chaque objectif */
+    public void afficherProgressionObjectifs() {
+        System.out.println("Progression des objectifs :");
+        for (ObjectifJournalier objectif : objectifs.values()) {
+            System.out.println(objectif.getType() + " : " + objectif.getProgressionString());
+        }
+    }
+
+    /** Méthode qui applique les changements liés au jour */
+    public void appliquerChangementsJour() {
+        if (estJourValide()) {
+            System.out.println("Jour " + jour.getJour() + " validé !");
+        } else {
+            System.out.println("Jour " + jour.getJour() + " non validé. Vous devez atteindre au moins " + getNombreMinimumObjectifsAtteints() + " objectifs pour valider le jour.");
+        }
+        genererObjectifs(); // Génère de nouveaux objectifs pour le nouveau jour
+    }
+    
 }

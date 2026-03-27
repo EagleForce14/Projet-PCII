@@ -8,6 +8,7 @@ import model.enemy.EnemyPhysicsThread;
 import model.movement.MovementModel;
 import model.movement.PhysicsThread;
 import model.movement.Unit;
+import model.runtime.Jour;
 import model.management.Inventaire;
 import model.management.Money;
 import model.shop.Shop;
@@ -42,7 +43,8 @@ public class Main {
         // Image de fond globale de la fenêtre.
         Image backgroundImage = ImageLoader.load("/assets/Main_Background.png");
 
-        GrilleCulture grilleCulture = new GrilleCulture();
+        Jour jour = new Jour();
+        GrilleCulture grilleCulture = new GrilleCulture(jour.getGestionnaireObjectifs());
         Money playerMoney = new Money(50);
         Inventaire inventaire = new Inventaire();
         Shop shop = new Shop();
@@ -105,7 +107,7 @@ public class Main {
         hudPanel.setOpaque(false);
         hudPanel.setAlignmentX(0.5f);
         hudPanel.setAlignmentY(0.5f);
-        hudPanel.add(new TopBarPanel(playerMoney), BorderLayout.NORTH);
+        hudPanel.add(new TopBarPanel(playerMoney, jour), BorderLayout.NORTH);
         gamePanel.add(hudPanel);
         gamePanel.setComponentZOrder(hudPanel, 0);
         gamePanel.setComponentZOrder(inventoryStatusOverlay, 1);

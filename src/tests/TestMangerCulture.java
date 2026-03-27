@@ -4,12 +4,14 @@ import model.culture.GrilleCulture;
 import model.culture.Stade;
 import model.culture.Type;
 import model.management.Inventaire;
+import model.objective.GestionnaireObjectifs;
 
 /** Classe de test pour la fonctionnalité qui permet au lapin de manger une culture */
 public class TestMangerCulture {
     public static void main(String[] args) {
+        GestionnaireObjectifs gestionnaireObjectifs = new GestionnaireObjectifs(null); // On peut passer null car on ne teste pas la génération d'objectifs ici
         // Créer une grille de culture
-        GrilleCulture grille = new GrilleCulture();
+        GrilleCulture grille = new GrilleCulture(gestionnaireObjectifs);
         Inventaire inventaire = new Inventaire();
         // Planter une culture dans la grille de culture
         grille.planterCulture(0, 0, Type.TULIPE, inventaire);
