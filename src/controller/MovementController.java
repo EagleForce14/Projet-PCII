@@ -271,7 +271,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         }
 
         updateFencePlacementPreview(event);
-        FieldPanel.FencePreview preview = fieldPanel.getFencePreview();
+        FencePreview preview = fieldPanel.getFencePreview();
         if (preview == null) {
             return false;
         }

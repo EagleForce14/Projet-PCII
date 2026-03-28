@@ -41,6 +41,10 @@ public class FieldPanel extends JPanel {
     // Couleurs du survol dédié au placement des clôtures.
     private static final Color FENCE_PREVIEW_FILL = new Color(255, 232, 151, 130);
     private static final Color FENCE_PREVIEW_BORDER = new Color(255, 201, 74, 230);
+    private static final Color FENCE_PREVIEW_SOFT_LIGHT = new Color(255, 255, 214, 120);
+
+    // Couleur de secours si une tuile de terrain ne peut pas être chargée.
+    private static final Color DEFAULT_GRASS_FILL = new Color(92, 167, 74);
 
     // Palette bois utilisée pour les clôtures rendues directement sur le champ.
     private static final Color FENCE_OUTLINE = new Color(27, 20, 15);
@@ -88,28 +92,6 @@ public class FieldPanel extends JPanel {
     private FencePreview fencePreview;
 
     /**
-     * Petit objet immuable qui représente un placement de clôture "en attente".
-     * On le garde volontairement minuscule pour pouvoir le recalculer souvent au survol.
-     */
-    public static final class FencePreview {
-        private final Point cell;
-        private final CellSide side;
-
-        public FencePreview(Point cell, CellSide side) {
-            this.cell = cell == null ? null : new Point(cell);
-            this.side = side;
-        }
-
-        public Point getCell() {
-            return cell == null ? null : new Point(cell);
-        }
-
-        public CellSide getSide() {
-            return side;
-        }
-    }
-
-    /**
      * Initialise la carte.
      * L'herbe et la terre sont maintenant générées en code pour éviter
      * la dépendance aux anciennes images statiques.
@@ -142,11 +124,13 @@ public class FieldPanel extends JPanel {
     }
 
     /**
-     * Place le joueur sur une case d'herbe visible, proche du bas-gauche.
+     * Place le joueur près du centre de la map.
+     * C'est plus naturel qu'un départ très excentré et cela évite de "coller"
+     * le joueur à un bord dès l'ouverture de la partie.
      */
     public Point getInitialPlayerOffset() {
         Rectangle fieldBounds = getPreferredFieldBounds();
-        return getLogicalCellCenter(2, Math.max(2, getRowCount() - 3), fieldBounds);
+        return getLogicalCellCenter(getColumnCount() / 2, getRowCount() / 2, fieldBounds);
     }
 
     /**
@@ -281,19 +265,64 @@ public class FieldPanel extends JPanel {
     }
 
     /**
-     * Retourne le case du champ affichée à l'écran correspondant à une case logique de la grille.
+     * Centralise le test de coordonnées.
+     * On évite ainsi de répéter la même condition dans tous les helpers de grille.
      */
-    public Rectangle getCellBounds(int gridX, int gridY) {
-        if (gridX < 0 || gridX >= getColumnCount() || gridY < 0 || gridY >= getRowCount()) {
-            return null;
-        }
+    private boolean isInsideGrid(int gridX, int gridY) {
+        return gridX >= 0 && gridX < getColumnCount() && gridY >= 0 && gridY < getRowCount();
+    }
 
-        // Ce rectangle sert de point d'ancrage visuel pour une case précise du modèle.
-        Rectangle fieldBounds = getFieldBounds();
-        int tileSize = fieldBounds.width / getColumnCount();
+    /**
+     * Une fois le rectangle global du champ connu, toutes les cases ont la même taille.
+     * Ce helper donne cette taille unique pour éviter de refaire le calcul partout.
+     */
+    private int getTileSize(Rectangle fieldBounds) {
+        return fieldBounds.width / getColumnCount();
+    }
+
+    /**
+     * Construit les coordonnées écran d'une case.
+     * Cette version sert au rendu : dessin du sol, des plantes, des surlignages, etc.
+     */
+    private Rectangle buildScreenCellBounds(int gridX, int gridY, Rectangle fieldBounds) {
+        int tileSize = getTileSize(fieldBounds);
         int x = fieldBounds.x + (gridX * tileSize);
         int y = fieldBounds.y + (gridY * tileSize);
         return new Rectangle(x, y, tileSize, tileSize);
+    }
+
+    /**
+     * Construit le rectangle logique d'une case dans le repère centré de la map.
+     * Cette version est utilisée pour les collisions et les comparaisons avec la grange.
+     */
+    private Rectangle buildLogicalCellBounds(int gridX, int gridY, Rectangle fieldBounds) {
+        int tileSize = getTileSize(fieldBounds);
+        int logicalX = -(fieldBounds.width / 2) + (gridX * tileSize);
+        int logicalY = -(fieldBounds.height / 2) + (gridY * tileSize);
+        return new Rectangle(logicalX, logicalY, tileSize, tileSize);
+    }
+
+    /**
+     * Donne le centre logique d'une case.
+     * C'est utile pour positionner proprement le joueur ou d'autres entités sur une tuile.
+     */
+    private Point buildLogicalCellCenter(int gridX, int gridY, Rectangle fieldBounds) {
+        Rectangle logicalCellBounds = buildLogicalCellBounds(gridX, gridY, fieldBounds);
+        return new Point(
+                logicalCellBounds.x + (logicalCellBounds.width / 2),
+                logicalCellBounds.y + (logicalCellBounds.height / 2)
+        );
+    }
+
+    /**
+     * Retourne le case du champ affichée à l'écran correspondant à une case logique de la grille.
+     */
+    public Rectangle getCellBounds(int gridX, int gridY) {
+        if (!isInsideGrid(gridX, gridY)) {
+            return null;
+        }
+
+        return buildScreenCellBounds(gridX, gridY, getFieldBounds());
     }
 
     /**
@@ -331,15 +360,11 @@ public class FieldPanel extends JPanel {
      * pour pouvoir comparer proprement la case à la grange.
      */
     private Rectangle getLogicalCellBounds(int gridX, int gridY) {
-        if (gridX < 0 || gridX >= getColumnCount() || gridY < 0 || gridY >= getRowCount()) {
+        if (!isInsideGrid(gridX, gridY)) {
             return null;
         }
 
-        Rectangle fieldBounds = getFieldBounds();
-        int tileSize = fieldBounds.width / getColumnCount();
-        int logicalX = -(fieldBounds.width / 2) + (gridX * tileSize);
-        int logicalY = -(fieldBounds.height / 2) + (gridY * tileSize);
-        return new Rectangle(logicalX, logicalY, tileSize, tileSize);
+        return buildLogicalCellBounds(gridX, gridY, getFieldBounds());
     }
 
     private Rectangle getBarnLogicalBounds() {
@@ -347,10 +372,7 @@ public class FieldPanel extends JPanel {
     }
 
     private Point getLogicalCellCenter(int gridX, int gridY, Rectangle fieldBounds) {
-        int tileSize = fieldBounds.width / getColumnCount();
-        int centerX = -(fieldBounds.width / 2) + (gridX * tileSize) + (tileSize / 2);
-        int centerY = -(fieldBounds.height / 2) + (gridY * tileSize) + (tileSize / 2);
-        return new Point(centerX, centerY);
+        return buildLogicalCellCenter(gridX, gridY, fieldBounds);
     }
 
     /**
@@ -363,11 +385,11 @@ public class FieldPanel extends JPanel {
         }
 
         // Cette conversion permettra ensuite d'associer un clic utilisateur a une case du modèle.
-        int tileSize = fieldBounds.width / getColumnCount();
+        int tileSize = getTileSize(fieldBounds);
         int gridX = (pixelX - fieldBounds.x) / tileSize;
         int gridY = (pixelY - fieldBounds.y) / tileSize;
 
-        if (gridX < 0 || gridX >= getColumnCount() || gridY < 0 || gridY >= getRowCount()) {
+        if (!isInsideGrid(gridX, gridY)) {
             return null;
         }
 
@@ -463,7 +485,7 @@ public class FieldPanel extends JPanel {
         CellSide bestSide = null;
         int bestDistance = Integer.MAX_VALUE;
         for (CellSide side : CellSide.values()) {
-            if (grilleCulture.canPlaceFence(cell.x, cell.y, side)) {
+            if (!grilleCulture.canPlaceFence(cell.x, cell.y, side)) {
                 continue;
             }
 
@@ -489,6 +511,97 @@ public class FieldPanel extends JPanel {
                 return Math.abs(pixelX - cellBounds.x);
             default:
                 return Integer.MAX_VALUE;
+        }
+    }
+
+    /**
+     * La preview et la vraie clôture doivent partager les mêmes proportions.
+     * On déduit donc une seule fois les dimensions à partir de la taille de case.
+     */
+    private FenceMetrics createFenceMetrics(Rectangle cellBounds) {
+        return new FenceMetrics(cellBounds.width);
+    }
+
+    /**
+     * Renvoie le rectangle du "bandeau" principal d'une clôture sur le côté demandé.
+     * Ce helper évite de recopier la même géométrie dans la preview et dans le rendu final.
+     */
+    private Rectangle getFenceBandBounds(Rectangle cellBounds, CellSide side, FenceMetrics metrics) {
+        switch (side) {
+            case TOP:
+                return new Rectangle(
+                        cellBounds.x,
+                        cellBounds.y - metrics.getOutsideDepth(),
+                        cellBounds.width,
+                        metrics.getBandThickness()
+                );
+            case RIGHT:
+                return new Rectangle(
+                        cellBounds.x + cellBounds.width - metrics.getInsideDepth(),
+                        cellBounds.y,
+                        metrics.getBandThickness(),
+                        cellBounds.height
+                );
+            case BOTTOM:
+                return new Rectangle(
+                        cellBounds.x,
+                        cellBounds.y + cellBounds.height - metrics.getInsideDepth(),
+                        cellBounds.width,
+                        metrics.getBandThickness()
+                );
+            case LEFT:
+                return new Rectangle(
+                        cellBounds.x - metrics.getOutsideDepth(),
+                        cellBounds.y,
+                        metrics.getBandThickness(),
+                        cellBounds.height
+                );
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Dessine un trait sur le bord intérieur ou extérieur du bandeau de preview.
+     * Cela évite deux gros switch quasi identiques juste pour changer un axe.
+     */
+    private void drawFencePreviewLine(Graphics2D g2, Rectangle previewBounds, CellSide side, boolean innerEdge, int inset, Color color) {
+        if (previewBounds == null || side == null) {
+            return;
+        }
+
+        g2.setColor(color);
+        switch (side) {
+            case TOP: {
+                int y = innerEdge
+                        ? previewBounds.y + previewBounds.height - 1 - inset
+                        : previewBounds.y + inset;
+                g2.drawLine(previewBounds.x, y, previewBounds.x + previewBounds.width - 1, y);
+                break;
+            }
+            case RIGHT: {
+                int x = innerEdge
+                        ? previewBounds.x + inset
+                        : previewBounds.x + previewBounds.width - 1 - inset;
+                g2.drawLine(x, previewBounds.y, x, previewBounds.y + previewBounds.height - 1);
+                break;
+            }
+            case BOTTOM: {
+                int y = innerEdge
+                        ? previewBounds.y + inset
+                        : previewBounds.y + previewBounds.height - 1 - inset;
+                g2.drawLine(previewBounds.x, y, previewBounds.x + previewBounds.width - 1, y);
+                break;
+            }
+            case LEFT: {
+                int x = innerEdge
+                        ? previewBounds.x + previewBounds.width - 1 - inset
+                        : previewBounds.x + inset;
+                g2.drawLine(x, previewBounds.y, x, previewBounds.y + previewBounds.height - 1);
+                break;
+            }
+            default:
+                break;
         }
     }
 
@@ -553,129 +666,20 @@ public class FieldPanel extends JPanel {
      * pour éviter l'effet "ruban flottant" qui collait mal à la terre.
      */
     private void drawFencePreview(Graphics2D g2, Rectangle cellBounds, CellSide side) {
-        int tileSize = cellBounds.width;
-        int outsideDepth = Math.max(2, tileSize / 18);
-        int insideDepth = Math.max(6, tileSize / 9);
-        int bandThickness = outsideDepth + insideDepth;
-
-        Rectangle previewBounds;
-        switch (side) {
-            case TOP:
-                previewBounds = new Rectangle(
-                        cellBounds.x,
-                        cellBounds.y - outsideDepth,
-                        cellBounds.width,
-                        bandThickness
-                );
-                break;
-            case RIGHT:
-                previewBounds = new Rectangle(
-                        cellBounds.x + cellBounds.width - insideDepth,
-                        cellBounds.y,
-                        bandThickness,
-                        cellBounds.height
-                );
-                break;
-            case BOTTOM:
-                previewBounds = new Rectangle(
-                        cellBounds.x,
-                        cellBounds.y + cellBounds.height - insideDepth,
-                        cellBounds.width,
-                        bandThickness
-                );
-                break;
-            case LEFT:
-                previewBounds = new Rectangle(
-                        cellBounds.x - outsideDepth,
-                        cellBounds.y,
-                        bandThickness,
-                        cellBounds.height
-                );
-                break;
-            default:
-                return;
+        FenceMetrics metrics = createFenceMetrics(cellBounds);
+        Rectangle previewBounds = getFenceBandBounds(cellBounds, side, metrics);
+        if (previewBounds == null) {
+            return;
         }
 
         g2.setColor(FENCE_PREVIEW_FILL);
         g2.fillRect(previewBounds.x, previewBounds.y, previewBounds.width, previewBounds.height);
 
-        g2.setColor(FENCE_PREVIEW_BORDER);
-        switch (side) {
-            case TOP:
-                g2.drawLine(
-                        previewBounds.x,
-                        previewBounds.y + previewBounds.height - 1,
-                        previewBounds.x + previewBounds.width - 1,
-                        previewBounds.y + previewBounds.height - 1
-                );
-                break;
-            case RIGHT:
-                g2.drawLine(
-                        previewBounds.x,
-                        previewBounds.y,
-                        previewBounds.x,
-                        previewBounds.y + previewBounds.height - 1
-                );
-                break;
-            case BOTTOM:
-                g2.drawLine(
-                        previewBounds.x,
-                        previewBounds.y,
-                        previewBounds.x + previewBounds.width - 1,
-                        previewBounds.y
-                );
-                break;
-            case LEFT:
-                g2.drawLine(
-                        previewBounds.x + previewBounds.width - 1,
-                        previewBounds.y,
-                        previewBounds.x + previewBounds.width - 1,
-                        previewBounds.y + previewBounds.height - 1
-                );
-                break;
-            default:
-                break;
-        }
+        drawFencePreviewLine(g2, previewBounds, side, true, 0, FENCE_PREVIEW_BORDER);
 
         // Une ligne secondaire plus douce aide à lire la direction du futur relief
         // sans surcharger la terre.
-        g2.setColor(new Color(255, 255, 214, 120));
-        switch (side) {
-            case TOP:
-                g2.drawLine(
-                        previewBounds.x,
-                        previewBounds.y + 1,
-                        previewBounds.x + previewBounds.width - 1,
-                        previewBounds.y + 1
-                );
-                break;
-            case RIGHT:
-                g2.drawLine(
-                        previewBounds.x + previewBounds.width - 2,
-                        previewBounds.y,
-                        previewBounds.x + previewBounds.width - 2,
-                        previewBounds.y + previewBounds.height - 1
-                );
-                break;
-            case BOTTOM:
-                g2.drawLine(
-                        previewBounds.x,
-                        previewBounds.y + previewBounds.height - 2,
-                        previewBounds.x + previewBounds.width - 1,
-                        previewBounds.y + previewBounds.height - 2
-                );
-                break;
-            case LEFT:
-                g2.drawLine(
-                        previewBounds.x + 1,
-                        previewBounds.y,
-                        previewBounds.x + 1,
-                        previewBounds.y + previewBounds.height - 1
-                );
-                break;
-            default:
-                break;
-        }
+        drawFencePreviewLine(g2, previewBounds, side, false, 1, FENCE_PREVIEW_SOFT_LIGHT);
     }
 
     private void drawFence(Graphics2D g2, int cellX, int cellY, Rectangle cellBounds, CellSide side) {
@@ -703,22 +707,20 @@ public class FieldPanel extends JPanel {
      * pas couchée sur la terre.
      */
     private void drawHorizontalFence(Graphics2D g2, int cellX, int cellY, Rectangle cellBounds, boolean bottomSide) {
-        int tileSize = cellBounds.width;
+        FenceMetrics metrics = createFenceMetrics(cellBounds);
         CellSide side = bottomSide ? CellSide.BOTTOM : CellSide.TOP;
         boolean connectedLeft = grilleCulture.hasFence(cellX - 1, cellY, side);
         boolean connectedRight = grilleCulture.hasFence(cellX + 1, cellY, side);
 
-        int outsideDepth = Math.max(2, tileSize / 18);
-        int insideDepth = Math.max(6, tileSize / 9);
-        int bandHeight = outsideDepth + insideDepth;
+        int bandHeight = metrics.getBandThickness();
         int bandY = bottomSide
-                ? cellBounds.y + cellBounds.height - insideDepth
-                : cellBounds.y - outsideDepth;
+                ? cellBounds.y + cellBounds.height - metrics.getInsideDepth()
+                : cellBounds.y - metrics.getOutsideDepth();
 
-        int slatThickness = Math.max(2, bandHeight / 3);
-        int slatGap = Math.max(1, tileSize / 20);
-        int postWidth = Math.max(7, tileSize / 8);
-        int postHeight = bandHeight + Math.max(4, tileSize / 12);
+        int slatThickness = metrics.getSlatThickness();
+        int slatGap = metrics.getSlatGap();
+        int postWidth = metrics.getPostThickness();
+        int postHeight = bandHeight + metrics.getPostExtension();
         int leftPostX = cellBounds.x - (postWidth / 2);
         int rightPostX = cellBounds.x + cellBounds.width - (postWidth / 2);
         int postY = bandY - ((postHeight - bandHeight) / 2);
@@ -743,26 +745,24 @@ public class FieldPanel extends JPanel {
 
         g2.setColor(FENCE_WOOD_SHADOW);
         int shadowY = bottomSide ? bandY - 1 : bandY + bandHeight;
-        g2.fillRect(cellBounds.x + 2, shadowY, Math.max(2, cellBounds.width - 4), Math.max(2, tileSize / 18));
+        g2.fillRect(cellBounds.x + 2, shadowY, Math.max(2, cellBounds.width - 4), metrics.getShadowThickness());
     }
 
     private void drawVerticalFence(Graphics2D g2, int cellX, int cellY, Rectangle cellBounds, boolean rightSide) {
-        int tileSize = cellBounds.width;
+        FenceMetrics metrics = createFenceMetrics(cellBounds);
         CellSide side = rightSide ? CellSide.RIGHT : CellSide.LEFT;
         boolean connectedTop = grilleCulture.hasFence(cellX, cellY - 1, side);
         boolean connectedBottom = grilleCulture.hasFence(cellX, cellY + 1, side);
 
-        int outsideDepth = Math.max(2, tileSize / 18);
-        int insideDepth = Math.max(6, tileSize / 9);
-        int bandWidth = outsideDepth + insideDepth;
+        int bandWidth = metrics.getBandThickness();
         int bandX = rightSide
-                ? cellBounds.x + cellBounds.width - insideDepth
-                : cellBounds.x - outsideDepth;
+                ? cellBounds.x + cellBounds.width - metrics.getInsideDepth()
+                : cellBounds.x - metrics.getOutsideDepth();
 
-        int slatThickness = Math.max(2, bandWidth / 3);
-        int slatGap = Math.max(1, tileSize / 20);
-        int postHeight = Math.max(7, tileSize / 8);
-        int postWidth = bandWidth + Math.max(4, tileSize / 12);
+        int slatThickness = metrics.getSlatThickness();
+        int slatGap = metrics.getSlatGap();
+        int postHeight = metrics.getPostThickness();
+        int postWidth = bandWidth + metrics.getPostExtension();
         int topPostY = cellBounds.y - (postHeight / 2);
         int bottomPostY = cellBounds.y + cellBounds.height - (postHeight / 2);
         int postX = bandX - ((postWidth - bandWidth) / 2);
@@ -787,22 +787,59 @@ public class FieldPanel extends JPanel {
 
         g2.setColor(FENCE_WOOD_SHADOW);
         int shadowX = rightSide ? bandX - 1 : bandX + bandWidth;
-        g2.fillRect(shadowX, cellBounds.y + 2, Math.max(2, tileSize / 18), Math.max(2, cellBounds.height - 4));
+        g2.fillRect(shadowX, cellBounds.y + 2, metrics.getShadowThickness(), Math.max(2, cellBounds.height - 4));
     }
 
-    private void drawHorizontalPost(Graphics2D g2, int x, int y, int width, int height, boolean outerOnTop) {
+    /**
+     * La structure de base d'un poteau ne dépend pas de son orientation :
+     * on a toujours un contour sombre puis un remplissage bois.
+     *
+     * On factorise donc cette partie commune ici,
+     * et chaque variante ajoute ensuite son relief propre.
+     */
+    private void drawPostBase(Graphics2D g2, int x, int y, int width, int height) {
         g2.setColor(FENCE_OUTLINE);
         g2.fillRect(x, y, width, height);
 
         g2.setColor(FENCE_WOOD_MID);
         g2.fillRect(x + 1, y + 1, Math.max(1, width - 2), Math.max(1, height - 2));
+    }
+
+    /**
+     * Relief d'un poteau "horizontal" :
+     * on éclaire légèrement le côté gauche
+     * et on assombrit le côté droit.
+     */
+    private void drawHorizontalPostRelief(Graphics2D g2, int x, int y, int width, int height) {
+        int innerHeight = Math.max(1, height - 2);
 
         g2.setColor(FENCE_WOOD_LIGHT);
-        g2.fillRect(x + 1, y + 1, Math.max(2, width / 3), Math.max(1, height - 2));
+        g2.fillRect(x + 1, y + 1, Math.max(2, width / 3), innerHeight);
 
         g2.setColor(FENCE_WOOD_DARK);
-        g2.fillRect(x + width - 2, y + 1, 1, Math.max(1, height - 2));
+        g2.fillRect(x + width - 2, y + 1, 1, innerHeight);
+    }
 
+    /**
+     * Relief d'un poteau "vertical" :
+     * on éclaire le haut et on ombre légèrement le bas.
+     */
+    private void drawVerticalPostRelief(Graphics2D g2, int x, int y, int width, int height) {
+        int innerWidth = Math.max(1, width - 2);
+
+        g2.setColor(FENCE_WOOD_LIGHT);
+        g2.fillRect(x + 1, y + 1, innerWidth, Math.max(2, height / 3));
+
+        g2.setColor(FENCE_WOOD_DARK);
+        g2.fillRect(x + 1, y + height - 2, innerWidth, 1);
+    }
+
+    /**
+     * Capuchon d'un poteau horizontal.
+     * Le capuchon se place sur le côté "extérieur" du relief,
+     * soit en haut, soit en bas.
+     */
+    private void drawHorizontalPostCap(Graphics2D g2, int x, int y, int width, int height, boolean outerOnTop) {
         int capY = outerOnTop ? y : y + height - Math.max(3, height / 3);
         int capHeight = Math.max(3, height / 3);
         g2.setColor(FENCE_CAP_DARK);
@@ -812,19 +849,12 @@ public class FieldPanel extends JPanel {
         g2.fillRect(x + 2, capY + 1, Math.max(1, width - 4), 1);
     }
 
-    private void drawVerticalPost(Graphics2D g2, int x, int y, int width, int height, boolean outerOnRight) {
-        g2.setColor(FENCE_OUTLINE);
-        g2.fillRect(x, y, width, height);
-
-        g2.setColor(FENCE_WOOD_MID);
-        g2.fillRect(x + 1, y + 1, Math.max(1, width - 2), Math.max(1, height - 2));
-
-        g2.setColor(FENCE_WOOD_LIGHT);
-        g2.fillRect(x + 1, y + 1, Math.max(1, width - 2), Math.max(2, height / 3));
-
-        g2.setColor(FENCE_WOOD_DARK);
-        g2.fillRect(x + 1, y + height - 2, Math.max(1, width - 2), 1);
-
+    /**
+     * Capuchon d'un poteau vertical.
+     * Même idée que la version horizontale, mais cette fois le capuchon
+     * est accroché à gauche ou à droite.
+     */
+    private void drawVerticalPostCap(Graphics2D g2, int x, int y, int width, int height, boolean outerOnRight) {
         int capX = outerOnRight ? x + width - Math.max(3, width / 3) : x;
         int capWidth = Math.max(3, width / 3);
         g2.setColor(FENCE_CAP_DARK);
@@ -832,6 +862,18 @@ public class FieldPanel extends JPanel {
 
         g2.setColor(FENCE_CAP_LIGHT);
         g2.fillRect(capX + (outerOnRight ? 0 : 1), y + 2, 1, Math.max(1, height - 4));
+    }
+
+    private void drawHorizontalPost(Graphics2D g2, int x, int y, int width, int height, boolean outerOnTop) {
+        drawPostBase(g2, x, y, width, height);
+        drawHorizontalPostRelief(g2, x, y, width, height);
+        drawHorizontalPostCap(g2, x, y, width, height, outerOnTop);
+    }
+
+    private void drawVerticalPost(Graphics2D g2, int x, int y, int width, int height, boolean outerOnRight) {
+        drawPostBase(g2, x, y, width, height);
+        drawVerticalPostRelief(g2, x, y, width, height);
+        drawVerticalPostCap(g2, x, y, width, height, outerOnRight);
     }
 
     private void drawHorizontalSlat(Graphics2D g2, int x, int y, int width, int height, boolean outerOnTop) {
@@ -869,6 +911,108 @@ public class FieldPanel extends JPanel {
     }
 
     /**
+     * Dessine tout ce qui appartient à une seule case:
+     * le sol, la culture éventuelle, l'animation d'arrosage et le surlignage du joueur.
+     *
+     * Ce découpage garde paintComponent lisible:
+     * la méthode principale orchestre,
+     * ce helper s'occupe du détail d'une tuile.
+     */
+    private void drawCell(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
+        drawGroundTile(g2, gridX, gridY, cellBounds);
+
+        Culture culture = grilleCulture.getCulture(gridX, gridY);
+        Image cultureImage = getCultureImage(culture);
+        if (cultureImage != null) {
+            drawCultureImage(g2, cultureImage, cellBounds.x, cellBounds.y, cellBounds.width);
+        }
+
+        if (shouldAnimateWateredCell(culture)) {
+            drawWateringAnimation(g2, cellBounds.x, cellBounds.y, cellBounds.width);
+        }
+
+        if (isHighlightedFarmableCell(gridX, gridY)) {
+            drawCellHighlight(g2, cellBounds);
+        }
+    }
+
+    /**
+     * Dessine uniquement la tuile de sol.
+     * On sépare ce travail pour éviter de mélanger le choix du fond avec le reste du rendu.
+     */
+    private void drawGroundTile(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
+        Image groundTile = getGroundTile(gridX, gridY);
+        if (groundTile != null) {
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+            g2.drawImage(groundTile, cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height, this);
+            return;
+        }
+
+        g2.setColor(DEFAULT_GRASS_FILL);
+        g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height);
+    }
+
+    /**
+     * Dit si la case affichée est celle actuellement occupée par le joueur
+     * et si cette case peut réellement être utilisée côté gameplay.
+     */
+    private boolean isHighlightedFarmableCell(int gridX, int gridY) {
+        return highlightedCell != null
+                && highlightedCell.x == gridX
+                && highlightedCell.y == gridY
+                && isFarmableCell(highlightedCell);
+    }
+
+    /**
+     * Le surlignage reste volontairement simple:
+     * un voile jaune et deux contours pour bien ressortir sur l'herbe comme sur la terre.
+     */
+    private void drawCellHighlight(Graphics2D g2, Rectangle cellBounds) {
+        g2.setColor(HIGHLIGHT_FILL);
+        g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height);
+        g2.setColor(HIGHLIGHT_BORDER);
+        g2.drawRect(cellBounds.x, cellBounds.y, cellBounds.width - 1, cellBounds.height - 1);
+        g2.drawRect(cellBounds.x + 1, cellBounds.y + 1, cellBounds.width - 3, cellBounds.height - 3);
+    }
+
+    /**
+     * Les clôtures sont dessinées après les cases pour rester au premier plan.
+     * On parcourt donc la grille une deuxième fois, mais avec une responsabilité très claire:
+     * uniquement les segments de clôture déjà posés.
+     */
+    private void drawPlacedFences(Graphics2D g2) {
+        for (int row = 0; row < getRowCount(); row++) {
+            for (int column = 0; column < getColumnCount(); column++) {
+                Rectangle cellBounds = getCellBounds(column, row);
+                if (cellBounds == null) {
+                    continue;
+                }
+
+                for (CellSide side : CellSide.values()) {
+                    if (grilleCulture.hasFence(column, row, side)) {
+                        drawFence(g2, column, row, cellBounds, side);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Dessine la preview de clôture, si le contrôleur en a préparé une.
+     */
+    private void drawFencePreviewOverlay(Graphics2D g2) {
+        if (fencePreview == null) {
+            return;
+        }
+
+        Point previewCell = fencePreview.getCell();
+        Rectangle previewBounds = previewCell == null ? null : getCellBounds(previewCell.x, previewCell.y);
+        if (previewBounds != null) {
+            drawFencePreview(g2, previewBounds, fencePreview.getSide());
+        }
+    }
+
+    /**
      * Dessine la grille (avec les images).
      */
     @Override
@@ -876,82 +1020,16 @@ public class FieldPanel extends JPanel {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g.create();
 
-        // Rectangle total occupé par la grille dans le panneau.
         Rectangle fieldBounds = getFieldBounds();
-
-        // Taille d'une case carrée à l'écran.
-        int tileSize = fieldBounds.width / getColumnCount();
-
-        // Point d'origine de la grille dans le panneau.
-        int startX = fieldBounds.x;
-        int startY = fieldBounds.y;
-
-        for (int r = 0; r < getRowCount(); r++) {
-            for (int c = 0; c < getColumnCount(); c++) {
-                int x = startX + c * tileSize;
-                int y = startY + r * tileSize;
-
-                Image groundTile = getGroundTile(c, r);
-                if (groundTile != null) {
-                    // Ici on force un agrandissement :
-                    // la tuile doit rester "pixel art" même en grand.
-                    g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-                    g2.drawImage(groundTile, x, y, tileSize, tileSize, this);
-                } else {
-                    g2.setColor(new Color(92, 167, 74));
-                    g2.fillRect(x, y, tileSize, tileSize);
-                }
-
-                Culture culture = grilleCulture.getCulture(c, r);
-                Image cultureImage = getCultureImage(culture);
-                if (cultureImage != null) {
-                    drawCultureImage(g2, cultureImage, x, y, tileSize);
-                }
-
-                // Si la culture vient d'être arrosée, on ajoute un halo pulsé sur la case.
-                // L'effet persiste tant que l'état du modèle reste "intermédiaire + arrosée".
-                if (shouldAnimateWateredCell(culture)) {
-                    drawWateringAnimation(g2, x, y, tileSize);
-                }
-
-                // La case active est surlignée uniquement quand le rectangle du joueur
-                // est entièrement contenu dans cette case logique.
-                if (highlightedCell != null
-                        && highlightedCell.x == c
-                        && highlightedCell.y == r
-                        && isFarmableCell(highlightedCell)) {
-                    g2.setColor(HIGHLIGHT_FILL);
-                    g2.fillRect(x, y, tileSize, tileSize);
-                    g2.setColor(HIGHLIGHT_BORDER);
-                    g2.drawRect(x, y, tileSize - 1, tileSize - 1);
-                    g2.drawRect(x + 1, y + 1, tileSize - 3, tileSize - 3);
-                }
+        for (int row = 0; row < getRowCount(); row++) {
+            for (int column = 0; column < getColumnCount(); column++) {
+                Rectangle cellBounds = buildScreenCellBounds(column, row, fieldBounds);
+                drawCell(g2, column, row, cellBounds);
             }
         }
 
-        // On dessine les clôtures après le contenu des cases pour qu'elles restent bien lisibles.
-        for (int r = 0; r < getRowCount(); r++) {
-            for (int c = 0; c < getColumnCount(); c++) {
-                Rectangle cellBounds = getCellBounds(c, r);
-                if (cellBounds == null) {
-                    continue;
-                }
-
-                for (CellSide side : CellSide.values()) {
-                    if (grilleCulture.hasFence(c, r, side)) {
-                        drawFence(g2, c, r, cellBounds, side);
-                    }
-                }
-            }
-        }
-
-        if (fencePreview != null) {
-            Point previewCell = fencePreview.getCell();
-            Rectangle previewBounds = previewCell == null ? null : getCellBounds(previewCell.x, previewCell.y);
-            if (previewBounds != null) {
-                drawFencePreview(g2, previewBounds, fencePreview.getSide());
-            }
-        }
+        drawPlacedFences(g2);
+        drawFencePreviewOverlay(g2);
 
         g2.dispose();
     }
