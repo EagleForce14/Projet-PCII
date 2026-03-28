@@ -19,6 +19,8 @@ public final class ProductPixelArt {
     private static final int DEFAULT_ART_ROWS = 5;
     private static final int FENCE_ART_COLUMNS = 9;
     private static final int FENCE_ART_ROWS = 7;
+    private static final int PATH_ART_COLUMNS = 7;
+    private static final int PATH_ART_ROWS = 7;
 
     // Le constructeur de la classe
     private ProductPixelArt() {}
@@ -38,11 +40,23 @@ public final class ProductPixelArt {
     }
 
     public static int getFacilityArtWidth(FacilityType type, int pixelSize) {
-        return (type == FacilityType.CLOTURE ? FENCE_ART_COLUMNS : DEFAULT_ART_COLUMNS) * pixelSize;
+        if (type == FacilityType.CLOTURE) {
+            return FENCE_ART_COLUMNS * pixelSize;
+        }
+        if (type == FacilityType.CHEMIN) {
+            return PATH_ART_COLUMNS * pixelSize;
+        }
+        return DEFAULT_ART_COLUMNS * pixelSize;
     }
 
     public static int getFacilityArtHeight(FacilityType type, int pixelSize) {
-        return (type == FacilityType.CLOTURE ? FENCE_ART_ROWS : DEFAULT_ART_ROWS) * pixelSize;
+        if (type == FacilityType.CLOTURE) {
+            return FENCE_ART_ROWS * pixelSize;
+        }
+        if (type == FacilityType.CHEMIN) {
+            return PATH_ART_ROWS * pixelSize;
+        }
+        return DEFAULT_ART_ROWS * pixelSize;
     }
 
     public static void drawProduct(Graphics2D g2d, Product product, int x, int y, int pixelSize) {
@@ -88,6 +102,9 @@ public final class ProductPixelArt {
         switch (type) {
             case CLOTURE:
                 drawFence(g2d, x, y, pixelSize);
+                break;
+            case CHEMIN:
+                drawStonePath(g2d, x, y, pixelSize);
                 break;
             case ENGRAIS:
                 drawFertilizer(g2d, x, y, pixelSize);
@@ -242,6 +259,36 @@ public final class ProductPixelArt {
         fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, shirt);
         fillPixel(g2d, x + pixelSize, y + (3 * pixelSize), pixelSize, pants);
         fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, pants);
+    }
+
+    /**
+     * Petit pictogramme de chemin en pierre.
+     *
+     * Le but est qu'on lise tout de suite "sol mineral"
+     * et surtout pas "terre labouree".
+     * On utilise donc des gris froids et des joints sombres.
+     */
+    private static void drawStonePath(Graphics2D g2d, int x, int y, int pixelSize) {
+        Color joint = new Color(63, 63, 67);
+        Color stoneDark = new Color(104, 104, 110);
+        Color stone = new Color(146, 146, 151);
+        Color stoneLight = new Color(192, 192, 197);
+
+        fillGridRect(g2d, x, y, pixelSize, 0, 0, 7, 7, joint);
+
+        fillGridRect(g2d, x, y, pixelSize, 0, 0, 3, 2, stone);
+        fillGridRect(g2d, x, y, pixelSize, 3, 0, 4, 2, stoneDark);
+        fillGridRect(g2d, x, y, pixelSize, 1, 2, 3, 2, stoneDark);
+        fillGridRect(g2d, x, y, pixelSize, 4, 2, 2, 2, stone);
+        fillGridRect(g2d, x, y, pixelSize, 0, 4, 4, 3, stone);
+        fillGridRect(g2d, x, y, pixelSize, 4, 4, 3, 3, stoneDark);
+
+        fillGridRect(g2d, x, y, pixelSize, 1, 0, 1, 1, stoneLight);
+        fillGridRect(g2d, x, y, pixelSize, 4, 0, 1, 1, stoneLight);
+        fillGridRect(g2d, x, y, pixelSize, 2, 2, 1, 1, stoneLight);
+        fillGridRect(g2d, x, y, pixelSize, 5, 2, 1, 1, stoneLight);
+        fillGridRect(g2d, x, y, pixelSize, 1, 4, 1, 1, stoneLight);
+        fillGridRect(g2d, x, y, pixelSize, 5, 5, 1, 1, stoneLight);
     }
 
     private static void drawStem(Graphics2D g2d, int x, int y, int pixelSize) {

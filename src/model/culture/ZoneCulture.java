@@ -2,12 +2,32 @@ package model.culture;
 
 /** Classe représentant une zone de culture */
 public class ZoneCulture {
+    /**
+     * Une case peut exister physiquement sur la map sans encore être "prête à cultiver".
+     * On sépare donc bien :
+     * - le fait que la case soit labourée,
+     * - le fait qu'elle contienne ou non une culture.
+     */
+    private boolean labouree;
+
     /** Attribut représentant la culture dans la zone */
     private Culture culture;
 
-    /** Constructeur de la classe ZoneCulture qui initialise la culture à null */
+    /**
+     * Ce constructeur reste pratique pour les tests unitaires
+     * qui manipulent une simple parcelle déjà prête à accueillir une plante.
+     */
     public ZoneCulture() {
-        this.culture = null; // La zone de culture est initialement vide
+        this(true);
+    }
+
+    /**
+     * Constructeur explicite utilisé par la grille de la map.
+     * On peut ainsi créer des cases d'herbe non labourées au démarrage.
+     */
+    public ZoneCulture(boolean laboureeInitialement) {
+        this.labouree = laboureeInitialement;
+        this.culture = null;
     }
 
     /** Getter pour l'attribut culture */
@@ -15,11 +35,29 @@ public class ZoneCulture {
         return culture;
     }
 
+    /**
+     * Le labourage est volontairement très simple :
+     * il transforme une case d'herbe en case de terre prête à l'emploi.
+     * S'il est rejoué sur une case déjà labourée, on ne fait rien.
+     */
+    public void labourer() {
+        labouree = true;
+    }
+
+    public boolean isLabouree() {
+        return labouree;
+    }
+
     /** Méthode qui plante une culture dans la zone 
      * @param type : le type concret de la culture à planter
      * @throws IllegalStateException si la zone de culture est déjà occupée par une culture
     **/
     public boolean planterCulture(Type type) {
+        // Règle importante :
+        // tant que le joueur n'a pas labouré la case, on reste sur de l'herbe.
+        if (!labouree) {
+            throw new IllegalStateException("La case doit d'abord etre labourée avant de planter.");
+        }
 
         // Vérifie s'il n'y a pas déjà une culture dans la zone avant de planter une nouvelle culture
         if (culture != null) {

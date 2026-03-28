@@ -71,6 +71,39 @@ public class MovementView extends JPanel {
                 Rectangle playerBounds = new Rectangle(drawX, drawY, Unit.SIZE, Unit.SIZE);
                 Rectangle playerBoundsInField = SwingUtilities.convertRectangle(this, playerBounds, fieldPanel);
                 highlightedCell = fieldPanel.getFullyOccupiedCell(playerBoundsInField);
+
+                // Même si une case existe géométriquement sous la grange,
+                // on ne veut jamais la présenter comme une vraie case exploitable.
+                if (fieldPanel.isBlockedByBarn(highlightedCell)) {
+                    highlightedCell = null;
+                }
+
+                /*
+                 * Le bonus de vitesse du chemin ne doit pas dependre
+                 * de la surbrillance de gameplay.
+                 *
+                 * Pourquoi ?
+                 * La case active impose que tout le rectangle du joueur
+                 * soit contenu dans une seule case.
+                 * C'est tres bien pour labourer / planter,
+                 * mais trop strict pour une sensation de deplacement fluide.
+                 *
+                 * Pour la vitesse, on lit donc simplement la case situee
+                 * sous le centre du joueur.
+                 * Des que son centre entre sur un chemin, il accelere.
+                 */
+                Point playerCenterInField = SwingUtilities.convertPoint(
+                        this,
+                        drawX + (Unit.SIZE / 2),
+                        drawY + (Unit.SIZE / 2),
+                        fieldPanel
+                );
+                Point pathCell = fieldPanel.getGridPositionAt(playerCenterInField.x, playerCenterInField.y);
+                if (pathCell != null && fieldPanel.getGrilleCulture().hasPath(pathCell.x, pathCell.y)) {
+                    u.setCurrentSpeed(Unit.PATH_SPEED);
+                } else {
+                    u.setCurrentSpeed(Unit.NORMAL_SPEED);
+                }
             }
             
             g.fillRect(drawX, drawY, Unit.SIZE, Unit.SIZE);

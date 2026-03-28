@@ -38,6 +38,9 @@ public class Shop {
         addSeed("Poivron", 5, Type.POIVRON);
         addSeed("Courgette", 5, Type.COURGETTE);
         facilities.add(new Facility("Cloture", 50, 20, FacilityType.CLOTURE));
+        // Le chemin est volontairement bon marché et disponible en plus grand stock,
+        // car le joueur peut vouloir en acheter beaucoup.
+        facilities.add(new Facility("Chemin", 12, 200, FacilityType.CHEMIN));
         facilities.add(new Facility("Engrais", 30, 50, FacilityType.ENGRAIS));
         facilities.add(new Facility("Jardinier", 100, 10, FacilityType.JARDINIER));
     }

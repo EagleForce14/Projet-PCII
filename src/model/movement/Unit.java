@@ -5,7 +5,8 @@ package model.movement;
  */
 public class Unit {
     public static final int SIZE = 30;
-    private static final int SPEED = 3;
+    public static final int NORMAL_SPEED = 3;
+    public static final int PATH_SPEED = 5;
 
     // On rappelle que volatile assure que les modifications sont immédiatement visibles par tous les threads
     private volatile int x;
@@ -20,6 +21,13 @@ public class Unit {
     // Rayon de la zone d'influence
     public static final int INFLUENCE_RADIUS = 50;
 
+    /*
+     * La vitesse peut maintenant varier selon le sol sous le joueur.
+     * On garde tout de meme une seule valeur simple par frame
+     * pour ne pas compliquer inutilement le déplacement.
+     */
+    private volatile int currentSpeed = NORMAL_SPEED;
+
     // Le constructeur de la classe.
     public Unit(int x, int y) {
         this.x = x;
@@ -31,13 +39,13 @@ public class Unit {
         int stepX = 0;
         int stepY = 0;
         if (moveUp) {
-            stepY -= SPEED;
+            stepY -= currentSpeed;
         } else if (moveDown) {
-            stepY += SPEED;
+            stepY += currentSpeed;
         } else if (moveLeft) {
-            stepX -= SPEED;
+            stepX -= currentSpeed;
         } else if (moveRight) {
-            stepX += SPEED;
+            stepX += currentSpeed;
         }
 
         int nextX = x;
@@ -72,10 +80,7 @@ public class Unit {
     public void setMoveDown(boolean moveDown) { this.moveDown = moveDown; }
     public void setMoveLeft(boolean moveLeft) { this.moveLeft = moveLeft; }
     public void setMoveRight(boolean moveRight) { this.moveRight = moveRight; }
-    
-    public boolean isMoving() {
-        return moveUp || moveDown || moveLeft || moveRight;
-    }
+    public void setCurrentSpeed(int currentSpeed) { this.currentSpeed = currentSpeed; }
 
     /**
      * Vérifie si une position donnée (x, y) est dans la zone d'influence de l'unité.

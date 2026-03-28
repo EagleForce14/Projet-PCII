@@ -5,6 +5,7 @@ import model.culture.Stade;
 import model.culture.Type;
 import model.management.Inventaire;
 import model.objective.GestionnaireObjectifs;
+import model.shop.Seed;
 
 /** Classe de test pour la fonctionnalité de plantation des cultures */
 
@@ -14,8 +15,10 @@ public class TestPlanterCulture {
         // Créer une grille de culture
         GrilleCulture grille = new GrilleCulture(gestionnaireObjectifs);
         Inventaire inventaire = new Inventaire();
+        inventaire.ajoutGraine(new Seed("Tulipe", 10, 1, Type.TULIPE), 2);
 
-        // Planter une culture dans la grille de culture
+        // Avec la nouvelle règle de gameplay, la case doit d'abord être labourée.
+        grille.labourerCase(0, 0);
         grille.planterCulture(0, 0, Type.TULIPE, inventaire);
 
         // Vérifier que la culture a été plantée correctement

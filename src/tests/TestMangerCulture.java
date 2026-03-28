@@ -5,6 +5,7 @@ import model.culture.Stade;
 import model.culture.Type;
 import model.management.Inventaire;
 import model.objective.GestionnaireObjectifs;
+import model.shop.Seed;
 
 /** Classe de test pour la fonctionnalité qui permet au lapin de manger une culture */
 public class TestMangerCulture {
@@ -13,7 +14,9 @@ public class TestMangerCulture {
         // Créer une grille de culture
         GrilleCulture grille = new GrilleCulture(gestionnaireObjectifs);
         Inventaire inventaire = new Inventaire();
+        inventaire.ajoutGraine(new Seed("Tulipe", 10, 1, Type.TULIPE), 2);
         // Planter une culture dans la grille de culture
+        grille.labourerCase(0, 0);
         grille.planterCulture(0, 0, Type.TULIPE, inventaire);
 
         /* Test pour une culture qui peut être mangée */
@@ -41,6 +44,7 @@ public class TestMangerCulture {
         }
 
         // Test pour une culture qui n'est pas à maturité
+        grille.labourerCase(2, 2);
         grille.planterCulture(2, 2, Type.TULIPE, inventaire);
         try {
             grille.mangerCulture(2, 2);

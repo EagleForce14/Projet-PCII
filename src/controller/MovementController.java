@@ -63,6 +63,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         enemyView.addMouseMotionListener(this);
         inventoryStatusOverlay.addMouseListener(this);
 
+        JButton labourButton = sidebarPanel.getLabourButton();
+        labourButton.addActionListener(this::labourerCaseActive);
+
         JButton plantButton = sidebarPanel.getPlantButton();
         plantButton.addActionListener(this::planterSurCaseActive);
 
@@ -75,8 +78,32 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         JButton cleanButton = sidebarPanel.getCleanButton();
         cleanButton.addActionListener(this::nettoyerCaseActive);
 
+        JButton pathButton = sidebarPanel.getPathButton();
+        pathButton.addActionListener(this::poserCheminCaseActive);
+
         JButton shopButton = sidebarPanel.getShopButton();
         shopButton.addActionListener(this::ouvrirBoutique);
+    }
+
+    /**
+     * Labourer transforme simplement une case d'herbe en case cultivable.
+     * On reste volontairement alignés avec les autres actions :
+     * le bouton agit sur la case actuellement occupée par le joueur.
+     */
+    private void labourerCaseActive(ActionEvent event) {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
+        Point activeFieldCell = model.getActiveFieldCell();
+        if (activeFieldCell == null
+                || !fieldPanel.isFarmableCell(activeFieldCell)
+                || grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y)
+                || grilleCulture.isLabouree(activeFieldCell.x, activeFieldCell.y)) {
+            return;
+        }
+
+        grilleCulture.labourerCase(activeFieldCell.x, activeFieldCell.y);
     }
 
     /**
@@ -89,7 +116,10 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         }
 
         Point activeFieldCell = model.getActiveFieldCell();
-        if (activeFieldCell == null) {
+        if (activeFieldCell == null
+                || !fieldPanel.isFarmableCell(activeFieldCell)
+                || grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y)
+                || !grilleCulture.isLabouree(activeFieldCell.x, activeFieldCell.y)) {
             return;
         }
 
@@ -117,7 +147,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
 
         Point activeFieldCell = model.getActiveFieldCell();
         // Si le jardinier n'est sur aucune case du champ, il n'y a rien à récolter.
-        if (activeFieldCell == null) {
+        if (activeFieldCell == null || !fieldPanel.isFarmableCell(activeFieldCell)) {
             return;
         }
 
@@ -144,7 +174,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         }
 
         Point activeFieldCell = model.getActiveFieldCell();
-        if (activeFieldCell == null) {
+        if (activeFieldCell == null || !fieldPanel.isFarmableCell(activeFieldCell)) {
             return;
         }
         grilleCulture.nettoyerCultureFletrie(activeFieldCell.x, activeFieldCell.y);
@@ -159,10 +189,38 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         }
 
         Point activeFieldCell = model.getActiveFieldCell();
-        if (activeFieldCell == null) {
+        if (activeFieldCell == null || !fieldPanel.isFarmableCell(activeFieldCell)) {
             return;
         }
         grilleCulture.arroserCulture(activeFieldCell.x, activeFieldCell.y);
+    }
+
+    /**
+     * Le chemin se pose comme les autres actions de la sidebar :
+     * sur la case actuellement occupee par le joueur.
+     *
+     * Cela remplace volontairement l'ancien placement a la souris,
+     * pour garder une logique de controle plus uniforme.
+     */
+    private void poserCheminCaseActive(ActionEvent event) {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
+        Point activeFieldCell = model.getActiveFieldCell();
+        if (activeFieldCell == null
+                || model.getSelectedFacilityType() != FacilityType.CHEMIN
+                || !fieldPanel.isFarmableCell(activeFieldCell)
+                || !grilleCulture.canPlacePath(activeFieldCell.x, activeFieldCell.y)
+                || inventaire.possedeInstallation(FacilityType.CHEMIN)) {
+            return;
+        }
+
+        grilleCulture.placePath(activeFieldCell.x, activeFieldCell.y, inventaire);
+        if (inventaire.possedeInstallation(FacilityType.CHEMIN)) {
+            model.clearSelectedInventoryItem();
+        }
+        inventoryStatusOverlay.repaint();
     }
 
     /**
@@ -399,6 +457,13 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         }
 
         if (tryPlaceSelectedFence(e)) {
+            movementView.requestFocusInWindow();
+            return;
+        }
+
+        // Quand le chemin est selectionne, on ne veut plus de pose a la souris.
+        // Le clic ne doit donc pas declencher d'action "cachee" sur le terrain.
+        if (model.isPathPlacementSelected()) {
             movementView.requestFocusInWindow();
             return;
         }

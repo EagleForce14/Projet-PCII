@@ -20,8 +20,6 @@ import javax.swing.JPanel;
 import javax.swing.OverlayLayout;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.GridBagLayout;
-import java.awt.Image;
 import java.awt.Point;
 
 public class Main {
@@ -39,9 +37,6 @@ public class Main {
                 GAME_AREA_PREFERRED_SIZE.width + SidebarPanel.SIDEBAR_WIDTH,
                 GAME_AREA_PREFERRED_SIZE.height
         ));
-
-        // Image de fond globale de la fenêtre.
-        Image backgroundImage = ImageLoader.load("/assets/Main_Background.png");
 
         Jour jour = new Jour();
         GrilleCulture grilleCulture = new GrilleCulture(jour.getGestionnaireObjectifs());
@@ -64,7 +59,7 @@ public class Main {
         movementView.setAlignmentY(0.5f);
 
         // Les actions contextuelles sont affichées dans une sidebar dédiée, hors du jeu.
-        SidebarPanel actionSidebarPanel = new SidebarPanel(model, grilleCulture, shop, inventaire);
+        SidebarPanel actionSidebarPanel = new SidebarPanel(model, grilleCulture, fieldPanel, shop, inventaire);
 
         EnemyView enemyView = new EnemyView(enemyModel, fieldPanel);
         enemyView.setAlignmentX(0.5f);
@@ -79,19 +74,13 @@ public class Main {
         environmentView.setAlignmentX(0.5f);
         environmentView.setAlignmentY(0.5f);
 
-        JPanel fieldLayer = new JPanel(new GridBagLayout());
+        JPanel fieldLayer = new JPanel(new BorderLayout());
         fieldLayer.setOpaque(false);
         fieldLayer.setAlignmentX(0.5f);
         fieldLayer.setAlignmentY(0.5f);
-        
-        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
-        // Petit decalage supplementaire:
-        // on redescend legerement le champ et la grange tout en gardant
-        // suffisamment d'air au-dessus de la hotbar.
-        gbc.insets = new java.awt.Insets(56, 0, 0, 0); 
-        fieldLayer.add(fieldPanel, gbc);
+        fieldLayer.add(fieldPanel, BorderLayout.CENTER);
 
-        JPanel gamePanel = createGamePanel(backgroundImage);
+        JPanel gamePanel = createGamePanel();
         gamePanel.setLayout(new OverlayLayout(gamePanel));
         gamePanel.add(movementView);
         gamePanel.add(enemyView);
@@ -143,8 +132,8 @@ public class Main {
         movementView.requestFocusInWindow();
     }
 
-    private static JPanel createGamePanel(Image backgroundImage) {
-        JPanel gamePanel = new BackgroundPanel(backgroundImage);
+    private static JPanel createGamePanel() {
+        JPanel gamePanel = new BackgroundPanel(null);
         gamePanel.setMinimumSize(GAME_AREA_MINIMUM_SIZE);
         gamePanel.setPreferredSize(GAME_AREA_PREFERRED_SIZE);
         return gamePanel;

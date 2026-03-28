@@ -1,10 +1,10 @@
 package view;
 
 import model.culture.Culture;
+import model.culture.CellSide;
 import model.culture.GrilleCulture;
-import model.culture.GrilleCulture.CellSide;
 import model.culture.Stade;
-import model.movement.Unit;
+import model.movement.Barn;
 
 import javax.swing.JPanel;
 import java.awt.Color;
@@ -21,17 +21,14 @@ import java.util.Objects;
  * Panneau d'affichage du champ, compose d'une grille d'images.
  */
 public class FieldPanel extends JPanel {
-    // Taille préférée du panneau qui contient le champ.
-    private static final int PREF_WIDTH = 1010;
-    private static final int PREF_HEIGHT = 580;
+    // Taille préférée alignée sur la zone de jeu principale.
+    // Le panneau peut s'étirer ensuite, mais ces valeurs servent de base cohérente
+    // pour tous les calculs effectués avant l'affichage réel.
+    private static final int PREF_WIDTH = 1180;
+    private static final int PREF_HEIGHT = 850;
 
-    // Marge intérieure laissée autour de la grille pour éviter qu'elle colle au bord du panneau.
-    private static final int INNER_PADDING = 24;
-
-    // Petit décalage vertical pour positionner visuellement le champ un peu plus bas que le centre.
-    // On garde toujours un petit biais vers le bas, mais moins prononce qu'avant,
-    // pour liberer davantage d'espace a la hotbar placee en bas de l'ecran.
-    private static final int VERTICAL_OFFSET = 18;
+    // La taille d'une case
+    private static final int PIXEL_ART_TILE_SIZE = 16;
 
     // Couleurs utilisées pour surligner la case actuellement occupée par le joueur.
     private static final Color HIGHLIGHT_FILL = new Color(255, 255, 120, 90);
@@ -57,6 +54,14 @@ public class FieldPanel extends JPanel {
     private static final Color FENCE_SLAT_DARK = new Color(174, 78, 18);
     private static final Color FENCE_WOOD_SHADOW = new Color(73, 46, 25, 95);
 
+    /*
+     * Constante pour gérer les cases inaccessibles trop proches de la grange.
+     * une case n'est interdite que si une portion significative de sa surface
+     * est réellement recouverte par la hitbox de collision de la grange.
+     * On applique un pourcentage de 35%.
+     */
+    private static final double BARN_BLOCKED_CELL_RATIO = 0.35;
+
     // Vitesse de pulsation de l'animation d'arrosage.
     // Plus la valeur est grande, plus le halo "respire" vite.
     private static final double WATER_PULSE_SPEED = 0.008;
@@ -64,8 +69,10 @@ public class FieldPanel extends JPanel {
     // On lit directement l'état réel des cultures.
     private final GrilleCulture grilleCulture;
 
-    // Image de fond d'une case de terre.
-    private final Image tileImage;
+    // Plusieurs variantes évitent un motif trop répétitif.
+    private final Image[] grassTileImages;
+    private final Image[] tilledTileImages;
+    private final Image[] pathTileImages;
 
     // Images associées aux différents stades visuels d'une culture.
     private final Image jeunePousseImage;
@@ -103,11 +110,15 @@ public class FieldPanel extends JPanel {
     }
 
     /**
-     * Initialise le champ et charge l'image d'une parcelle.
+     * Initialise la carte.
+     * L'herbe et la terre sont maintenant générées en code pour éviter
+     * la dépendance aux anciennes images statiques.
      */
     public FieldPanel(GrilleCulture grilleCulture) {
         this.grilleCulture = grilleCulture;
-        this.tileImage = ImageLoader.load("/assets/Terre.png");
+        this.grassTileImages = TerrainTileFactory.createGrassTiles(PIXEL_ART_TILE_SIZE);
+        this.tilledTileImages = TerrainTileFactory.createSoilTiles(PIXEL_ART_TILE_SIZE);
+        this.pathTileImages = TerrainTileFactory.createPathTiles(PIXEL_ART_TILE_SIZE);
         this.jeunePousseImage = ImageLoader.load("/assets/jeune_pousse.png");
         this.croissanceInterImage = ImageLoader.load("/assets/croissance_inter.png");
         this.maturiteImage = ImageLoader.load("/assets/maturite.png");
@@ -117,7 +128,7 @@ public class FieldPanel extends JPanel {
         setOpaque(false);
     }
 
-    // Les getters pour la l'attribut grilleCulture, et pour la largeur et la hauteur de la grille
+    // Les getters pour l'attribut grilleCulture, et pour la largeur et la hauteur de la grille
     public GrilleCulture getGrilleCulture() {
         return grilleCulture;
     }
@@ -131,21 +142,15 @@ public class FieldPanel extends JPanel {
     }
 
     /**
-     * Calcule une position initiale située juste en dehors du champ, près de son
-     * coin haut-gauche, dans le repère utilisé par les unités.
-     * Le repère des unités est centré sur le champ: la valeur renvoyée représente
-     * donc un décalage par rapport au centre visuel de la grille.
+     * Place le joueur sur une case d'herbe visible, proche du bas-gauche.
      */
     public Point getInitialPlayerOffset() {
         Rectangle fieldBounds = getPreferredFieldBounds();
-        int margin = Math.max(12, Unit.SIZE / 2);
-        int spawnX = -(fieldBounds.width / 2) - margin;
-        int spawnY = -(fieldBounds.height / 2) - margin;
-        return new Point(spawnX, spawnY);
+        return getLogicalCellCenter(2, Math.max(2, getRowCount() - 3), fieldBounds);
     }
 
     /**
-     * Met a jour la case surlignée. La surbrillance est portée par le FieldPanel
+     * Met à jour la case surlignée. La surbrillance est portée par le FieldPanel
      * pour rester parfaitement alignée avec les images du champ.
      */
     public void setHighlightedCell(Point highlightedCell) {
@@ -190,7 +195,7 @@ public class FieldPanel extends JPanel {
 
     /**
      * Traduit la position réelle de la souris en preview de clôture.
-     * Sur une case d'angle, on choisit simplement le bord extérieur libre le plus proche du curseur.
+     * Sur une case d'angle, on choisit simplement le bord libre le plus proche du curseur.
      */
     public FencePreview getFencePreviewAt(Point pointInFieldPanel) {
         if (pointInFieldPanel == null) {
@@ -198,7 +203,7 @@ public class FieldPanel extends JPanel {
         }
 
         Point cell = getGridPositionAt(pointInFieldPanel.x, pointInFieldPanel.y);
-        if (cell == null) {
+        if (cell == null || isBlockedByBarn(cell)) {
             return null;
         }
 
@@ -251,18 +256,27 @@ public class FieldPanel extends JPanel {
     private Rectangle computeFieldBounds(int panelWidth, int panelHeight) {
         int columns = getColumnCount();
         int rows = getRowCount();
-        // On réduit la marge interne pour laisser la grille occuper davantage d'espace visible.
-        int availableWidth = Math.max(0, panelWidth - 2 * INNER_PADDING);
-        int availableHeight = Math.max(0, panelHeight - 2 * INNER_PADDING);
-        int tileW = availableWidth / columns;
-        int tileH = availableHeight / rows;
-        // Une case = une cellule logique du modèle, donc on conserve des tuiles carrées.
-        int tileSize = Math.min(tileW, tileH);
+        if (panelWidth <= 0 || panelHeight <= 0 || columns <= 0 || rows <= 0) {
+            return new Rectangle();
+        }
+
+        /*
+         * Ici on cherche un comportement précis :
+         * la map doit recouvrir toute la zone visible.
+         * On choisit donc la plus grande taille de case nécessaire pour couvrir
+         * à la fois la largeur ET la hauteur, quitte à déborder de quelques pixels.
+         * Le panneau est ensuite simplement "recadré" par la fenêtre.
+         */
+        int tileSize = (int) Math.ceil(Math.max(
+                (double) panelWidth / columns,
+                (double) panelHeight / rows
+        ));
+        tileSize = Math.max(1, tileSize);
+
         int gridW = tileSize * columns;
         int gridH = tileSize * rows;
         int startX = (panelWidth - gridW) / 2;
-        // On décale légèrement le champ vers le bas tout en restant entièrement visible.
-        int startY = Math.min((panelHeight - gridH), ((panelHeight - gridH) / 2) + VERTICAL_OFFSET);
+        int startY = (panelHeight - gridH) / 2;
         return new Rectangle(startX, startY, gridW, gridH);
     }
 
@@ -283,7 +297,64 @@ public class FieldPanel extends JPanel {
     }
 
     /**
-     * Convertit des coordonnees écran du panneau vers une case logique du modele.
+     * Cette méthode sert surtout aux règles de gameplay.
+     * Une case qui croise la grange ne doit jamais pouvoir être labourée ni plantée.
+     */
+    public boolean isBlockedByBarn(Point cell) {
+        return cell != null && isBlockedByBarn(cell.x, cell.y);
+    }
+
+    public boolean isBlockedByBarn(int gridX, int gridY) {
+        Rectangle logicalCellBounds = getLogicalCellBounds(gridX, gridY);
+        if (logicalCellBounds == null) {
+            return false;
+        }
+
+        Rectangle barnBounds = getBarnLogicalBounds();
+        Rectangle overlap = logicalCellBounds.intersection(barnBounds);
+        if (overlap.isEmpty()) {
+            return false;
+        }
+
+        double overlapArea = overlap.getWidth() * overlap.getHeight();
+        double cellArea = logicalCellBounds.getWidth() * logicalCellBounds.getHeight();
+        return overlapArea >= cellArea * BARN_BLOCKED_CELL_RATIO;
+    }
+
+    public boolean isFarmableCell(Point cell) {
+        return cell != null && !isBlockedByBarn(cell);
+    }
+
+    /**
+     * Les calculs de collisions et de déplacements utilisent un repère centré sur la map.
+     * On reconstruit donc ici le rectangle logique d'une case dans ce même repère,
+     * pour pouvoir comparer proprement la case à la grange.
+     */
+    private Rectangle getLogicalCellBounds(int gridX, int gridY) {
+        if (gridX < 0 || gridX >= getColumnCount() || gridY < 0 || gridY >= getRowCount()) {
+            return null;
+        }
+
+        Rectangle fieldBounds = getFieldBounds();
+        int tileSize = fieldBounds.width / getColumnCount();
+        int logicalX = -(fieldBounds.width / 2) + (gridX * tileSize);
+        int logicalY = -(fieldBounds.height / 2) + (gridY * tileSize);
+        return new Rectangle(logicalX, logicalY, tileSize, tileSize);
+    }
+
+    private Rectangle getBarnLogicalBounds() {
+        return Barn.getCollisionBounds();
+    }
+
+    private Point getLogicalCellCenter(int gridX, int gridY, Rectangle fieldBounds) {
+        int tileSize = fieldBounds.width / getColumnCount();
+        int centerX = -(fieldBounds.width / 2) + (gridX * tileSize) + (tileSize / 2);
+        int centerY = -(fieldBounds.height / 2) + (gridY * tileSize) + (tileSize / 2);
+        return new Point(centerX, centerY);
+    }
+
+    /**
+     * Convertit des coordonnées écran du panneau vers une case logique du modele.
      */
     public Point getGridPositionAt(int pixelX, int pixelY) {
         Rectangle fieldBounds = getFieldBounds();
@@ -392,7 +463,7 @@ public class FieldPanel extends JPanel {
         CellSide bestSide = null;
         int bestDistance = Integer.MAX_VALUE;
         for (CellSide side : CellSide.values()) {
-            if (!grilleCulture.canPlaceFence(cell.x, cell.y, side)) {
+            if (grilleCulture.canPlaceFence(cell.x, cell.y, side)) {
                 continue;
             }
 
@@ -419,6 +490,27 @@ public class FieldPanel extends JPanel {
             default:
                 return Integer.MAX_VALUE;
         }
+    }
+
+    /**
+     * La tuile affichée dépend uniquement des coordonnées et de l'état labouré.
+     * Ce petit hash stable évite de stocker une variante par case dans le modèle.
+     */
+    private Image getGroundTile(int gridX, int gridY) {
+        Image[] variants;
+        if (grilleCulture.hasPath(gridX, gridY)) {
+            variants = pathTileImages;
+        } else if (grilleCulture.isLabouree(gridX, gridY)) {
+            variants = tilledTileImages;
+        } else {
+            variants = grassTileImages;
+        }
+        if (variants == null || variants.length == 0) {
+            return null;
+        }
+
+        int variantIndex = Math.floorMod((gridX * 31) + (gridY * 17), variants.length);
+        return variants[variantIndex];
     }
 
     /**
@@ -449,55 +541,137 @@ public class FieldPanel extends JPanel {
         int drawX = x + ((tileSize - drawWidth) / 2);
         int drawY = y + ((tileSize - drawHeight) / 2);
 
-        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        // Les plantes sont elles aussi en pixel art :
+        // on évite donc le flou de l'interpolation bilinéaire.
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
         g2.drawImage(cultureImage, drawX, drawY, drawWidth, drawHeight, this);
     }
 
     /**
      * Le survol de pose doit épouser le bord visé, pas la case entière.
-     * On dessine donc une bande fine exactement à l'endroit où la clôture pourrait arriver.
+     * On reprend presque la même emprise que la vraie clôture,
+     * pour éviter l'effet "ruban flottant" qui collait mal à la terre.
      */
     private void drawFencePreview(Graphics2D g2, Rectangle cellBounds, CellSide side) {
-        int stripThickness = Math.max(6, cellBounds.width / 8);
-        int inset = Math.max(4, cellBounds.width / 10);
+        int tileSize = cellBounds.width;
+        int outsideDepth = Math.max(2, tileSize / 18);
+        int insideDepth = Math.max(6, tileSize / 9);
+        int bandThickness = outsideDepth + insideDepth;
 
-        g2.setColor(FENCE_PREVIEW_FILL);
+        Rectangle previewBounds;
         switch (side) {
             case TOP:
-                g2.fillRoundRect(cellBounds.x + inset, cellBounds.y, cellBounds.width - (2 * inset), stripThickness, 8, 8);
+                previewBounds = new Rectangle(
+                        cellBounds.x,
+                        cellBounds.y - outsideDepth,
+                        cellBounds.width,
+                        bandThickness
+                );
                 break;
             case RIGHT:
-                g2.fillRoundRect(cellBounds.x + cellBounds.width - stripThickness, cellBounds.y + inset,
-                        stripThickness, cellBounds.height - (2 * inset), 8, 8);
+                previewBounds = new Rectangle(
+                        cellBounds.x + cellBounds.width - insideDepth,
+                        cellBounds.y,
+                        bandThickness,
+                        cellBounds.height
+                );
                 break;
             case BOTTOM:
-                g2.fillRoundRect(cellBounds.x + inset, cellBounds.y + cellBounds.height - stripThickness,
-                        cellBounds.width - (2 * inset), stripThickness, 8, 8);
+                previewBounds = new Rectangle(
+                        cellBounds.x,
+                        cellBounds.y + cellBounds.height - insideDepth,
+                        cellBounds.width,
+                        bandThickness
+                );
                 break;
             case LEFT:
-                g2.fillRoundRect(cellBounds.x, cellBounds.y + inset, stripThickness, cellBounds.height - (2 * inset), 8, 8);
+                previewBounds = new Rectangle(
+                        cellBounds.x - outsideDepth,
+                        cellBounds.y,
+                        bandThickness,
+                        cellBounds.height
+                );
                 break;
             default:
                 return;
         }
 
+        g2.setColor(FENCE_PREVIEW_FILL);
+        g2.fillRect(previewBounds.x, previewBounds.y, previewBounds.width, previewBounds.height);
+
         g2.setColor(FENCE_PREVIEW_BORDER);
         switch (side) {
             case TOP:
-                g2.drawLine(cellBounds.x + inset, cellBounds.y + stripThickness - 1,
-                        cellBounds.x + cellBounds.width - inset, cellBounds.y + stripThickness - 1);
+                g2.drawLine(
+                        previewBounds.x,
+                        previewBounds.y + previewBounds.height - 1,
+                        previewBounds.x + previewBounds.width - 1,
+                        previewBounds.y + previewBounds.height - 1
+                );
                 break;
             case RIGHT:
-                g2.drawLine(cellBounds.x + cellBounds.width - stripThickness, cellBounds.y + inset,
-                        cellBounds.x + cellBounds.width - stripThickness, cellBounds.y + cellBounds.height - inset);
+                g2.drawLine(
+                        previewBounds.x,
+                        previewBounds.y,
+                        previewBounds.x,
+                        previewBounds.y + previewBounds.height - 1
+                );
                 break;
             case BOTTOM:
-                g2.drawLine(cellBounds.x + inset, cellBounds.y + cellBounds.height - stripThickness,
-                        cellBounds.x + cellBounds.width - inset, cellBounds.y + cellBounds.height - stripThickness);
+                g2.drawLine(
+                        previewBounds.x,
+                        previewBounds.y,
+                        previewBounds.x + previewBounds.width - 1,
+                        previewBounds.y
+                );
                 break;
             case LEFT:
-                g2.drawLine(cellBounds.x + stripThickness - 1, cellBounds.y + inset,
-                        cellBounds.x + stripThickness - 1, cellBounds.y + cellBounds.height - inset);
+                g2.drawLine(
+                        previewBounds.x + previewBounds.width - 1,
+                        previewBounds.y,
+                        previewBounds.x + previewBounds.width - 1,
+                        previewBounds.y + previewBounds.height - 1
+                );
+                break;
+            default:
+                break;
+        }
+
+        // Une ligne secondaire plus douce aide à lire la direction du futur relief
+        // sans surcharger la terre.
+        g2.setColor(new Color(255, 255, 214, 120));
+        switch (side) {
+            case TOP:
+                g2.drawLine(
+                        previewBounds.x,
+                        previewBounds.y + 1,
+                        previewBounds.x + previewBounds.width - 1,
+                        previewBounds.y + 1
+                );
+                break;
+            case RIGHT:
+                g2.drawLine(
+                        previewBounds.x + previewBounds.width - 2,
+                        previewBounds.y,
+                        previewBounds.x + previewBounds.width - 2,
+                        previewBounds.y + previewBounds.height - 1
+                );
+                break;
+            case BOTTOM:
+                g2.drawLine(
+                        previewBounds.x,
+                        previewBounds.y + previewBounds.height - 2,
+                        previewBounds.x + previewBounds.width - 1,
+                        previewBounds.y + previewBounds.height - 2
+                );
+                break;
+            case LEFT:
+                g2.drawLine(
+                        previewBounds.x + 1,
+                        previewBounds.y,
+                        previewBounds.x + 1,
+                        previewBounds.y + previewBounds.height - 1
+                );
                 break;
             default:
                 break;
@@ -716,13 +890,16 @@ public class FieldPanel extends JPanel {
             for (int c = 0; c < getColumnCount(); c++) {
                 int x = startX + c * tileSize;
                 int y = startY + r * tileSize;
-                if (tileImage != null) {
-                    g2.drawImage(tileImage, x, y, tileSize, tileSize, this);
+
+                Image groundTile = getGroundTile(c, r);
+                if (groundTile != null) {
+                    // Ici on force un agrandissement :
+                    // la tuile doit rester "pixel art" même en grand.
+                    g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+                    g2.drawImage(groundTile, x, y, tileSize, tileSize, this);
                 } else {
-                    g2.setColor(new Color(200, 190, 170));
+                    g2.setColor(new Color(92, 167, 74));
                     g2.fillRect(x, y, tileSize, tileSize);
-                    g2.setColor(new Color(160, 150, 130));
-                    g2.drawRect(x, y, tileSize, tileSize);
                 }
 
                 Culture culture = grilleCulture.getCulture(c, r);
@@ -739,7 +916,10 @@ public class FieldPanel extends JPanel {
 
                 // La case active est surlignée uniquement quand le rectangle du joueur
                 // est entièrement contenu dans cette case logique.
-                if (highlightedCell != null && highlightedCell.x == c && highlightedCell.y == r) {
+                if (highlightedCell != null
+                        && highlightedCell.x == c
+                        && highlightedCell.y == r
+                        && isFarmableCell(highlightedCell)) {
                     g2.setColor(HIGHLIGHT_FILL);
                     g2.fillRect(x, y, tileSize, tileSize);
                     g2.setColor(HIGHLIGHT_BORDER);

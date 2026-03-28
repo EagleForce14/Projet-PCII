@@ -6,6 +6,7 @@ import model.culture.Stade;
 import model.culture.Type;
 import model.movement.MovementModel;
 import model.management.Inventaire;
+import model.shop.FacilityType;
 import model.shop.Shop;
 
 import javax.swing.BorderFactory;
@@ -27,7 +28,7 @@ import java.awt.Point;
  */
 public class SidebarPanel extends JPanel {
     public static final int SIDEBAR_WIDTH = 320;
-    private static final int ACTIONS_CONTENT_HEIGHT = 230;
+    private static final int ACTIONS_CONTENT_HEIGHT = 360;
 
     // Le chemin pour accéder à la police personnalisée
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
@@ -35,6 +36,7 @@ public class SidebarPanel extends JPanel {
     // On référence au modèle car la vue lit uniquement un état booléen d'activation.
     private final MovementModel movementModel;
     private final GrilleCulture grilleCulture;
+    private final FieldPanel fieldPanel;
     private final Shop shop;
     private final Inventaire inventaire;
 
@@ -42,24 +44,32 @@ public class SidebarPanel extends JPanel {
     // Texture de fond en bois (chargée via la classe utilitaire du projet).
     private final Image woodBackground;
 
+    private final JButton labourButton;
     // Les 4 boutons de contrôle des actions des unités déplaçables.
     private final JButton plantButton;
     private final JButton harvestButton;
     private final JButton waterButton;
     private final JButton cleanButton;
     private final JButton shopButton;
+    private final JButton pathButton;
+    private final JPanel pathActionRow;
 
 
     // Petit cache local pour éviter d'appliquer setEnabled en boucle inutilement.
+    private boolean currentLabourEnabledState;
     private boolean currentPlantEnabledState;
     private boolean currentHarvestEnabledState;
     private boolean currentCleanEnabledState;
     private boolean currentWaterEnabledState;
+    private boolean currentPathEnabledState;
+    private boolean currentPathVisibleState;
 
     // Constructeur de la classe
-    public SidebarPanel(MovementModel movementModel, GrilleCulture grilleCulture, Shop shop, Inventaire inventaire) {
+    public SidebarPanel(MovementModel movementModel, GrilleCulture grilleCulture, FieldPanel fieldPanel,
+                        Shop shop, Inventaire inventaire) {
         this.movementModel = movementModel;
         this.grilleCulture = grilleCulture;
+        this.fieldPanel = fieldPanel;
         this.shop = shop;
         this.inventaire = inventaire;
         this.woodBackground = ImageLoader.load("/assets/bois.png");
@@ -91,31 +101,48 @@ public class SidebarPanel extends JPanel {
         titleLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 18.0f));
         titleRow.add(titleLabel, BorderLayout.WEST);
 
-        // On crée la grille 2x2 demandée avec deux boutons par ligne.
-        JPanel buttonsGrid = new JPanel(new GridLayout(2, 2, 8, 8));
+        // 3 lignes de 2 boutons :
+        // cela laisse une place claire au bouton "Labourer"
+        // sans rendre la colonne plus compliquée à comprendre.
+        JPanel buttonsGrid = new JPanel(new GridLayout(3, 2, 8, 8));
         buttonsGrid.setOpaque(false);
         buttonsGrid.setBorder(BorderFactory.createEmptyBorder(8, 16, 16, 16));
 
         // On crée les boutons en appliquant le style visuel.
+        labourButton = createStyledButton("Labourer", new Color(124, 83, 48, 255), 12.5f);
         plantButton = createStyledButton("Planter", new Color(139, 69, 19, 255), 12.5f);
         harvestButton = createStyledButton("Recolter", new Color(160, 82, 45, 255), 12.5f);
         waterButton = createStyledButton("Arroser", new Color(205, 133, 63, 255), 12.5f);
         cleanButton = createStyledButton("Nettoyer", new Color(101, 67, 33, 255), 12.5f);
         shopButton = createStyledButton("Boutique", new Color(139, 69, 19, 255), 12.5f);
         // On ajoute les boutons
+        buttonsGrid.add(labourButton);
         buttonsGrid.add(plantButton);
         buttonsGrid.add(harvestButton);
         buttonsGrid.add(waterButton);
         buttonsGrid.add(cleanButton);
         buttonsGrid.add(shopButton);
 
+        /*
+         * Le bouton de pose du chemin est volontairement separé :
+         * il ne doit apparaitre que quand l'objet chemin est l'outil actif.
+         * Ainsi, la barre principale reste sobre la plupart du temps.
+         */
+        pathButton = createStyledButton("Poser chemin", new Color(91, 97, 112, 255), 12.0f);
+        pathActionRow = new JPanel(new BorderLayout());
+        pathActionRow.setOpaque(false);
+        pathActionRow.setBorder(BorderFactory.createEmptyBorder(0, 16, 16, 16));
+        pathActionRow.add(pathButton, BorderLayout.CENTER);
+        pathActionRow.setVisible(false);
+
         contentPanel.add(titleRow, BorderLayout.NORTH);
         contentPanel.add(buttonsGrid, BorderLayout.CENTER);
+        contentPanel.add(pathActionRow, BorderLayout.SOUTH);
         add(contentPanel, BorderLayout.NORTH);
 
         // Au démarrage, les boutons sont désactivés tant que l'unité déplaçable n'est pas
         // sur une case valide du champ.
-        applyButtonsEnabledState(false, false, false, false);
+        applyButtonsEnabledState(false, false, false, false, false, false, false);
     }
 
     /**
@@ -148,47 +175,103 @@ public class SidebarPanel extends JPanel {
      * Lit l'état dans le modèle et applique visuellement l'activation si nécessaire.
      */
     private void syncFromModel() {
+        boolean shouldEnableLabour = canLabourActiveCell();
         boolean shouldEnablePlant = canPlantActiveCell();
         boolean shouldEnableHarvest = canHarvestActiveCell();
         boolean shouldEnableClean = canCleanActiveCell();
         boolean shouldEnableWater = canWaterActiveCell();
-        if (shouldEnablePlant != currentPlantEnabledState
+        boolean shouldShowPathAction = movementModel.getSelectedFacilityType() == FacilityType.CHEMIN;
+        boolean shouldEnablePath = shouldShowPathAction && canPlacePathActiveCell();
+        if (shouldEnableLabour != currentLabourEnabledState
+                || shouldEnablePlant != currentPlantEnabledState
                 || shouldEnableHarvest != currentHarvestEnabledState
                 || shouldEnableClean != currentCleanEnabledState
-                || shouldEnableWater != currentWaterEnabledState) {
-            applyButtonsEnabledState(shouldEnablePlant, shouldEnableHarvest, shouldEnableClean, shouldEnableWater);
+                || shouldEnableWater != currentWaterEnabledState
+                || shouldEnablePath != currentPathEnabledState
+                || shouldShowPathAction != currentPathVisibleState) {
+            applyButtonsEnabledState(
+                    shouldEnableLabour,
+                    shouldEnablePlant,
+                    shouldEnableHarvest,
+                    shouldEnableClean,
+                    shouldEnableWater,
+                    shouldEnablePath,
+                    shouldShowPathAction
+            );
         }
     }
 
     /**
      * Active/désactive les boutons.
      */
-    private void applyButtonsEnabledState(boolean plantEnabled, boolean harvestEnabled, boolean cleanEnabled, boolean waterEnabled) {
+    private void applyButtonsEnabledState(boolean labourEnabled, boolean plantEnabled,
+                                          boolean harvestEnabled, boolean cleanEnabled, boolean waterEnabled,
+                                          boolean pathEnabled, boolean pathVisible) {
+        currentLabourEnabledState = labourEnabled;
         currentPlantEnabledState = plantEnabled;
         currentHarvestEnabledState = harvestEnabled;
         currentCleanEnabledState = cleanEnabled;
         currentWaterEnabledState = waterEnabled;
+        currentPathEnabledState = pathEnabled;
+        currentPathVisibleState = pathVisible;
 
+        labourButton.setEnabled(labourEnabled);
         plantButton.setEnabled(plantEnabled);
         harvestButton.setEnabled(harvestEnabled);
         waterButton.setEnabled(waterEnabled);
         cleanButton.setEnabled(cleanEnabled);
+        pathButton.setEnabled(pathEnabled);
+        pathActionRow.setVisible(pathVisible);
 
         repaint();
     }
 
     /**
+     * Le labourage n'est possible que sur une case de map exploitable
+     * qui est encore en herbe.
+     */
+    private boolean canLabourActiveCell() {
+        Point activeFieldCell = movementModel.getActiveFieldCell();
+        if (activeFieldCell == null || !fieldPanel.isFarmableCell(activeFieldCell)) {
+            return false;
+        }
+
+        return !grilleCulture.isLabouree(activeFieldCell.x, activeFieldCell.y)
+                && !grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y);
+    }
+
+    /**
      * On ne peut planter que si une graine précise est sélectionnée,
-     * qu'il en reste au moins une, et que la case active est vide.
+     * qu'il en reste au moins une, que la case est bien labourée,
+     * et qu'aucune culture n'y pousse déjà.
      */
     private boolean canPlantActiveCell() {
         Point activeFieldCell = movementModel.getActiveFieldCell();
         Type selectedSeedType = movementModel.getSelectedSeedType();
-        if (activeFieldCell == null || selectedSeedType == null || !inventaire.possedeGraine(selectedSeedType)) {
+        if (activeFieldCell == null
+                || !fieldPanel.isFarmableCell(activeFieldCell)
+                || !grilleCulture.isLabouree(activeFieldCell.x, activeFieldCell.y)
+                || grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y)
+                || selectedSeedType == null
+                || !inventaire.possedeGraine(selectedSeedType)) {
             return false;
         }
 
         return grilleCulture.getCulture(activeFieldCell.x, activeFieldCell.y) == null;
+    }
+
+    /**
+     * Le chemin se pose uniquement sur de l'herbe:
+     * pas sur la grange, pas sur une case deja labourée, pas sur une case deja occupee.
+     *
+     * On garde cette regle dans la sidebar aussi
+     * pour que le bouton explique visuellement quand l'action est possible.
+     */
+    private boolean canPlacePathActiveCell() {
+        Point activeFieldCell = movementModel.getActiveFieldCell();
+        return activeFieldCell != null
+                && fieldPanel.isFarmableCell(activeFieldCell)
+                && grilleCulture.canPlacePath(activeFieldCell.x, activeFieldCell.y);
     }
 
     /**
@@ -231,6 +314,10 @@ public class SidebarPanel extends JPanel {
         return plantButton;
     }
 
+    public JButton getLabourButton() {
+        return labourButton;
+    }
+
     public JButton getHarvestButton() {
         return harvestButton;
     }
@@ -245,6 +332,10 @@ public class SidebarPanel extends JPanel {
 
     public JButton getShopButton() {
         return shopButton;
+    }
+
+    public JButton getPathButton() {
+        return pathButton;
     }
 
 

@@ -104,8 +104,16 @@ public class MovementModel {
         return selectedFacilityType;
     }
 
+    /**
+     * Helper :
+     * le contrôleur n'a pas a deviner la signification d'une comparaison d'enum.
+     */
     public boolean isFencePlacementSelected() {
         return selectedFacilityType != FacilityType.CLOTURE;
+    }
+
+    public boolean isPathPlacementSelected() {
+        return selectedFacilityType == FacilityType.CHEMIN;
     }
 
     // Accesseur pour la vue (qui a besoin d'afficher TOUTES les unités)

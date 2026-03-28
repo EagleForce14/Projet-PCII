@@ -35,8 +35,14 @@ public class InventoryStatusOverlay extends JPanel {
             Type.POIVRON,
             Type.COURGETTE
     };
-    // Pour l'instant on n'expose qu'une seule installation dans la barre d'inventaire.
-    private static final FacilityType INVENTORY_FACILITY = FacilityType.CLOTURE;
+    /*
+     * Les installations sont maintenant listées explicitement dans l'ordre voulu.
+     * Cela evite de coder des "cas speciaux" partout des qu'un nouvel objet apparait.
+     */
+    private static final FacilityType[] INVENTORY_FACILITY_ORDER = {
+            FacilityType.CLOTURE,
+            FacilityType.CHEMIN
+    };
 
     // Le FieldPanel nous sert uniquement de point d'ancrage géométrique:
     private final FieldPanel fieldPanel;
@@ -202,18 +208,19 @@ public class InventoryStatusOverlay extends JPanel {
         }
 
         int iconPixelSize = hasStock ? 5 : 4;
+        FacilityType facilityType = getFacilityTypeForSlot(slotIndex);
         int iconArtWidth = slotIndex < INVENTORY_SEED_ORDER.length
                 ? 5 * iconPixelSize
-                : ProductPixelArt.getFacilityArtWidth(INVENTORY_FACILITY, iconPixelSize);
+                : ProductPixelArt.getFacilityArtWidth(facilityType, iconPixelSize);
         int iconArtHeight = slotIndex < INVENTORY_SEED_ORDER.length
                 ? 5 * iconPixelSize
-                : ProductPixelArt.getFacilityArtHeight(INVENTORY_FACILITY, iconPixelSize);
+                : ProductPixelArt.getFacilityArtHeight(facilityType, iconPixelSize);
         int iconX = x + ((size - iconArtWidth) / 2);
         int iconY = y + ((size - iconArtHeight) / 2) + 1;
         if (slotIndex < INVENTORY_SEED_ORDER.length) {
             ProductPixelArt.drawSeed(g2d, INVENTORY_SEED_ORDER[slotIndex], iconX, iconY, iconPixelSize);
         } else {
-            ProductPixelArt.drawFacility(g2d, INVENTORY_FACILITY, iconX, iconY, iconPixelSize);
+            ProductPixelArt.drawFacility(g2d, facilityType, iconX, iconY, iconPixelSize);
         }
 
         if (!hasStock) {
@@ -236,7 +243,7 @@ public class InventoryStatusOverlay extends JPanel {
     }
 
     private int getInventorySlotCount() {
-        return INVENTORY_SEED_ORDER.length + 1;
+        return INVENTORY_SEED_ORDER.length + INVENTORY_FACILITY_ORDER.length;
     }
 
     private boolean isSeedSlot(int slotIndex) {
@@ -248,7 +255,11 @@ public class InventoryStatusOverlay extends JPanel {
     }
 
     public FacilityType getFacilityTypeForSlot(int slotIndex) {
-        return slotIndex == INVENTORY_SEED_ORDER.length ? INVENTORY_FACILITY : null;
+        int facilityIndex = slotIndex - INVENTORY_SEED_ORDER.length;
+        if (facilityIndex < 0 || facilityIndex >= INVENTORY_FACILITY_ORDER.length) {
+            return null;
+        }
+        return INVENTORY_FACILITY_ORDER[facilityIndex];
     }
 
     private boolean isSlotSelected(int slotIndex) {
@@ -268,6 +279,7 @@ public class InventoryStatusOverlay extends JPanel {
         if (slotIndex < INVENTORY_SEED_ORDER.length) {
             return inventaire.getQuantiteGraine(INVENTORY_SEED_ORDER[slotIndex]);
         }
-        return inventaire.getQuantiteInstallation(INVENTORY_FACILITY);
+        FacilityType facilityType = getFacilityTypeForSlot(slotIndex);
+        return facilityType == null ? 0 : inventaire.getQuantiteInstallation(facilityType);
     }
 }

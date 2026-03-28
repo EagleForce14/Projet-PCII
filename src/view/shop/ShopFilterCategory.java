@@ -2,6 +2,7 @@ package view.shop;
 
 import model.culture.Type;
 import model.shop.Facility;
+import model.shop.FacilityType;
 import model.shop.Product;
 import model.shop.Seed;
 
@@ -14,7 +15,8 @@ public enum ShopFilterCategory {
     ALL("Tout voir"),
     FLOWERS("Fleurs"),
     VEGETABLES("Legumes"),
-    FACILITIES("Installations");
+    FACILITIES("Installations"),
+    DECOR("Decor");
 
     private final String label;
 
@@ -32,7 +34,10 @@ public enum ShopFilterCategory {
             return true;
         }
         if (this == FACILITIES) {
-            return product instanceof Facility;
+            return product instanceof Facility && ((Facility) product).getType() != FacilityType.CHEMIN;
+        }
+        if (this == DECOR) {
+            return product instanceof Facility && ((Facility) product).getType() == FacilityType.CHEMIN;
         }
         if (!(product instanceof Seed)) {
             return false;

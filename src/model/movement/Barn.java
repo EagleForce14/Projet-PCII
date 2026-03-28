@@ -13,8 +13,9 @@ public class Barn {
     
     // Position x pour être centrée horizontalement (0 est le centre)
     public static final int X = -WIDTH / 2 + 90;
-    // Position y de la grange
-    public static final int Y = -490;
+    // Position y de la grange.
+    // On la descend un peu pour qu'elle soit moins collée au haut de l'écran.
+    public static final int Y = -420;
 
     /**
      * Retourne la zone de collision (hitbox).

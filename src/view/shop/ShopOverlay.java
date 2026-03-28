@@ -5,6 +5,7 @@ import model.management.Money;
 import model.runtime.GamePauseController;
 import model.shop.CartItem;
 import model.shop.Facility;
+import model.shop.FacilityType;
 import model.shop.Product;
 import model.shop.Seed;
 import model.shop.Shop;
@@ -162,7 +163,7 @@ public class ShopOverlay extends JPanel {
         setMessage(null, TEXT_MUTED);
     }
 
-    // Ouvrir la boutique revient surtout a:
+    // Ouvrir la boutique revient surtout à :
     // 1) mettre le jeu en pause,
     // 2) resynchroniser l'UI avec le modele,
     // 3) recuperer le focus clavier pour Echap.
@@ -866,6 +867,9 @@ public class ShopOverlay extends JPanel {
             return "Graine";
         }
         if (product instanceof Facility) {
+            if (((Facility) product).getType() == FacilityType.CHEMIN) {
+                return "Decor";
+            }
             return "Installation";
         }
         return "Article";
