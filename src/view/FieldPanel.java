@@ -93,8 +93,6 @@ public class FieldPanel extends JPanel {
 
     /**
      * Initialise la carte.
-     * L'herbe et la terre sont maintenant générées en code pour éviter
-     * la dépendance aux anciennes images statiques.
      */
     public FieldPanel(GrilleCulture grilleCulture) {
         this.grilleCulture = grilleCulture;
