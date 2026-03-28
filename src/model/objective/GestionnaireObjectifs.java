@@ -124,7 +124,7 @@ public class GestionnaireObjectifs {
         return progression;
     }
 
-    /** Méthode qui met à jour les objectifs */
+    /** Méthode qui met à jour les objectifs liés à la plantation */
     public void mettreAJourObjectifsPlanter(Type typeCulture) {
         for (ObjectifJournalier objectif : objectifs.values()) {
             switch (objectif.getType()) {
@@ -136,6 +136,26 @@ public class GestionnaireObjectifs {
                     break;
                 case TAUX_RECOLTE_CULTURES:
                     ((ObjectifTauxRecolte) objectif).mettreAJourNombreCulturesPlantees();
+                    break;
+                default:
+                    break;
+            }
+        }
+        afficherProgressionObjectifs(); // Affiche la progression de chaque objectif dans la console après la mise à jour
+    }
+
+    /** Méthode qui met à jour les objectifs liés à la récolte */
+    public void mettreAJourObjectifsRecolter(Type typeCulture) {
+        for (ObjectifJournalier objectif : objectifs.values()) {
+            switch (objectif.getType()) {
+                case RECOLTER_CULTURES:
+                    ((ObjectifCompteur) objectif).mettreAJourProgression(1); // Incrémente la progression de l'objectif RECOLTER_CULTURES de la quantité récoltée à chaque récolte de culture
+                    break;
+                case RECOLTER_TYPES_CULTURE:
+                    ((ObjectifCompteurTypes) objectif).mettreAJourProgression(typeCulture);
+                    break;
+                case TAUX_RECOLTE_CULTURES:
+                    ((ObjectifTauxRecolte) objectif).mettreAJourNombreCulturesRecoltees();
                     break;
                 default:
                     break;

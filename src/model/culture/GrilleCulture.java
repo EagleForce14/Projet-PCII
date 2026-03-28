@@ -274,7 +274,11 @@ public class GrilleCulture {
     /** Méthode qui recolte une culture de la grille */
     public int recolterCulture(int x, int y) {
         if (estDansGrille(x, y)) {
-            return grille[x][y].recolterCulture();
+            Type type = getCulture(x, y).getType(); // Récupère le type de la culture avant de la récolter pour mettre à jour les objectifs
+            int prixVente = grille[x][y].recolterCulture(); // Récupère le prix de vente de la culture récoltée
+            // Met à jour les objectifs liés à la récolte de cultures
+            gestionnaireObjectifs.mettreAJourObjectifsRecolter(type);
+            return prixVente;
         } else {
             throw new IllegalStateException("Coordonnées hors de la grille.");
         }
