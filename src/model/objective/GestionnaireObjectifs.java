@@ -31,10 +31,14 @@ public class GestionnaireObjectifs {
     /** Attribut qui stocke le nombre d'objectifs à valider */
     int nombreObjectifsAValider;
 
+    /** Attribut qui stocke le nombre d'objectifs atteints pour le jour courant */
+    int nombreObjectifsAtteints;
+
     /** Constructeur de la classe GestionnaireObjectifs */
     public GestionnaireObjectifs(Jour jour) {
         this.jour = jour;
         this.objectifs = new HashMap<>();
+        this.nombreObjectifsAtteints = 0;
         genererObjectifs(); // Génère les objectifs pour le jour actuel lors de l'initialisation du gestionnaire d'objectifs
     }
 
@@ -101,21 +105,30 @@ public class GestionnaireObjectifs {
     /** Méthode qui renvoie si le jour est validé, c'est-à-dire si au moins un certain nombre d'objectifs sont atteints en fonction du jour*/
     public boolean estJourValide() {
         System.out.println("Nombre minimum d'objectifs à atteindre pour valider le jour : " + nombreObjectifsAValider);
-        if (nombreObjectifsAValider > objectifs.size()) {
-            nombreObjectifsAValider = objectifs.size(); // Limite le nombre minimum d'objectifs à atteindre au nombre total d'objectifs disponibles
-        }
+        int minimumEffectif = Math.min(nombreObjectifsAValider, objectifs.size());
         int objectifsAtteints = 0;
         for (ObjectifJournalier objectif : objectifs.values()) {
             if (objectif.estAtteint()) {
                 objectifsAtteints++;
             }
         }
-        return objectifsAtteints >= nombreObjectifsAValider; // Le jour est validé si le nombre d'objectifs atteints est supérieur ou égal au nombre minimum d'objectifs à atteindre
+        nombreObjectifsAtteints = objectifsAtteints;
+        return objectifsAtteints >= minimumEffectif; // Le jour est validé si le nombre d'objectifs atteints est supérieur ou égal au nombre minimum d'objectifs à atteindre
     }
 
     /** Méthode qui renvoie le nombre minimum d'objectifs à atteindre pour valider le jour */
     public int getNombreMinimumObjectifsAValider() {
         return 1 + (int) (jour.getJour() * 0.5);
+    }
+
+    /** Méthode qui renvoie le nombre minimum d'objectifs à valider pour le jour courant en tenant compte des objectifs disponibles */
+    public int getNombreObjectifsAValiderEffectif() {
+        return Math.min(nombreObjectifsAValider, objectifs.size());
+    }
+
+    /** Méthode qui renvoie le nombre d'objectifs atteints pour le jour courant */
+    public int getNombreObjectifsAtteints() {
+        return nombreObjectifsAtteints;
     }
 
     /** Méthode qui renvoie la progression de chaque objectif sous forme d'une map */
@@ -203,13 +216,15 @@ public class GestionnaireObjectifs {
     }
 
     /** Méthode qui applique les changements liés au jour */
-    public void appliquerChangementsJour() {
+    public boolean appliquerChangementsJour() {
         if (estJourValide()) {
             System.out.println("Jour " + jour.getJour() + " validé !");
+            genererObjectifs(); // Génère de nouveaux objectifs pour le nouveau jour
+            return true;
         } else {
-            System.out.println("Jour " + jour.getJour() + " non validé. Vous devez atteindre au moins " + getNombreMinimumObjectifsAValider() + " objectifs pour valider le jour.");
+            System.out.println("Jour " + jour.getJour() + " non validé. Vous devez atteindre au moins " + getNombreObjectifsAValiderEffectif() + " objectifs pour valider le jour.");
+            return false;
         }
-        genererObjectifs(); // Génère de nouveaux objectifs pour le nouveau jour
     }
     
 }

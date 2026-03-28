@@ -82,6 +82,7 @@ public class Main {
 
         JPanel gamePanel = createGamePanel();
         gamePanel.setLayout(new OverlayLayout(gamePanel));
+        GameOverOverlay gameOverOverlay = new GameOverOverlay(jour);
         gamePanel.add(movementView);
         gamePanel.add(enemyView);
         gamePanel.add(inventoryStatusOverlay);
@@ -95,8 +96,10 @@ public class Main {
         hudPanel.setAlignmentY(0.5f);
         hudPanel.add(new TopBarPanel(playerMoney, jour), BorderLayout.NORTH);
         gamePanel.add(hudPanel);
-        gamePanel.setComponentZOrder(hudPanel, 0);
-        gamePanel.setComponentZOrder(inventoryStatusOverlay, 1);
+        gamePanel.add(gameOverOverlay);
+        gamePanel.setComponentZOrder(gameOverOverlay, 0);
+        gamePanel.setComponentZOrder(hudPanel, 1);
+        gamePanel.setComponentZOrder(inventoryStatusOverlay, 2);
 
         JPanel contentPanel = new JPanel(new BorderLayout());
         contentPanel.add(gamePanel, BorderLayout.CENTER);

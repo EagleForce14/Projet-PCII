@@ -13,6 +13,7 @@ public class Jour extends Thread {
 
     /** Attribut représentant l'état du thread */
     private boolean actif;
+    private volatile boolean partieTerminee;
     private final GamePauseController pauseController;
 
     /** Attribut représentant le gestionnaire d'objectifs */
@@ -22,6 +23,7 @@ public class Jour extends Thread {
     public Jour() {
         this.jour = 1; // Le jeu commence au jour 1
         this.actif = true;
+        this.partieTerminee = false;
         this.pauseController = GamePauseController.getInstance();
         this.gestionnaireObjectifs = new GestionnaireObjectifs(this);
 
@@ -38,7 +40,11 @@ public class Jour extends Thread {
                 return;
             }
             jour++; // Incrémenter le jour
-            notifierChangementJour(); // Notifier le gestionnaire d'objectifs du changement de jour
+            if (!notifierChangementJour()) {
+                partieTerminee = true;
+                pauseController.setPaused(true);
+                arreter();
+            }
         }  
     }
 
@@ -52,13 +58,18 @@ public class Jour extends Thread {
         actif = false;
     }
 
+    /** Getter sur l'état de fin de partie */
+    public boolean isPartieTerminee() {
+        return partieTerminee;
+    }
+
     /** Getter sur le gestionnaire d'objectifs */
     public GestionnaireObjectifs getGestionnaireObjectifs() {
         return gestionnaireObjectifs;
     }
 
     /** Méthode qui notifie le gestionnaire d'objectifs du changement de jour */
-    public void notifierChangementJour() {
-        gestionnaireObjectifs.appliquerChangementsJour();
+    public boolean notifierChangementJour() {
+        return gestionnaireObjectifs.appliquerChangementsJour();
     }
 }
