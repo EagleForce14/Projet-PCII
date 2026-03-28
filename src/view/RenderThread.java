@@ -16,6 +16,15 @@ public class RenderThread extends Thread {
         this.component = component;
     }
 
+    /**
+     * Redémarrer une partie dans la même fenêtre veut dire
+     * qu'il faut aussi savoir arrêter l'ancien thread de rendu.
+     */
+    public void arreter() {
+        running = false;
+        interrupt();
+    }
+
     // La méthode principale du thread
     @Override
     public void run() {
@@ -25,7 +34,8 @@ public class RenderThread extends Thread {
             try {
                 Thread.sleep(DELAY);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                interrupt();
+                return;
             }
         }
     }

@@ -42,7 +42,8 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     // Constructeur de la classe
     public MovementController(MovementModel model, MovementView view, EnemyView enemyView, SidebarPanel sidebarPanel,
                               GrilleCulture grilleCulture, Money playerMoney, Inventaire inventaire,
-                              FieldPanel fieldPanel, InventoryStatusOverlay inventoryStatusOverlay, ShopOverlay shopOverlay) {
+                              FieldPanel fieldPanel, InventoryStatusOverlay inventoryStatusOverlay, ShopOverlay shopOverlay,
+                              GameOverOverlay gameOverOverlay, Runnable restartGameAction) {
         this.model = model;
         this.grilleCulture = grilleCulture;
         this.playerMoney = playerMoney;
@@ -83,6 +84,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
 
         JButton shopButton = sidebarPanel.getShopButton();
         shopButton.addActionListener(this::ouvrirBoutique);
+
+        JButton replayButton = gameOverOverlay.getReplayButton();
+        replayButton.addActionListener(event -> relancerPartie(restartGameAction));
     }
 
     /**
@@ -234,6 +238,17 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         stopPlayerMovement();
         fieldPanel.clearFencePreview();
         shopOverlay.openShop();
+    }
+
+    /**
+     * Le redémarrage n'est autorisé que quand le jeu est déjà figé.
+     * En pratique, cela correspond à l'écran de défaite où le bouton apparaît.
+     */
+    private void relancerPartie(Runnable restartGameAction) {
+        if (!pauseController.isPaused() || restartGameAction == null) {
+            return;
+        }
+        restartGameAction.run();
     }
 
     /**

@@ -50,6 +50,15 @@ public class Culture {
         return threadCroissance.isAlive();
     }
 
+    /**
+     * Utilisé pendant un redémarrage complet de partie.
+     * On demande explicitement au thread de croissance de s'arrêter,
+     * sinon l'ancienne plante continuerait à "exister" en arrière-plan.
+     */
+    public void arreterCroissance() {
+        threadCroissance.arreter();
+    }
+
     /** Méthode qui récolte la culture et renvoie son prix de vente */
     public int recolter() {
         // Vérifie si la culture est à maturité avant de la récolter

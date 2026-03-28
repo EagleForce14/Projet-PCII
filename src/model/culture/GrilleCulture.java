@@ -320,4 +320,19 @@ public class GrilleCulture {
     public GestionnaireObjectifs getGestionnaireObjectifs() {
         return gestionnaireObjectifs;
     }
+
+    /**
+     * Quand le joueur relance une partie, on coupe toutes les croissances encore actives
+     * pour que l'ancienne grille ne garde aucun thread vivant derrière le rideau.
+     */
+    public void arreterToutesLesCultures() {
+        for (int x = 0; x < LARGEUR_GRILLE; x++) {
+            for (int y = 0; y < HAUTEUR_GRILLE; y++) {
+                Culture culture = getCulture(x, y);
+                if (culture != null) {
+                    culture.arreterCroissance();
+                }
+            }
+        }
+    }
 }
