@@ -79,7 +79,7 @@ public class EnemyModel {
         spawnTimer--;
         if (spawnTimer <= 0) {
             if (enemies.size() < MAX_ENEMIES) { // On limite le nombre d'ennemis sur la carte
-                enemies.add(new EnemyUnit(currentViewportWidth, currentViewportHeight, currentFieldWidth, currentFieldHeight));
+                enemies.add(new EnemyUnit(currentViewportWidth, currentViewportHeight, currentFieldWidth, currentFieldHeight, grilleCulture.getGestionnaireObjectifs()));
             }
             // Un nouveau ennemi apparaît toutes les 2 à 5 secondes (à 60 FPS)
             spawnTimer = 120 + random.nextInt(180); 

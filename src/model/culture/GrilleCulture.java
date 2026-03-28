@@ -303,8 +303,9 @@ public class GrilleCulture {
 
     /** Méthode qui mange la culture à une position donnée */
     public void mangerCulture(int x, int y) {
-        if (estDansGrille(x, y)) {
-            grille[x][y].mangerCulture();
+        if (estDansGrille(x, y) && grille[x][y].mangerCulture()) {
+            // Met à jour les objectifs liés à la consommation de cultures par les lapins
+            gestionnaireObjectifs.mettreAJourObjectifsManger();
         }
     }
 
@@ -313,5 +314,10 @@ public class GrilleCulture {
         if (estDansGrille(x, y)) {
             grille[x][y].nettoyerCultureFletrie();
         }
+    }
+
+    /** Getter pour le gestionnaire d'objectifs */
+    public GestionnaireObjectifs getGestionnaireObjectifs() {
+        return gestionnaireObjectifs;
     }
 }

@@ -88,10 +88,11 @@ public class Culture {
     }
 
     /** Méthode qui permet de manger la culture seulement si elle est à maturité */
-    public void manger() {
+    public boolean manger() {
         // Vérifie si la culture est à maturité avant de la manger
         if (stadeCroissance == Stade.MATURE) {
             threadCroissance.arreter(); // Arrêter le thread de croissance
+            return true; // Indique que la culture a été mangée avec succès
         } else {
             throw new IllegalStateException("La culture n'est pas à maturité et ne peut pas être mangée.");
         }

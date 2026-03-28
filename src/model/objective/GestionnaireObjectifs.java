@@ -164,6 +164,28 @@ public class GestionnaireObjectifs {
         afficherProgressionObjectifs(); // Affiche la progression de chaque objectif dans la console après la mise à jour
     }
 
+    /** Méthode qui met à jour l'objectif lié aux cultures mangées */
+    public void mettreAJourObjectifsManger() {
+        for (ObjectifJournalier objectif : objectifs.values()) {
+            if (objectif.getType() == TypeObjectif.CULTURES_MANGEES) {
+                ((ObjectifCompteur) objectif).mettreAJourProgression(1);
+                break;
+            }
+        }
+        afficherProgressionObjectifs();
+    }
+
+    /** Méthode qui met à jour l'objectif lié aux repoussage des lapins */
+    public void mettreAJourObjectifsFuite() {
+        for (ObjectifJournalier objectif : objectifs.values()) {
+            if (objectif.getType() == TypeObjectif.REPOUSSER_LAPINS) {
+                ((ObjectifCompteur) objectif).mettreAJourProgression(1);
+                break;
+            }
+        }
+        afficherProgressionObjectifs();
+    }
+
     /** Méthode qui affiche dans la console la progression de chaque objectif */
     public void afficherProgressionObjectifs() {
         System.out.println("Progression des objectifs :");

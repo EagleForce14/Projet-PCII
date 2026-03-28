@@ -93,11 +93,14 @@ public class ZoneCulture {
     }
 
     /** Méthode qui mange la culture de la zone */
-    public void mangerCulture() {
+    public boolean mangerCulture() {
         // Vérifie s'il y a une culture à manger dans la zone
         if (culture != null) {
-            culture.manger();
-            this.culture = null; // La culture est mangée et retirée de la zone
+            boolean mangerReussi = culture.manger();
+            if (mangerReussi) {
+                this.culture = null; // La culture est mangée et retirée de la zone
+            }
+            return mangerReussi; // Indique que la culture a été mangée avec succès
         } else {
             throw new IllegalStateException("Il n'y a pas de culture à manger dans cette zone.");
         }

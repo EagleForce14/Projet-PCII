@@ -5,6 +5,7 @@ import model.culture.Culture;
 import model.culture.Stade;
 import model.movement.Barn;
 import model.movement.Unit;
+import model.objective.GestionnaireObjectifs;
 
 import java.awt.Rectangle;
 import java.util.Random;
@@ -92,13 +93,17 @@ public class EnemyUnit {
     private int fieldWidth;
     // Hauteur utile du champ cultivable.
     private int fieldHeight;
-    
+
+    // Gestionnaire d'objectifs pour mettre à jour les objectifs liés à la fuite.
+    private GestionnaireObjectifs gestionnaireObjectifs;
+
     // On construit ici une unité ennemie avec les dimensions connues au moment de son apparition.
-    public EnemyUnit(int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight) {
+    public EnemyUnit(int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight, GestionnaireObjectifs gestionnaireObjectifs) {
         this.viewportWidth = viewportWidth;
         this.viewportHeight = viewportHeight;
         this.fieldWidth = fieldWidth;
         this.fieldHeight = fieldHeight;
+        this.gestionnaireObjectifs = gestionnaireObjectifs;
         // On fait apparaître le lapin hors écran.
         spawnOutside();
         // On initialise la dernière position connue sur X.
@@ -208,6 +213,7 @@ public class EnemyUnit {
             // pour un autre lapin et le délai avant consommation est perdu.
             clearCultureTarget(enemyModel);
             updateFleeTarget(player);
+            gestionnaireObjectifs.mettreAJourObjectifsFuite();
         }
     }
 
