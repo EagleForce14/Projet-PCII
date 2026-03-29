@@ -85,9 +85,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         JButton compostButton = sidebarPanel.getCompostButton();
         compostButton.addActionListener(this::gererBoutonCompostCaseActive);
 
-        JButton shopButton = sidebarPanel.getShopButton();
-        shopButton.addActionListener(this::ouvrirBoutique);
-
         JButton replayButton = gameOverOverlay.getReplayButton();
         replayButton.addActionListener(event -> relancerPartie(restartGameAction));
     }
@@ -299,7 +296,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     /**
      * Ouvre la boutique plein écran et fige le jeu tant que le panneau reste visible.
      */
-    private void ouvrirBoutique(ActionEvent event) {
+    private void ouvrirBoutique() {
         if (pauseController.isPaused()) {
             return;
         }
@@ -543,6 +540,11 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             return;
         }
 
+        if (handleBarnShopClick(e)) {
+            movementView.requestFocusInWindow();
+            return;
+        }
+
         if (tryPlaceSelectedFence(e)) {
             movementView.requestFocusInWindow();
             return;
@@ -629,19 +631,46 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     }
 
     /**
+     * La boutique s'ouvre maintenant directement en cliquant sur la grange.
+     * On teste l'image visible de la grange, pas seulement sa hitbox de collision,
+     * car le joueur raisonne avec ce qu'il voit à l'écran.
+     */
+    private boolean handleBarnShopClick(MouseEvent event) {
+        Point pointInFieldPanel = getPointInFieldPanel(event);
+        if (pointInFieldPanel == null || !fieldPanel.getBarnScreenBounds().contains(pointInFieldPanel)) {
+            return false;
+        }
+
+        ouvrirBoutique();
+        return true;
+    }
+
+    /**
      * Convertit un clic provenant d'une vue Swing quelconque
      * vers une case logique du champ.
      */
     private Point getClickedFieldCell(MouseEvent event) {
+        Point pointInFieldPanel = getPointInFieldPanel(event);
+        if (pointInFieldPanel == null) {
+            return null;
+        }
+
+        return fieldPanel.getGridPositionAt(pointInFieldPanel.x, pointInFieldPanel.y);
+    }
+
+    /**
+     * Convertit n'importe quel clic reçu par le contrôleur
+     * vers le repère du FieldPanel.
+     */
+    private Point getPointInFieldPanel(MouseEvent event) {
         if (!(event.getSource() instanceof Component)) {
             return null;
         }
 
-        Point pointInFieldPanel = SwingUtilities.convertPoint(
+        return SwingUtilities.convertPoint(
                 (Component) event.getSource(),
                 event.getPoint(),
                 fieldPanel
         );
-        return fieldPanel.getGridPositionAt(pointInFieldPanel.x, pointInFieldPanel.y);
     }
 }

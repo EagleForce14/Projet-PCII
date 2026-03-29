@@ -7,6 +7,7 @@ import model.shop.Product;
 import model.shop.Seed;
 
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
@@ -21,9 +22,9 @@ public final class ProductPixelArt {
     private static final int DEFAULT_ART_ROWS = 5;
     private static final int FENCE_ART_COLUMNS = 9;
     private static final int FENCE_ART_ROWS = 7;
-    private static final int PATH_ART_COLUMNS = 7;
-    private static final int PATH_ART_ROWS = 7;
+    private static final int PATH_ART_MAX_SIDE = 7;
     private static final int COMPOST_ART_MAX_SIDE = 6;
+    private static final Image PATH_IMAGE = ImageLoader.load("/assets/stone.png");
     private static final Image COMPOST_IMAGE = ImageLoader.load("/assets/Compost.png");
 
     // Le constructeur de la classe
@@ -48,10 +49,10 @@ public final class ProductPixelArt {
             return FENCE_ART_COLUMNS * pixelSize;
         }
         if (type == FacilityType.CHEMIN) {
-            return PATH_ART_COLUMNS * pixelSize;
+            return getScaledImageSize(PATH_IMAGE, PATH_ART_MAX_SIDE * pixelSize).width;
         }
         if (type == FacilityType.COMPOST) {
-            return getCompostArtWidth(pixelSize);
+            return getScaledImageSize(COMPOST_IMAGE, COMPOST_ART_MAX_SIDE * pixelSize).width;
         }
         return DEFAULT_ART_COLUMNS * pixelSize;
     }
@@ -61,10 +62,10 @@ public final class ProductPixelArt {
             return FENCE_ART_ROWS * pixelSize;
         }
         if (type == FacilityType.CHEMIN) {
-            return PATH_ART_ROWS * pixelSize;
+            return getScaledImageSize(PATH_IMAGE, PATH_ART_MAX_SIDE * pixelSize).height;
         }
         if (type == FacilityType.COMPOST) {
-            return getCompostArtHeight(pixelSize);
+            return getScaledImageSize(COMPOST_IMAGE, COMPOST_ART_MAX_SIDE * pixelSize).height;
         }
         return DEFAULT_ART_ROWS * pixelSize;
     }
@@ -114,10 +115,10 @@ public final class ProductPixelArt {
                 drawFence(g2d, x, y, pixelSize);
                 break;
             case CHEMIN:
-                drawStonePath(g2d, x, y, pixelSize);
+                drawScaledImage(g2d, PATH_IMAGE, x, y, PATH_ART_MAX_SIDE * pixelSize);
                 break;
             case COMPOST:
-                drawCompostImage(g2d, x, y, pixelSize);
+                drawScaledImage(g2d, COMPOST_IMAGE, x, y, COMPOST_ART_MAX_SIDE * pixelSize);
                 break;
             case JARDINIER:
                 drawGardener(g2d, x, y, pixelSize);
@@ -235,20 +236,6 @@ public final class ProductPixelArt {
         fillGridRect(g2d, x, y, pixelSize, 3, 4, 1, 1, new Color(255, 145, 61));
     }
 
-    /**
-     * On affiche l'image du compost dans la boutique
-     */
-    private static void drawCompostImage(Graphics2D g2d, int x, int y, int pixelSize) {
-        if (COMPOST_IMAGE == null) {
-            return;
-        }
-
-        Graphics2D compostGraphics = (Graphics2D) g2d.create();
-        compostGraphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-        compostGraphics.drawImage(COMPOST_IMAGE, x, y, getCompostArtWidth(pixelSize), getCompostArtHeight(pixelSize), null);
-        compostGraphics.dispose();
-    }
-
     private static void drawGardener(Graphics2D g2d, int x, int y, int pixelSize) {
         Color hat = new Color(170, 109, 61);
         Color skin = new Color(238, 192, 154);
@@ -267,36 +254,6 @@ public final class ProductPixelArt {
         fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, pants);
     }
 
-    /**
-     * Petit pictogramme de chemin en pierre.
-     *
-     * Le but est qu'on lise tout de suite "sol mineral"
-     * et surtout pas "terre labouree".
-     * On utilise donc des gris froids et des joints sombres.
-     */
-    private static void drawStonePath(Graphics2D g2d, int x, int y, int pixelSize) {
-        Color joint = new Color(63, 63, 67);
-        Color stoneDark = new Color(104, 104, 110);
-        Color stone = new Color(146, 146, 151);
-        Color stoneLight = new Color(192, 192, 197);
-
-        fillGridRect(g2d, x, y, pixelSize, 0, 0, 7, 7, joint);
-
-        fillGridRect(g2d, x, y, pixelSize, 0, 0, 3, 2, stone);
-        fillGridRect(g2d, x, y, pixelSize, 3, 0, 4, 2, stoneDark);
-        fillGridRect(g2d, x, y, pixelSize, 1, 2, 3, 2, stoneDark);
-        fillGridRect(g2d, x, y, pixelSize, 4, 2, 2, 2, stone);
-        fillGridRect(g2d, x, y, pixelSize, 0, 4, 4, 3, stone);
-        fillGridRect(g2d, x, y, pixelSize, 4, 4, 3, 3, stoneDark);
-
-        fillGridRect(g2d, x, y, pixelSize, 1, 0, 1, 1, stoneLight);
-        fillGridRect(g2d, x, y, pixelSize, 4, 0, 1, 1, stoneLight);
-        fillGridRect(g2d, x, y, pixelSize, 2, 2, 1, 1, stoneLight);
-        fillGridRect(g2d, x, y, pixelSize, 5, 2, 1, 1, stoneLight);
-        fillGridRect(g2d, x, y, pixelSize, 1, 4, 1, 1, stoneLight);
-        fillGridRect(g2d, x, y, pixelSize, 5, 5, 1, 1, stoneLight);
-    }
-
     private static void drawStem(Graphics2D g2d, int x, int y, int pixelSize) {
         fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(79, 163, 78));
         fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, new Color(63, 137, 63));
@@ -309,47 +266,50 @@ public final class ProductPixelArt {
     }
 
     /**
-     * La preview du compost garde une taille visuelle fixe en "unités pixel-art",
-     * puis on adapte largeur et hauteur à l'image réelle pour conserver ses proportions.
+     * Helper unique pour dessiner une image d'objet dans l'UI.
+     *
+     * On lui passe simplement :
+     * - l'image source,
+     * - la position,
+     * - la taille cible maximale en pixels.
+     *
+     * La méthode se charge ensuite :
+     * - de respecter le ratio de l'image,
+     * - d'utiliser un rendu "nearest neighbor" pour garder un aspect net.
      */
-    private static int getCompostArtWidth(int pixelSize) {
-        int maxSide = COMPOST_ART_MAX_SIDE * pixelSize;
-        if (COMPOST_IMAGE == null) {
-            return maxSide;
+    private static void drawScaledImage(Graphics2D g2d, Image image, int x, int y, int maxSide) {
+        if (image == null) {
+            return;
         }
 
-        int imageWidth = COMPOST_IMAGE.getWidth(null);
-        int imageHeight = COMPOST_IMAGE.getHeight(null);
-        if (imageWidth <= 0 || imageHeight <= 0) {
-            return maxSide;
-        }
-
-        if (imageWidth >= imageHeight) {
-            return maxSide;
-        }
-        return Math.max(1, (maxSide * imageWidth) / imageHeight);
+        Dimension scaledSize = getScaledImageSize(image, maxSide);
+        Graphics2D imageGraphics = (Graphics2D) g2d.create();
+        imageGraphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        imageGraphics.drawImage(image, x, y, scaledSize.width, scaledSize.height, null);
+        imageGraphics.dispose();
     }
 
     /**
-     * Même logique que pour la largeur :
-     * on conserve le ratio de l'image source pour que l'objet ne soit ni étiré ni écrasé.
+     * Calcule une seule fois la taille affichée d'une image.
+     *
+     * On évite ainsi de dupliquer la même lecture
+     * de largeur/hauteur source dans plusieurs méthodes.
      */
-    private static int getCompostArtHeight(int pixelSize) {
-        int maxSide = COMPOST_ART_MAX_SIDE * pixelSize;
-        if (COMPOST_IMAGE == null) {
-            return maxSide;
+    private static Dimension getScaledImageSize(Image image, int maxSide) {
+        if (image == null) {
+            return new Dimension(maxSide, maxSide);
         }
 
-        int imageWidth = COMPOST_IMAGE.getWidth(null);
-        int imageHeight = COMPOST_IMAGE.getHeight(null);
+        int imageWidth = image.getWidth(null);
+        int imageHeight = image.getHeight(null);
         if (imageWidth <= 0 || imageHeight <= 0) {
-            return maxSide;
+            return new Dimension(maxSide, maxSide);
         }
 
-        if (imageHeight >= imageWidth) {
-            return maxSide;
+        if (imageWidth >= imageHeight) {
+            return new Dimension(maxSide, Math.max(1, (maxSide * imageHeight) / imageWidth));
         }
-        return Math.max(1, (maxSide * imageHeight) / imageWidth);
+        return new Dimension(Math.max(1, (maxSide * imageWidth) / imageHeight), maxSide);
     }
 
     private static void fillGridRect(Graphics2D g2d, int originX, int originY, int pixelSize,

@@ -72,9 +72,9 @@ public class MovementView extends JPanel {
                 Rectangle playerBoundsInField = SwingUtilities.convertRectangle(this, playerBounds, fieldPanel);
                 highlightedCell = fieldPanel.getFullyOccupiedCell(playerBoundsInField);
 
-                // Même si une case existe géométriquement sous la grange,
-                // on ne veut jamais la présenter comme une vraie case exploitable.
-                if (fieldPanel.isBlockedByBarn(highlightedCell)) {
+                // Une case recouverte par la grange ou par un arbre
+                // ne doit jamais devenir la case active du gameplay.
+                if (!fieldPanel.isFarmableCell(highlightedCell)) {
                     highlightedCell = null;
                 }
 

@@ -111,7 +111,12 @@ public class InventoryStatusOverlay extends JPanel {
         }
     }
 
-    private Rectangle getInventoryBarBounds(Rectangle fieldBounds, int viewWidth, int viewHeight) {
+    /**
+     * Géométrie partagée de la barre d'inventaire.
+     * On l'expose en statique pour que d'autres composants puissent respecter
+     * la même limite visuelle sans recopier les calculs.
+     */
+    public static Rectangle computeInventoryBarBounds(Rectangle fieldBounds, int viewWidth, int viewHeight) {
         int slotCount = getInventorySlotCount();
         int barWidth = (slotCount * SLOT_SIZE) + ((slotCount - 1) * SLOT_GAP) + (OUTER_PADDING * 2);
         int barHeight = SLOT_SIZE + (OUTER_PADDING * 2);
@@ -124,6 +129,10 @@ public class InventoryStatusOverlay extends JPanel {
         int barY = Math.max(desiredY, minimumClearY);
         barY = Math.min(barY, viewHeight - barHeight - 10);
         return new Rectangle(barX, barY, barWidth, barHeight);
+    }
+
+    private Rectangle getInventoryBarBounds(Rectangle fieldBounds, int viewWidth, int viewHeight) {
+        return computeInventoryBarBounds(fieldBounds, viewWidth, viewHeight);
     }
 
     private Rectangle getSlotBounds(int slotIndex, Rectangle barBounds) {
@@ -243,7 +252,7 @@ public class InventoryStatusOverlay extends JPanel {
         g2d.drawString(quantityText, textX, textY);
     }
 
-    private int getInventorySlotCount() {
+    private static int getInventorySlotCount() {
         return INVENTORY_SEED_ORDER.length + INVENTORY_FACILITY_ORDER.length;
     }
 

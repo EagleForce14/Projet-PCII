@@ -7,7 +7,6 @@ import model.culture.Type;
 import model.movement.MovementModel;
 import model.management.Inventaire;
 import model.shop.FacilityType;
-import model.shop.Shop;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -38,7 +37,6 @@ public class SidebarPanel extends JPanel {
     private final MovementModel movementModel;
     private final GrilleCulture grilleCulture;
     private final FieldPanel fieldPanel;
-    private final Shop shop;
     private final Inventaire inventaire;
 
 
@@ -51,7 +49,6 @@ public class SidebarPanel extends JPanel {
     private final JButton harvestButton;
     private final JButton waterButton;
     private final JButton cleanButton;
-    private final JButton shopButton;
     private final JButton pathButton;
     private final JButton compostButton;
     private final JPanel pathActionRow;
@@ -72,11 +69,10 @@ public class SidebarPanel extends JPanel {
 
     // Constructeur de la classe
     public SidebarPanel(MovementModel movementModel, GrilleCulture grilleCulture, FieldPanel fieldPanel,
-                        Shop shop, Inventaire inventaire) {
+                        Inventaire inventaire) {
         this.movementModel = movementModel;
         this.grilleCulture = grilleCulture;
         this.fieldPanel = fieldPanel;
-        this.shop = shop;
         this.inventaire = inventaire;
         this.woodBackground = ImageLoader.load("/assets/bois.png");
 
@@ -120,14 +116,13 @@ public class SidebarPanel extends JPanel {
         harvestButton = createStyledButton("Recolter", new Color(160, 82, 45, 255), 12.5f);
         waterButton = createStyledButton("Arroser", new Color(205, 133, 63, 255), 12.5f);
         cleanButton = createStyledButton("Nettoyer", new Color(101, 67, 33, 255), 12.5f);
-        shopButton = createStyledButton("Boutique", new Color(139, 69, 19, 255), 12.5f);
         // On ajoute les boutons
         buttonsGrid.add(labourButton);
         buttonsGrid.add(plantButton);
         buttonsGrid.add(harvestButton);
         buttonsGrid.add(waterButton);
         buttonsGrid.add(cleanButton);
-        buttonsGrid.add(shopButton);
+        buttonsGrid.add(createGridSpacer());
 
         /*
          * Le bouton de pose du chemin est volontairement separé :
@@ -162,6 +157,15 @@ public class SidebarPanel extends JPanel {
         // Au démarrage, les boutons sont désactivés tant que l'unité déplaçable n'est pas
         // sur une case valide du champ.
         applyButtonsEnabledState(false, false, false, false, false, false, false, false, false, "Poser compost");
+    }
+
+    /**
+     * Case vide utilisée pour garder la grille de boutons bien alignée
+     */
+    private JPanel createGridSpacer() {
+        JPanel spacer = new JPanel();
+        spacer.setOpaque(false);
+        return spacer;
     }
 
     /**
@@ -442,10 +446,6 @@ public class SidebarPanel extends JPanel {
 
     public JButton getCleanButton() {
         return cleanButton;
-    }
-
-    public JButton getShopButton() {
-        return shopButton;
     }
 
     public JButton getPathButton() {

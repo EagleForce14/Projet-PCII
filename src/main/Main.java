@@ -5,6 +5,10 @@ import controller.MovementController;
 import model.culture.GrilleCulture;
 import model.enemy.EnemyModel;
 import model.enemy.EnemyPhysicsThread;
+import model.environment.TreeObstacleMap;
+import model.environment.TreeManager;
+import model.environment.TreeThread;
+import model.movement.Barn;
 import model.movement.MovementModel;
 import model.movement.PhysicsThread;
 import model.movement.Unit;
@@ -59,28 +63,33 @@ public class Main {
 
         Jour jour = new Jour();
         GrilleCulture grilleCulture = new GrilleCulture(jour.getGestionnaireObjectifs());
+        TreeManager treeManager = new TreeManager(grilleCulture);
         Money playerMoney = new Money(150);
         Inventaire inventaire = new Inventaire();
         Shop shop = new Shop();
         // Enregistrer shop pour qu'il recoive les notifications de changement de jour
         jour.addDayChangeListener(shop);
-        FieldPanel fieldPanel = new FieldPanel(grilleCulture);
+        FieldPanel fieldPanel = new FieldPanel(grilleCulture, treeManager);
+        TreeObstacleMap treeObstacleMap = new TreeObstacleMap(treeManager, fieldPanel);
+        fieldPanel.setTreeObstacleMap(treeObstacleMap);
 
         MovementModel model = new MovementModel();
         // Le joueur démarre hors du champ, près du coin haut-gauche de la grille.
         Point initialPlayerOffset = fieldPanel.getInitialPlayerOffset();
         Unit playerUnit = new Unit(initialPlayerOffset.x, initialPlayerOffset.y);
+        playerUnit.setTreeObstacleMap(treeObstacleMap);
         model.setPlayerUnit(playerUnit);
 
         EnemyModel enemyModel = new EnemyModel();
         enemyModel.setPlayer(playerUnit);
         enemyModel.setGrilleCulture(grilleCulture);
+        enemyModel.setTreeObstacleMap(treeObstacleMap);
         MovementView movementView = new MovementView(model, fieldPanel);
         movementView.setAlignmentX(0.5f);
         movementView.setAlignmentY(0.5f);
 
         // Les actions contextuelles sont affichées dans une sidebar dédiée, hors du jeu.
-        SidebarPanel actionSidebarPanel = new SidebarPanel(model, grilleCulture, fieldPanel, shop, inventaire);
+        SidebarPanel actionSidebarPanel = new SidebarPanel(model, grilleCulture, fieldPanel, inventaire);
 
         EnemyView enemyView = new EnemyView(enemyModel, fieldPanel);
         enemyView.setAlignmentX(0.5f);
@@ -91,7 +100,7 @@ public class Main {
         inventoryStatusOverlay.setAlignmentY(0.5f);
 
         // Cette vue couvre toute la fenêtre et affiche les éléments de décor fixes
-        EnvironmentView environmentView = new EnvironmentView(fieldPanel);
+        EnvironmentView environmentView = new EnvironmentView(fieldPanel, treeManager);
         environmentView.setAlignmentX(0.5f);
         environmentView.setAlignmentY(0.5f);
 
@@ -128,6 +137,7 @@ public class Main {
         PhysicsThread physicsThread = new PhysicsThread(model);
         EnemyPhysicsThread enemyPhysicsThread = new EnemyPhysicsThread(enemyModel);
         RenderThread renderThread = new RenderThread(contentPanel);
+        TreeThread treeThread = new TreeThread(treeManager, treeObstacleMap, playerUnit, enemyModel);
 
         /*
          * On garde la session courante dans un petit holder pour pouvoir la couper
@@ -159,7 +169,7 @@ public class Main {
                 () -> restartCurrentGame(frame, sessionHolder[0])
         );
 
-        sessionHolder[0] = new GameSession(jour, grilleCulture, physicsThread, enemyPhysicsThread, renderThread);
+        sessionHolder[0] = new GameSession(jour, grilleCulture, physicsThread, enemyPhysicsThread, renderThread, treeThread);
 
         if (firstLaunch) {
             frame.pack();
@@ -174,14 +184,57 @@ public class Main {
         }
 
         frame.validate();
+        treeThread.installerArbresInitiaux();
+        Point safeInitialPlayerOffset = findSafeInitialPlayerOffset(fieldPanel, treeObstacleMap);
+        playerUnit.setPosition(safeInitialPlayerOffset.x, safeInitialPlayerOffset.y);
 
         enemyModel.setViewportSize(gamePanel.getWidth(), gamePanel.getHeight());
 
         physicsThread.start();
         enemyPhysicsThread.start();
         renderThread.start();
+        treeThread.start();
 
         SwingUtilities.invokeLater(movementView::requestFocusInWindow);
+    }
+
+    /**
+     * Les arbres initiaux étant posés après la création du joueur,
+     * on choisit ici la case libre la plus proche du centre avant de lancer les threads.
+     */
+    private static Point findSafeInitialPlayerOffset(FieldPanel fieldPanel, TreeObstacleMap treeObstacleMap) {
+        Point preferredOffset = fieldPanel.getInitialPlayerOffset();
+        Point bestOffset = preferredOffset;
+        long bestDistanceSquared = Long.MAX_VALUE;
+
+        for (int column = 0; column < fieldPanel.getColumnCount(); column++) {
+            for (int row = 0; row < fieldPanel.getRowCount(); row++) {
+                Point candidateOffset = fieldPanel.getLogicalCellCenter(column, row);
+                if (!canSpawnPlayerAt(candidateOffset, treeObstacleMap)) {
+                    continue;
+                }
+
+                long distanceSquared = squaredDistance(candidateOffset, preferredOffset);
+                if (distanceSquared < bestDistanceSquared) {
+                    bestDistanceSquared = distanceSquared;
+                    bestOffset = candidateOffset;
+                }
+            }
+        }
+
+        return bestOffset;
+    }
+
+    private static boolean canSpawnPlayerAt(Point position, TreeObstacleMap treeObstacleMap) {
+        return position != null
+                && Barn.canOccupyCenteredBox(position.x, position.y, Unit.SIZE, Unit.SIZE)
+                && (treeObstacleMap == null || treeObstacleMap.canOccupyCenteredBox(position.x, position.y, Unit.SIZE, Unit.SIZE));
+    }
+
+    private static long squaredDistance(Point a, Point b) {
+        long deltaX = (long) a.x - b.x;
+        long deltaY = (long) a.y - b.y;
+        return (deltaX * deltaX) + (deltaY * deltaY);
     }
 
     private static JPanel createGamePanel() {
@@ -215,14 +268,16 @@ public class Main {
         private final PhysicsThread physicsThread;
         private final EnemyPhysicsThread enemyPhysicsThread;
         private final RenderThread renderThread;
+        private final TreeThread treeThread;
 
         private GameSession(Jour jour, GrilleCulture grilleCulture, PhysicsThread physicsThread,
-                            EnemyPhysicsThread enemyPhysicsThread, RenderThread renderThread) {
+                            EnemyPhysicsThread enemyPhysicsThread, RenderThread renderThread, TreeThread treeThread) {
             this.jour = jour;
             this.grilleCulture = grilleCulture;
             this.physicsThread = physicsThread;
             this.enemyPhysicsThread = enemyPhysicsThread;
             this.renderThread = renderThread;
+            this.treeThread = treeThread;
         }
 
         private void shutdown() {
@@ -237,6 +292,7 @@ public class Main {
             physicsThread.interrupt();
             enemyPhysicsThread.interrupt();
             renderThread.arreter();
+            treeThread.arreter();
         }
     }
 }

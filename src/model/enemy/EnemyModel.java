@@ -1,6 +1,7 @@
 package model.enemy;
 
 import model.culture.GrilleCulture;
+import model.environment.TreeObstacleMap;
 import model.movement.Unit;
 
 import java.awt.Point;
@@ -32,6 +33,7 @@ public class EnemyModel {
     
     // Référence au joueur pour la fuite
     private Unit player;
+    private TreeObstacleMap treeObstacleMap;
 
     public EnemyModel() {
         // Remarque : On utilise CopyOnWriteArrayList pour éviter les ConcurrentModificationException
@@ -46,6 +48,10 @@ public class EnemyModel {
 
     public void setGrilleCulture(GrilleCulture grilleCulture) {
         this.grilleCulture = grilleCulture;
+    }
+
+    public void setTreeObstacleMap(TreeObstacleMap treeObstacleMap) {
+        this.treeObstacleMap = treeObstacleMap;
     }
 
     public void setViewportSize(int viewportWidth, int viewportHeight) {
@@ -79,7 +85,14 @@ public class EnemyModel {
         spawnTimer--;
         if (spawnTimer <= 0) {
             if (enemies.size() < MAX_ENEMIES) { // On limite le nombre d'ennemis sur la carte
-                enemies.add(new EnemyUnit(currentViewportWidth, currentViewportHeight, currentFieldWidth, currentFieldHeight, grilleCulture.getGestionnaireObjectifs()));
+                enemies.add(new EnemyUnit(
+                        currentViewportWidth,
+                        currentViewportHeight,
+                        currentFieldWidth,
+                        currentFieldHeight,
+                        grilleCulture.getGestionnaireObjectifs(),
+                        treeObstacleMap
+                ));
             }
             // Un nouveau ennemi apparaît toutes les 2 à 5 secondes (à 60 FPS)
             spawnTimer = 120 + random.nextInt(180); 

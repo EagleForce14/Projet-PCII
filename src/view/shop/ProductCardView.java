@@ -71,7 +71,7 @@ public class ProductCardView extends JPanel {
         this.onSelect = onSelect;
 
         setOpaque(false);
-        setPreferredSize(new Dimension(270, hasDetailLabel() ? 178 : 154));
+        setPreferredSize(new Dimension(270, getCardHeight()));
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         // On ne garde qu'un retour visuel minimal:
@@ -149,12 +149,19 @@ public class ProductCardView extends JPanel {
         if (hasDetailLabel()) {
             /*
              * Le texte d'effet est affiché directement sur la carte du catalogue.
+             * On accepte plusieurs lignes pour les règles un peu plus longues,
+             * afin d'éviter les débordements horizontaux.
              */
             g2d.setColor(new Color(176, 226, 136));
-            g2d.drawString(detailLabel, 120, 84);
+            String[] detailLines = getDetailLines();
+            int detailY = 84;
+            for (String line : detailLines) {
+                g2d.drawString(line, 120, detailY);
+                detailY += 16;
+            }
             g2d.setColor(TEXT_SECONDARY);
-            g2d.drawString(product.getPrice() + " EUR", 120, 108);
-            g2d.drawString("Stock : " + remainingStock, 120, 132);
+            g2d.drawString(product.getPrice() + " EUR", 120, detailY + 8);
+            g2d.drawString("Stock : " + remainingStock, 120, detailY + 32);
         } else {
             g2d.setColor(TEXT_SECONDARY);
             g2d.drawString(product.getPrice() + " EUR", 120, 86);
@@ -185,5 +192,23 @@ public class ProductCardView extends JPanel {
 
     private boolean hasDetailLabel() {
         return !detailLabel.isBlank();
+    }
+
+    /**
+     * Découpe le texte d'aide sur les retours à la ligne demandés par la boutique.
+     */
+    private String[] getDetailLines() {
+        return detailLabel.split("\\n");
+    }
+
+    /**
+     * Une carte avec plusieurs lignes d'aide doit être un peu plus haute,
+     * sinon le prix et le stock viennent se coller au badge du panier.
+     */
+    private int getCardHeight() {
+        if (!hasDetailLabel()) {
+            return 154;
+        }
+        return 162 + (getDetailLines().length * 18);
     }
 }

@@ -882,8 +882,7 @@ public class ShopOverlay extends JPanel {
     /**
      * Petit texte court affiché directement sur la carte produit du catalogue.
      *
-     * On le réserve surtout aux objets "décor / boosts",
-     * car ce sont ceux que le joueur compare le plus visuellement au centre.
+     * On le réserve surtout aux objets "décor / boosts".
      */
     private String getProductCatalogDetailLabel(Product product) {
         if (!(product instanceof Facility)) {
@@ -895,7 +894,10 @@ public class ShopOverlay extends JPanel {
             case CHEMIN:
                 return "Deplacement plus rapide";
             case COMPOST:
-                return "Rendement x2 des cultures proches";
+                if (shop.isCompostRestockUnlocked()) {
+                    return "Rendement x2 des cultures proches";
+                }
+                return "Rendement x2 des cultures proches\nLe produit sera réapprovisionné\nau jour 10.";
             default:
                 return "";
         }

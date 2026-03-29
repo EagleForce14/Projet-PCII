@@ -24,11 +24,10 @@ public class Barn {
      * @return Rectangle représentant les limites infranchissables de la grange
      */
     public static Rectangle getCollisionBounds() {
-        // Marges spécifiques pour coller précisément aux murs de la grange
-        int marginLeft = 30;
-        int marginRight = 30;
-        int marginTop = 50;
-        int marginBottom = 70;
+        int marginLeft = 24;
+        int marginRight = 24;
+        int marginTop = 44;
+        int marginBottom = 64;
 
         int hitboxWidth = WIDTH - marginLeft - marginRight;
         int hitboxHeight = HEIGHT - marginTop - marginBottom;

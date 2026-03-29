@@ -1,5 +1,7 @@
 package model.movement;
 
+import model.environment.TreeObstacleMap;
+
 /**
  * Représente une entité déplaçable.
  */
@@ -27,6 +29,7 @@ public class Unit {
      * pour ne pas compliquer inutilement le déplacement.
      */
     private volatile int currentSpeed = NORMAL_SPEED;
+    private TreeObstacleMap treeObstacleMap;
 
     // Le constructeur de la classe.
     public Unit(int x, int y) {
@@ -55,10 +58,10 @@ public class Unit {
          * Ainsi, le cercle de zone d'influence n'est pas pris en compte pour bloquer le déplacement, il est par ailleurs
          * purement visuel.
          */
-        if (stepX != 0 && Barn.canOccupyCenteredBox(x + stepX, y, SIZE, SIZE)) {
+        if (stepX != 0 && canOccupy(x + stepX, y)) {
             nextX = x + stepX;
         }
-        if (stepY != 0 && Barn.canOccupyCenteredBox(nextX, y + stepY, SIZE, SIZE)) {
+        if (stepY != 0 && canOccupy(nextX, y + stepY)) {
             nextY = y + stepY;
         }
 
@@ -69,6 +72,15 @@ public class Unit {
     // Getters et Setters
     public synchronized int getX() { return x; }
     public synchronized int getY() { return y; }
+
+    /**
+     * Permet de replacer proprement l'unité sur une position sûre,
+     * par exemple au démarrage de la partie après le placement du décor.
+     */
+    public synchronized void setPosition(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
 
     // Force l'unité à rester dans les bornes visibles de la fenêtre.
     public synchronized void clampPosition(int minX, int maxX, int minY, int maxY) {
@@ -81,6 +93,15 @@ public class Unit {
     public void setMoveLeft(boolean moveLeft) { this.moveLeft = moveLeft; }
     public void setMoveRight(boolean moveRight) { this.moveRight = moveRight; }
     public void setCurrentSpeed(int currentSpeed) { this.currentSpeed = currentSpeed; }
+    public void setTreeObstacleMap(TreeObstacleMap treeObstacleMap) { this.treeObstacleMap = treeObstacleMap; }
+
+    /**
+     * Le joueur partage le même filtre d'occupation pour tous les obstacles fixes.
+     */
+    private boolean canOccupy(double centerX, double centerY) {
+        return Barn.canOccupyCenteredBox(centerX, centerY, SIZE, SIZE)
+                && (treeObstacleMap == null || treeObstacleMap.canOccupyCenteredBox(centerX, centerY, SIZE, SIZE));
+    }
 
     /**
      * Vérifie si une position donnée (x, y) est dans la zone d'influence de l'unité.

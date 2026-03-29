@@ -9,6 +9,9 @@ import java.util.ArrayList;
 
 
 public class Shop implements DayChangeListener {
+    private static final int COMPOST_RESTOCK_DAY = 10;
+    private static final int INITIAL_COMPOST_STOCK = 1;
+
     /**
      * Classe représentant le magasin du jeu.
      * Achat des graines, de clotures et de main d'oeuvre.
@@ -18,6 +21,8 @@ public class Shop implements DayChangeListener {
     private final ArrayList<Facility> facilities; // liste des installations disponibles dans le magasin
     // panier avec des item différents du stock pour éviter de modifier les quantités du stock avant l'achat
     private ArrayList<CartItem> shoppingCard; // liste des produits que le joueur souhaite acheter
+    private int currentDay;
+    private boolean compostRestockUnlocked;
 
     // référence vers l'inventaire du joueur
 
@@ -28,6 +33,8 @@ public class Shop implements DayChangeListener {
         seeds = new ArrayList<>();
         facilities = new ArrayList<>();
         shoppingCard = new ArrayList<>();
+        currentDay = 1;
+        compostRestockUnlocked = false;
 
         // Toutes les graines partagees avec l'inventaire sont visibles en boutique.
         addSeed("Tulipe", 8, Type.TULIPE);
@@ -43,12 +50,11 @@ public class Shop implements DayChangeListener {
         // car le joueur peut vouloir en acheter beaucoup.
         facilities.add(new Facility("Chemin", 12, 200, FacilityType.CHEMIN));
         /*
-         * Le compost est unique dans une partie.
-         * On lui donne donc un stock de 1 directement en boutique :
-         * cela évite d'ajouter une logique compliquée juste pour interdire
-         * un deuxième achat du même objet.
+         * Le compost démarre avec un stock initial de 1.
+         * Un second compost est débloqué plus tard, au jour 10.
+         * On sépare bien ces deux temps pour donner une progression claire au joueur.
          */
-        facilities.add(new Facility("Compost", 80, 1, FacilityType.COMPOST));
+        facilities.add(new Facility("Compost", 80, INITIAL_COMPOST_STOCK, FacilityType.COMPOST));
         facilities.add(new Facility("Jardinier", 100, 10, FacilityType.JARDINIER));
     }
 
@@ -296,6 +302,34 @@ public class Shop implements DayChangeListener {
     }
 
     /**
+     * Petit helper local pour retrouver rapidement une installation par son type.
+     * Le magasin a peu d'objets, donc une simple boucle reste largement suffisante.
+     */
+    private Facility getFacilityByType(FacilityType type) {
+        for (Facility facility : facilities) {
+            if (facility.getType() == type) {
+                return facility;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Expose le jour courant à l'interface pour que la boutique puisse
+     * expliquer clairement quand le second compost devient disponible.
+     */
+    public synchronized int getCurrentDay() {
+        return currentDay;
+    }
+
+    /**
+     * Indique si le palier du jour 10 a déjà été atteint.
+     */
+    public synchronized boolean isCompostRestockUnlocked() {
+        return compostRestockUnlocked;
+    }
+
+    /**
      * Augmente tous les prix du magasin d'un certain pourcentage (arrondis à l'entier le plus proche).
      * Si percent est négatif, les prix baissent.
      */
@@ -320,8 +354,22 @@ public class Shop implements DayChangeListener {
      */
     @Override
     public void onNewDay(int day) {
+        currentDay = day;
         // Politique simple :
         increasePricesByPercent(30.0);
+
+        /*
+         * Au jour 10, on rouvre une seule fois l'achat du compost.
+         * On ajoute 1 au stock total du produit, ce qui permet un nouvel achat
+         * sans toucher au reste de la logique du panier.
+         */
+        if (!compostRestockUnlocked && day >= COMPOST_RESTOCK_DAY) {
+            Facility compost = getFacilityByType(FacilityType.COMPOST);
+            if (compost != null) {
+                compost.setQuantity(compost.getQuantity() + 1);
+            }
+            compostRestockUnlocked = true;
+        }
     }
 
 }

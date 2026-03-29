@@ -3,6 +3,7 @@ package model.enemy;
 import model.culture.GrilleCulture;
 import model.culture.Culture;
 import model.culture.Stade;
+import model.environment.TreeObstacleMap;
 import model.movement.Barn;
 import model.movement.Unit;
 import model.objective.GestionnaireObjectifs;
@@ -96,14 +97,17 @@ public class EnemyUnit {
 
     // Gestionnaire d'objectifs pour mettre à jour les objectifs liés à la fuite.
     private GestionnaireObjectifs gestionnaireObjectifs;
+    private final TreeObstacleMap treeObstacleMap;
 
     // On construit ici une unité ennemie avec les dimensions connues au moment de son apparition.
-    public EnemyUnit(int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight, GestionnaireObjectifs gestionnaireObjectifs) {
+    public EnemyUnit(int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight,
+                     GestionnaireObjectifs gestionnaireObjectifs, TreeObstacleMap treeObstacleMap) {
         this.viewportWidth = viewportWidth;
         this.viewportHeight = viewportHeight;
         this.fieldWidth = fieldWidth;
         this.fieldHeight = fieldHeight;
         this.gestionnaireObjectifs = gestionnaireObjectifs;
+        this.treeObstacleMap = treeObstacleMap;
         // On fait apparaître le lapin hors écran.
         spawnOutside();
         // On initialise la dernière position connue sur X.
@@ -714,7 +718,7 @@ public class EnemyUnit {
     }
 
     /**
-     * Tente d'appliquer le pas voulu. Si la grange bloque, on délègue à la logique de contournement.
+     * Tente d'appliquer le pas voulu. Si un obstacle bloque, on délègue à la logique de contournement.
      */
     private void moveWithBarnCollision(double stepX, double stepY, double speed) {
         if (tryMove(stepX, stepY)) {
@@ -726,7 +730,7 @@ public class EnemyUnit {
 
     /**
      * Applique un déplacement seulement s'il laisse le lapin dans une zone autorisée.
-     * C'est le point central qui filtre toutes les collisions avec la grange.
+     * C'est le point central qui filtre toutes les collisions avec les obstacles fixes.
      */
     private boolean tryMove(double stepX, double stepY) {
         double nextX = x + stepX;
@@ -796,10 +800,12 @@ public class EnemyUnit {
     }
 
     /**
-     * Encapsule le test de collision avec la grange pour garder le reste du code lisible.
+     * Encapsule le test de collision avec la grange et les arbres
+     * pour garder le reste du code lisible.
      */
     private boolean canOccupy(double centerX, double centerY) {
-        return Barn.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE);
+        return Barn.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE)
+                && (treeObstacleMap == null || treeObstacleMap.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE));
     }
 
     /**
@@ -847,6 +853,10 @@ public class EnemyUnit {
      * Expose la position X arrondie pour l'affichage de la vue.
      */
     public synchronized int getX() { return (int) x; }
+
+    public static int getCollisionSize() {
+        return HITBOX_SIZE;
+    }
 
     /**
      * Expose la position Y arrondie pour l'affichage de la vue.

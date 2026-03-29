@@ -4,6 +4,8 @@ import model.culture.Culture;
 import model.culture.CellSide;
 import model.culture.GrilleCulture;
 import model.culture.Stade;
+import model.environment.TreeManager;
+import model.environment.TreeObstacleMap;
 import model.movement.Barn;
 
 import javax.swing.JPanel;
@@ -76,6 +78,8 @@ public class FieldPanel extends JPanel {
 
     // On lit directement l'état réel des cultures.
     private final GrilleCulture grilleCulture;
+    private final TreeManager treeManager;
+    private TreeObstacleMap treeObstacleMap;
 
     // Plusieurs variantes évitent un motif trop répétitif.
     private final Image[] grassTileImages;
@@ -103,8 +107,9 @@ public class FieldPanel extends JPanel {
     /**
      * Initialise la carte.
      */
-    public FieldPanel(GrilleCulture grilleCulture) {
+    public FieldPanel(GrilleCulture grilleCulture, TreeManager treeManager) {
         this.grilleCulture = grilleCulture;
+        this.treeManager = treeManager;
         this.grassTileImages = TerrainTileFactory.createGrassTiles(PIXEL_ART_TILE_SIZE);
         this.tilledTileImages = TerrainTileFactory.createSoilTiles(PIXEL_ART_TILE_SIZE);
         this.pathTileImages = TerrainTileFactory.createPathTiles(PIXEL_ART_TILE_SIZE);
@@ -117,6 +122,10 @@ public class FieldPanel extends JPanel {
         setPreferredSize(new Dimension(PREF_WIDTH, PREF_HEIGHT));
         // Le panneau reste transparent hors de la grille pour laisser voir le fond global.
         setOpaque(false);
+    }
+
+    public void setTreeObstacleMap(TreeObstacleMap treeObstacleMap) {
+        this.treeObstacleMap = treeObstacleMap;
     }
 
     // Les getters pour l'attribut grilleCulture, et pour la largeur et la hauteur de la grille
@@ -213,7 +222,7 @@ public class FieldPanel extends JPanel {
         }
 
         Point cell = getGridPositionAt(pointInFieldPanel.x, pointInFieldPanel.y);
-        if (cell == null || isBlockedByBarn(cell)) {
+        if (cell == null || !isFarmableCell(cell)) {
             return null;
         }
 
@@ -256,6 +265,34 @@ public class FieldPanel extends JPanel {
      */
     public Rectangle getFieldBounds() {
         return computeFieldBounds(getWidth(), getHeight());
+    }
+
+    /**
+     * Expose le rectangle écran de la grange.
+     * La vue d'environnement et le contrôleur s'en servent pour parler
+     * exactement du même objet visuel sans recalculer chacun de leur côté.
+     */
+    public Rectangle getBarnScreenBounds() {
+        Rectangle fieldBounds = getFieldBounds();
+        int centerX = fieldBounds.x + (fieldBounds.width / 2);
+        int centerY = fieldBounds.y + (fieldBounds.height / 2);
+        int drawX = centerX + Barn.X;
+        int drawY = centerY + Barn.Y;
+        return new Rectangle(drawX, drawY, Barn.WIDTH, Barn.HEIGHT);
+    }
+
+    /**
+     * Expose le repère logique complet du champ.
+     * Les obstacles fixes et les entités mobiles y partagent la même origine.
+     */
+    public Rectangle getFieldLogicalBounds() {
+        Rectangle fieldBounds = getFieldBounds();
+        return new Rectangle(
+                -(fieldBounds.width / 2),
+                -(fieldBounds.height / 2),
+                fieldBounds.width,
+                fieldBounds.height
+        );
     }
 
     private Rectangle getPreferredFieldBounds() {
@@ -377,7 +414,21 @@ public class FieldPanel extends JPanel {
     }
 
     public boolean isFarmableCell(Point cell) {
-        return cell != null && !isBlockedByBarn(cell);
+        return cell != null
+                && !isBlockedByBarn(cell)
+                && !isBlockedByTree(cell.x, cell.y);
+    }
+
+    /**
+     * Une case peut être bloquée par l'arbre posé dessus,
+     * mais aussi par la canopée d'un arbre voisin devenue très grande.
+     */
+    public boolean isBlockedByTree(int gridX, int gridY) {
+        if (treeObstacleMap != null) {
+            return treeObstacleMap.blocksCell(gridX, gridY);
+        }
+
+        return treeManager.hasTreeAt(gridX, gridY);
     }
 
     /**
@@ -385,7 +436,7 @@ public class FieldPanel extends JPanel {
      * On reconstruit donc ici le rectangle logique d'une case dans ce même repère,
      * pour pouvoir comparer proprement la case à la grange.
      */
-    private Rectangle getLogicalCellBounds(int gridX, int gridY) {
+    public Rectangle getLogicalCellBounds(int gridX, int gridY) {
         if (!isInsideGrid(gridX, gridY)) {
             return null;
         }
@@ -397,8 +448,28 @@ public class FieldPanel extends JPanel {
         return Barn.getCollisionBounds();
     }
 
+    /**
+     * Expose le rectangle logique associé à la grange.
+     * Cela sert aux règles visuelles de placement des arbres, plus strictes que la seule hitbox.
+     */
+    public Rectangle getBarnLogicalDrawBounds() {
+        return new Rectangle(Barn.X, Barn.Y, Barn.WIDTH, Barn.HEIGHT);
+    }
+
     private Point getLogicalCellCenter(int gridX, int gridY, Rectangle fieldBounds) {
         return buildLogicalCellCenter(gridX, gridY, fieldBounds);
+    }
+
+    /**
+     * Expose le centre logique d'une case dans le repère actuel du champ.
+     * Le démarrage du joueur peut ainsi se recaler sur une vraie case libre.
+     */
+    public Point getLogicalCellCenter(int gridX, int gridY) {
+        if (!isInsideGrid(gridX, gridY)) {
+            return null;
+        }
+
+        return buildLogicalCellCenter(gridX, gridY, getFieldBounds());
     }
 
     /**
