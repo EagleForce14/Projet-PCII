@@ -439,8 +439,10 @@ public class ShopOverlay extends JPanel {
 
         top.add(productPreview, BorderLayout.WEST);
 
-        // Le bloc meta est volontairement tres compact:
+        // Le bloc meta reste volontairement compact:
         // nom, categorie, prix, stock, deja-present-dans-le-panier.
+        // Le texte d'effet des boosts est maintenant visible directement
+        // sur les cartes du catalogue central pour faciliter la comparaison.
         JPanel meta = new JPanel();
         meta.setOpaque(false);
         meta.setLayout(new BoxLayout(meta, BoxLayout.Y_AXIS));
@@ -556,6 +558,7 @@ public class ShopOverlay extends JPanel {
                 productsGrid.add(new ProductCardView(
                         product,
                         getProductCategoryLabel(product),
+                        getProductCatalogDetailLabel(product),
                         shop.getRemainingStock(product),
                         shop.getShoppingCardQuantity(product),
                         product == selectedProduct,
@@ -867,12 +870,35 @@ public class ShopOverlay extends JPanel {
             return "Graine";
         }
         if (product instanceof Facility) {
-            if (((Facility) product).getType() == FacilityType.CHEMIN) {
-                return "Decor";
+            FacilityType type = ((Facility) product).getType();
+            if (type == FacilityType.CHEMIN || type == FacilityType.COMPOST) {
+                return "Decor / Boosts";
             }
             return "Installation";
         }
         return "Article";
+    }
+
+    /**
+     * Petit texte court affiché directement sur la carte produit du catalogue.
+     *
+     * On le réserve surtout aux objets "décor / boosts",
+     * car ce sont ceux que le joueur compare le plus visuellement au centre.
+     */
+    private String getProductCatalogDetailLabel(Product product) {
+        if (!(product instanceof Facility)) {
+            return "";
+        }
+
+        FacilityType type = ((Facility) product).getType();
+        switch (type) {
+            case CHEMIN:
+                return "Deplacement plus rapide";
+            case COMPOST:
+                return "Rendement x2 des cultures proches";
+            default:
+                return "";
+        }
     }
 
     private JComponent createLeftAlignedRow(JComponent component) {

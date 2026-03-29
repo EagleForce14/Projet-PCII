@@ -1,7 +1,6 @@
 package model.management;
 
 import model.culture.Type;
-import model.shop.Facility;
 import model.shop.FacilityType;
 import model.shop.Seed;
 
@@ -63,23 +62,19 @@ public class Inventaire {
 
         }
 
-        
-
-        /** ajoutInstallation : méthode pour ajouter de nouvelle installations dans l'inventaire
-         * @param installation : l'installation que le joueur à acheté
-         * @param quantite : la quantité d'installations que le joueurs à acheté
-         * **/
-        public void ajoutInstallation(Facility installation, int quantite) {
-            // si le joueur possède déjà l'installation, on rajoute les installations achetées à la quantité de base
-
-            // ici on a pas besoin de faire du trie 
-            FacilityType type = installation.getType();
-            if (installations.containsKey(type)) {
-                installations.put(  type, installations.get(type) + quantite);
-            } else {
-                // sinon, on ajoute la nouvelle installation avec sa quantité
-                installations.put(type, quantite);
+        /**
+         * Ajoute une installation dans l'inventaire à partir de son type.
+         * Cela couvre donc à la fois :
+         * - un achat depuis la boutique,
+         * - un objet remis dans l'inventaire après avoir été posé dans le monde.
+         */
+        public void ajoutInstallation(FacilityType type, int quantite) {
+            if (type == null || quantite <= 0) {
+                return;
             }
+
+            int quantiteActuelle = getQuantiteInstallation(type);
+            installations.put(type, quantiteActuelle + quantite);
         }
 
         // utilsation des installations et des graines 

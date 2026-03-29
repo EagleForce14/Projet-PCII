@@ -41,7 +41,8 @@ public class InventoryStatusOverlay extends JPanel {
      */
     private static final FacilityType[] INVENTORY_FACILITY_ORDER = {
             FacilityType.CLOTURE,
-            FacilityType.CHEMIN
+            FacilityType.CHEMIN,
+            FacilityType.COMPOST
     };
 
     // Le FieldPanel nous sert uniquement de point d'ancrage géométrique:

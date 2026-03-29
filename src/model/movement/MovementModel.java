@@ -116,6 +116,10 @@ public class MovementModel {
         return selectedFacilityType == FacilityType.CHEMIN;
     }
 
+    public boolean isCompostPlacementSelected() {
+        return selectedFacilityType == FacilityType.COMPOST;
+    }
+
     // Accesseur pour la vue (qui a besoin d'afficher TOUTES les unités)
     public List<Unit> getUnits() {
         return units;

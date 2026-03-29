@@ -16,7 +16,7 @@ public enum ShopFilterCategory {
     FLOWERS("Fleurs"),
     VEGETABLES("Legumes"),
     FACILITIES("Installations"),
-    DECOR("Decor");
+    DECOR("Decor / Boosts");
 
     private final String label;
 
@@ -34,10 +34,18 @@ public enum ShopFilterCategory {
             return true;
         }
         if (this == FACILITIES) {
-            return product instanceof Facility && ((Facility) product).getType() != FacilityType.CHEMIN;
+            if (!(product instanceof Facility)) {
+                return false;
+            }
+            FacilityType type = ((Facility) product).getType();
+            return type != FacilityType.CHEMIN && type != FacilityType.COMPOST;
         }
         if (this == DECOR) {
-            return product instanceof Facility && ((Facility) product).getType() == FacilityType.CHEMIN;
+            if (!(product instanceof Facility)) {
+                return false;
+            }
+            FacilityType type = ((Facility) product).getType();
+            return type == FacilityType.CHEMIN || type == FacilityType.COMPOST;
         }
         if (!(product instanceof Seed)) {
             return false;

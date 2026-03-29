@@ -59,7 +59,7 @@ public class Main {
 
         Jour jour = new Jour();
         GrilleCulture grilleCulture = new GrilleCulture(jour.getGestionnaireObjectifs());
-        Money playerMoney = new Money(50);
+        Money playerMoney = new Money(150);
         Inventaire inventaire = new Inventaire();
         Shop shop = new Shop();
         FieldPanel fieldPanel = new FieldPanel(grilleCulture);

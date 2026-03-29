@@ -38,6 +38,10 @@ public class FieldPanel extends JPanel {
     private static final Color WATERED_FILL = new Color(70, 170, 255);
     private static final Color WATERED_BORDER = new Color(220, 245, 255);
 
+    // Couleurs utilisées pour visualiser la zone influencée par le compost.
+    private static final Color COMPOST_RANGE_FILL = new Color(145, 214, 98, 70);
+    private static final Color COMPOST_RANGE_BORDER = new Color(228, 255, 177, 170);
+
     // Couleurs du survol dédié au placement des clôtures.
     private static final Color FENCE_PREVIEW_FILL = new Color(255, 232, 151, 130);
     private static final Color FENCE_PREVIEW_BORDER = new Color(255, 201, 74, 230);
@@ -83,6 +87,7 @@ public class FieldPanel extends JPanel {
     private final Image croissanceInterImage;
     private final Image maturiteImage;
     private final Image fletrieImage;
+    private final Image compostImage;
 
     // Coordonnées de la case actuellement surlignée.
     // Cette valeur vaut null quand aucune case n'est activable.
@@ -90,6 +95,10 @@ public class FieldPanel extends JPanel {
 
     // Le preview mémorise à la fois la case survolée et le bord réellement visé.
     private FencePreview fencePreview;
+
+    // Cet indicateur dit seulement si la zone du compost doit être montrée ou non.
+    // Les cases exactes sont relues directement depuis la grille au moment du dessin.
+    private boolean compostInfluenceVisible;
 
     /**
      * Initialise la carte.
@@ -103,6 +112,8 @@ public class FieldPanel extends JPanel {
         this.croissanceInterImage = ImageLoader.load("/assets/croissance_inter.png");
         this.maturiteImage = ImageLoader.load("/assets/maturite.png");
         this.fletrieImage = ImageLoader.load("/assets/fletrie.png");
+        this.compostImage = ImageLoader.load("/assets/Compost.png");
+        this.compostInfluenceVisible = false;
         setPreferredSize(new Dimension(PREF_WIDTH, PREF_HEIGHT));
         // Le panneau reste transparent hors de la grille pour laisser voir le fond global.
         setOpaque(false);
@@ -173,6 +184,23 @@ public class FieldPanel extends JPanel {
 
     public void clearFencePreview() {
         setFencePreview(null);
+    }
+
+    /**
+     * Le compost étant unique dans la partie, un simple booléen suffit :
+     * soit on montre sa zone d'effet, soit on la cache.
+     */
+    public void toggleCompostInfluenceHighlight() {
+        compostInfluenceVisible = !compostInfluenceVisible;
+        repaint();
+    }
+
+    public void clearCompostInfluenceHighlight() {
+        if (!compostInfluenceVisible) {
+            return;
+        }
+        compostInfluenceVisible = false;
+        repaint();
     }
 
     /**
@@ -929,6 +957,10 @@ public class FieldPanel extends JPanel {
             drawWateringAnimation(g2, cellBounds.x, cellBounds.y, cellBounds.width);
         }
 
+        if (grilleCulture.hasCompostAt(gridX, gridY)) {
+            drawCompostDecoration(g2, cellBounds);
+        }
+
         if (isHighlightedFarmableCell(gridX, gridY)) {
             drawCellHighlight(g2, cellBounds);
         }
@@ -971,6 +1003,54 @@ public class FieldPanel extends JPanel {
         g2.setColor(HIGHLIGHT_BORDER);
         g2.drawRect(cellBounds.x, cellBounds.y, cellBounds.width - 1, cellBounds.height - 1);
         g2.drawRect(cellBounds.x + 1, cellBounds.y + 1, cellBounds.width - 3, cellBounds.height - 3);
+    }
+
+    /**
+     * Dessine l'objet compost posé sur une case d'herbe.
+     * On garde un petit padding pour qu'il reste lisible sans toucher les bords de la tuile.
+     */
+    private void drawCompostDecoration(Graphics2D g2, Rectangle cellBounds) {
+        if (compostImage == null) {
+            return;
+        }
+
+        int padding = Math.max(4, cellBounds.width / 10);
+        int drawWidth = cellBounds.width - (padding * 2);
+        int drawHeight = cellBounds.height - (padding * 2);
+
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g2.drawImage(
+                compostImage,
+                cellBounds.x + padding,
+                cellBounds.y + padding,
+                drawWidth,
+                drawHeight,
+                this
+        );
+    }
+
+    /**
+     * Quand le joueur clique sur le compost,
+     * on affiche les cases de terre actuellement boostées autour de lui.
+     */
+    private void drawCompostInfluenceOverlay(Graphics2D g2) {
+        if (!compostInfluenceVisible) {
+            return;
+        }
+
+        for (Point affectedCell : grilleCulture.getCompostAffectedSoilCells()) {
+            Rectangle cellBounds = getCellBounds(affectedCell.x, affectedCell.y);
+            if (cellBounds == null) {
+                continue;
+            }
+
+            g2.setColor(COMPOST_RANGE_FILL);
+            g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height);
+
+            g2.setColor(COMPOST_RANGE_BORDER);
+            g2.drawRect(cellBounds.x, cellBounds.y, cellBounds.width - 1, cellBounds.height - 1);
+            g2.drawRect(cellBounds.x + 1, cellBounds.y + 1, cellBounds.width - 3, cellBounds.height - 3);
+        }
     }
 
     /**
@@ -1026,6 +1106,7 @@ public class FieldPanel extends JPanel {
             }
         }
 
+        drawCompostInfluenceOverlay(g2);
         drawPlacedFences(g2);
         drawFencePreviewOverlay(g2);
 

@@ -10,6 +10,7 @@ import model.shop.FacilityType;
 import model.shop.Shop;
 
 import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -52,7 +53,9 @@ public class SidebarPanel extends JPanel {
     private final JButton cleanButton;
     private final JButton shopButton;
     private final JButton pathButton;
+    private final JButton compostButton;
     private final JPanel pathActionRow;
+    private final JPanel compostActionRow;
 
 
     // Petit cache local pour éviter d'appliquer setEnabled en boucle inutilement.
@@ -63,6 +66,9 @@ public class SidebarPanel extends JPanel {
     private boolean currentWaterEnabledState;
     private boolean currentPathEnabledState;
     private boolean currentPathVisibleState;
+    private boolean currentCompostEnabledState;
+    private boolean currentCompostVisibleState;
+    private String currentCompostButtonLabel;
 
     // Constructeur de la classe
     public SidebarPanel(MovementModel movementModel, GrilleCulture grilleCulture, FieldPanel fieldPanel,
@@ -129,20 +135,33 @@ public class SidebarPanel extends JPanel {
          * Ainsi, la barre principale reste sobre la plupart du temps.
          */
         pathButton = createStyledButton("Poser chemin", new Color(91, 97, 112, 255), 12.0f);
-        pathActionRow = new JPanel(new BorderLayout());
-        pathActionRow.setOpaque(false);
-        pathActionRow.setBorder(BorderFactory.createEmptyBorder(0, 16, 16, 16));
-        pathActionRow.add(pathButton, BorderLayout.CENTER);
+        pathActionRow = createSpecialActionRow(pathButton);
         pathActionRow.setVisible(false);
+
+        /*
+         * Le compost est un boost important et unique.
+         * On lui donne donc un bouton plus "spécial" visuellement
+         * pour qu'on sente immédiatement qu'il ne joue pas le même rôle qu'un simple chemin.
+         */
+        compostButton = createBoostActionButton("Poser compost");
+        compostActionRow = createSpecialActionRow(compostButton);
+        compostActionRow.setVisible(false);
+
+        JPanel specialActionsPanel = new JPanel();
+        specialActionsPanel.setOpaque(false);
+        specialActionsPanel.setLayout(new BoxLayout(specialActionsPanel, BoxLayout.Y_AXIS));
+        specialActionsPanel.setBorder(BorderFactory.createEmptyBorder(0, 16, 16, 16));
+        specialActionsPanel.add(pathActionRow);
+        specialActionsPanel.add(compostActionRow);
 
         contentPanel.add(titleRow, BorderLayout.NORTH);
         contentPanel.add(buttonsGrid, BorderLayout.CENTER);
-        contentPanel.add(pathActionRow, BorderLayout.SOUTH);
+        contentPanel.add(specialActionsPanel, BorderLayout.SOUTH);
         add(contentPanel, BorderLayout.NORTH);
 
         // Au démarrage, les boutons sont désactivés tant que l'unité déplaçable n'est pas
         // sur une case valide du champ.
-        applyButtonsEnabledState(false, false, false, false, false, false, false);
+        applyButtonsEnabledState(false, false, false, false, false, false, false, false, false, "Poser compost");
     }
 
     /**
@@ -172,6 +191,32 @@ public class SidebarPanel extends JPanel {
     }
 
     /**
+     * Variante visuelle utilisée pour les objets "boost".
+     * Le fond est plus vert et la bordure plus claire,
+     * pour qu'on lise tout de suite un objet spécial différent des actions classiques.
+     */
+    private JButton createBoostActionButton(String text) {
+        JButton button = createStyledButton(text, new Color(66, 111, 57, 255), 12.0f);
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(222, 214, 123), 2),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
+        return button;
+    }
+
+    /**
+     * Petit wrapper partagé pour les actions contextuelles.
+     * Elles n'apparaissent pas en permanence :
+     * seulement quand un état de jeu particulier le justifie.
+     */
+    private JPanel createSpecialActionRow(JButton button) {
+        JPanel row = new JPanel(new BorderLayout());
+        row.setOpaque(false);
+        row.add(button, BorderLayout.CENTER);
+        return row;
+    }
+
+    /**
      * Lit l'état dans le modèle et applique visuellement l'activation si nécessaire.
      */
     private void syncFromModel() {
@@ -182,13 +227,19 @@ public class SidebarPanel extends JPanel {
         boolean shouldEnableWater = canWaterActiveCell();
         boolean shouldShowPathAction = movementModel.getSelectedFacilityType() == FacilityType.CHEMIN;
         boolean shouldEnablePath = shouldShowPathAction && canPlacePathActiveCell();
+        boolean shouldDisplayCompostAction = shouldShowCompostAction();
+        boolean shouldEnableCompost = canUseCompostButtonOnActiveCell();
+        String compostButtonLabel = shouldShowRemiserCompostAction() ? "Remiser compost" : "Poser compost";
         if (shouldEnableLabour != currentLabourEnabledState
                 || shouldEnablePlant != currentPlantEnabledState
                 || shouldEnableHarvest != currentHarvestEnabledState
                 || shouldEnableClean != currentCleanEnabledState
                 || shouldEnableWater != currentWaterEnabledState
                 || shouldEnablePath != currentPathEnabledState
-                || shouldShowPathAction != currentPathVisibleState) {
+                || shouldShowPathAction != currentPathVisibleState
+                || shouldEnableCompost != currentCompostEnabledState
+                || shouldDisplayCompostAction != currentCompostVisibleState
+                || !compostButtonLabel.equals(currentCompostButtonLabel)) {
             applyButtonsEnabledState(
                     shouldEnableLabour,
                     shouldEnablePlant,
@@ -196,7 +247,10 @@ public class SidebarPanel extends JPanel {
                     shouldEnableClean,
                     shouldEnableWater,
                     shouldEnablePath,
-                    shouldShowPathAction
+                    shouldShowPathAction,
+                    shouldEnableCompost,
+                    shouldDisplayCompostAction,
+                    compostButtonLabel
             );
         }
     }
@@ -206,7 +260,9 @@ public class SidebarPanel extends JPanel {
      */
     private void applyButtonsEnabledState(boolean labourEnabled, boolean plantEnabled,
                                           boolean harvestEnabled, boolean cleanEnabled, boolean waterEnabled,
-                                          boolean pathEnabled, boolean pathVisible) {
+                                          boolean pathEnabled, boolean pathVisible,
+                                          boolean compostEnabled, boolean compostVisible,
+                                          String compostButtonLabel) {
         currentLabourEnabledState = labourEnabled;
         currentPlantEnabledState = plantEnabled;
         currentHarvestEnabledState = harvestEnabled;
@@ -214,6 +270,9 @@ public class SidebarPanel extends JPanel {
         currentWaterEnabledState = waterEnabled;
         currentPathEnabledState = pathEnabled;
         currentPathVisibleState = pathVisible;
+        currentCompostEnabledState = compostEnabled;
+        currentCompostVisibleState = compostVisible;
+        currentCompostButtonLabel = compostButtonLabel;
 
         labourButton.setEnabled(labourEnabled);
         plantButton.setEnabled(plantEnabled);
@@ -222,6 +281,9 @@ public class SidebarPanel extends JPanel {
         cleanButton.setEnabled(cleanEnabled);
         pathButton.setEnabled(pathEnabled);
         pathActionRow.setVisible(pathVisible);
+        compostButton.setEnabled(compostEnabled);
+        compostActionRow.setVisible(compostVisible);
+        compostButton.setText(compostButtonLabel);
 
         repaint();
     }
@@ -237,7 +299,8 @@ public class SidebarPanel extends JPanel {
         }
 
         return !grilleCulture.isLabouree(activeFieldCell.x, activeFieldCell.y)
-                && !grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y);
+                && !grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y)
+                && !grilleCulture.hasCompostAt(activeFieldCell.x, activeFieldCell.y);
     }
 
     /**
@@ -272,6 +335,57 @@ public class SidebarPanel extends JPanel {
         return activeFieldCell != null
                 && fieldPanel.isFarmableCell(activeFieldCell)
                 && grilleCulture.canPlacePath(activeFieldCell.x, activeFieldCell.y);
+    }
+
+    /**
+     * Le compost se pose lui aussi sur une case d'herbe libre,
+     * mais avec une contrainte de plus :
+     * il est unique sur toute la partie.
+     */
+    private boolean canPlaceCompostActiveCell() {
+        Point activeFieldCell = movementModel.getActiveFieldCell();
+        return activeFieldCell != null
+                && fieldPanel.isFarmableCell(activeFieldCell)
+                && grilleCulture.canPlaceCompost(activeFieldCell.x, activeFieldCell.y);
+    }
+
+    /**
+     * Le bouton compost doit rester visible si le compost est sélectionné,
+     * mais aussi quand le joueur est déjà debout dessus pour pouvoir le remiser.
+     */
+    private boolean shouldShowCompostAction() {
+        return movementModel.getSelectedFacilityType() == FacilityType.COMPOST || isPlayerStandingOnCompost();
+    }
+
+    /**
+     * Même composant visuel, mais deux libellés possibles.
+     * Si la case active contient déjà le compost, on affiche clairement l'action inverse.
+     */
+    private boolean shouldShowRemiserCompostAction() {
+        return isPlayerStandingOnCompost();
+    }
+
+    /**
+     * Active le bouton dans le mode pertinent :
+     * - toujours actif pour remiser un compost sur la case du joueur,
+     * - sinon actif seulement si le compost sélectionné peut être posé ici.
+     */
+    private boolean canUseCompostButtonOnActiveCell() {
+        if (shouldShowRemiserCompostAction()) {
+            return true;
+        }
+        return movementModel.getSelectedFacilityType() == FacilityType.COMPOST && canPlaceCompostActiveCell();
+    }
+
+    /**
+     * Helper de lecture très simple pour éviter de répéter partout
+     * le même test "case active + compost".
+     */
+    private boolean isPlayerStandingOnCompost() {
+        Point activeFieldCell = movementModel.getActiveFieldCell();
+        return activeFieldCell != null
+                && fieldPanel.isFarmableCell(activeFieldCell)
+                && grilleCulture.hasCompostAt(activeFieldCell.x, activeFieldCell.y);
     }
 
     /**
@@ -336,6 +450,10 @@ public class SidebarPanel extends JPanel {
 
     public JButton getPathButton() {
         return pathButton;
+    }
+
+    public JButton getCompostButton() {
+        return compostButton;
     }
 
 

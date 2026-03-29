@@ -4,6 +4,9 @@ import model.management.Inventaire;
 import model.objective.GestionnaireObjectifs;
 import model.shop.FacilityType;
 
+import java.awt.Point;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /** Classe représentant la grille de culture */
@@ -63,6 +66,13 @@ public class GrilleCulture {
     private final int[][] fenceMasks;
 
     /*
+     * Le compost est volontairement unique dans la partie.
+     * Au lieu d'un tableau par case, un simple point suffit donc.
+     * null signifie "aucun compost encore pose".
+     */
+    private Point compostCell;
+
+    /*
      * Les chemins occupent la surface complete d'une case.
      * On les stocke donc à part, comme un simple drapeau par case.
      *
@@ -71,6 +81,13 @@ public class GrilleCulture {
      * C'est un décor de sol, au même niveau que l'herbe ou la terre.
      */
     private final boolean[][] pathCells;
+
+    /*
+     * Portée choisie pour le compost.
+     * On utilise ici une distance de Manhattan :
+     * le bonus forme un "diamant" lisible autour du compost.
+     */
+    private static final int COMPOST_RANGE = 2;
 
     /** Attribut représentant le gestionnaire d'objectifs */
     private final GestionnaireObjectifs gestionnaireObjectifs;
@@ -85,6 +102,7 @@ public class GrilleCulture {
         this.gestionnaireObjectifs = gestionnaireObjectifs;
         this.grille = new ZoneCulture[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         this.fenceMasks = new int[LARGEUR_GRILLE][HAUTEUR_GRILLE];
+        this.compostCell = null;
         this.pathCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         // Toute la map démarre en herbe :
         // chaque case existe déjà, mais aucune n'est labourée au lancement.
@@ -196,6 +214,9 @@ public class GrilleCulture {
         if (hasPath(x, y)) {
             throw new IllegalStateException("Impossible de labourer une case recouverte par un chemin.");
         }
+        if (hasCompostAt(x, y)) {
+            throw new IllegalStateException("Impossible de labourer une case recouverte par un compost.");
+        }
 
         grille[x][y].labourer();
     }
@@ -219,6 +240,30 @@ public class GrilleCulture {
     }
 
     /**
+     * Dit si un compost est deja pose quelque part sur la map.
+     * Comme il est unique, cela revient a verifier si le point existe.
+     */
+    public boolean hasCompost() {
+        return compostCell != null;
+    }
+
+    /**
+     * Expose la position du compost en la copiant,
+     * pour éviter qu'un appelant modifie l'état interne de la grille.
+     */
+    public Point getCompostCell() {
+        return compostCell == null ? null : new Point(compostCell);
+    }
+
+    /**
+     * Helper de lecture très simple utilisé par la vue et le contrôleur
+     * quand ils veulent savoir si la case cliquée correspond au compost.
+     */
+    public boolean hasCompostAt(int x, int y) {
+        return compostCell != null && compostCell.x == x && compostCell.y == y;
+    }
+
+    /**
      * Un chemin peut etre posé seulement sur une case libre :
      * qui n'est pas déjà recouverte par un chemin,
      * qui n'est pas occupée par une culture.
@@ -230,6 +275,7 @@ public class GrilleCulture {
     public boolean canPlacePath(int x, int y) {
         return estDansGrille(x, y)
                 && !hasPath(x, y)
+                && !hasCompostAt(x, y)
                 && !isLabouree(x, y)
                 && getCulture(x, y) == null;
     }
@@ -247,6 +293,91 @@ public class GrilleCulture {
 
         pathCells[x][y] = true;
         inventaire.UseInstallation(FacilityType.CHEMIN);
+    }
+
+    /**
+     * Le compost se pose seulement sur de l'herbe libre.
+     *
+     * Les règles :
+     * - un seul compost pour toute la partie,
+     * - pas sur une case deja labourée,
+     * - pas sur un chemin,
+     * - pas sur une case deja occupee.
+     */
+    public boolean canPlaceCompost(int x, int y) {
+        return estDansGrille(x, y)
+                && !hasCompost()
+                && !hasPath(x, y)
+                && !isLabouree(x, y)
+                && getCulture(x, y) == null;
+    }
+
+    /**
+     * Pose le compost puis consomme l'objet de l'inventaire.
+     */
+    public void placeCompost(int x, int y, Inventaire inventaire) {
+        if (inventaire == null || inventaire.possedeInstallation(FacilityType.COMPOST)) {
+            throw new IllegalStateException("Aucun compost n'est disponible dans l'inventaire.");
+        }
+        if (!canPlaceCompost(x, y)) {
+            throw new IllegalStateException("Le compost doit etre pose sur une case d'herbe libre.");
+        }
+
+        compostCell = new Point(x, y);
+        inventaire.UseInstallation(FacilityType.COMPOST);
+    }
+
+    /**
+     * Permet de reprendre le compost pour le remettre dans l'inventaire.
+     */
+    public void storeCompost(int x, int y, Inventaire inventaire) {
+        if (inventaire == null) {
+            throw new IllegalStateException("Impossible de remiser le compost sans inventaire.");
+        }
+        if (!hasCompostAt(x, y)) {
+            throw new IllegalStateException("Aucun compost n'est posé sur cette case.");
+        }
+
+        compostCell = null;
+        inventaire.ajoutInstallation(FacilityType.COMPOST, 1);
+    }
+
+    /**
+     * Indique si une case de terre profite du compost.
+     *
+     * Important :
+     * on ne booste que les cases labourées.
+     * Le compost peut être proche d'une zone d'herbe,
+     * mais cette herbe ne gagne rien tant qu'elle n'est pas transformée en terre.
+     */
+    public boolean isCellBoostedByCompost(int x, int y) {
+        if (!estDansGrille(x, y) || !isLabouree(x, y) || compostCell == null) {
+            return false;
+        }
+
+        int distance = Math.abs(x - compostCell.x) + Math.abs(y - compostCell.y);
+        return distance <= COMPOST_RANGE;
+    }
+
+    /**
+     * Renvoie les cases de terre actuellement couvertes par le compost.
+     * La vue s'en sert pour afficher la surbrillance quand le joueur clique dessus.
+     */
+    public List<Point> getCompostAffectedSoilCells() {
+        List<Point> affectedCells = new ArrayList<>();
+        if (compostCell == null) {
+            return affectedCells;
+        }
+
+        for (int x = 0; x < LARGEUR_GRILLE; x++) {
+            for (int y = 0; y < HAUTEUR_GRILLE; y++) {
+                if (isCellBoostedByCompost(x, y)) {
+                    affectedCells.add(new Point(x, y));
+                }
+            }
+        }
+
+        return affectedCells;
     }
 
     /** Méthode qui plante une culture dans la grille */
@@ -276,6 +407,9 @@ public class GrilleCulture {
         if (estDansGrille(x, y)) {
             Type type = getCulture(x, y).getType(); // Récupère le type de la culture avant de la récolter pour mettre à jour les objectifs
             int prixVente = grille[x][y].recolterCulture(); // Récupère le prix de vente de la culture récoltée
+            if (isCellBoostedByCompost(x, y)) {
+                prixVente = prixVente * 2;
+            }
             // Met à jour les objectifs liés à la récolte de cultures
             gestionnaireObjectifs.mettreAJourObjectifsRecolter(type);
             return prixVente;

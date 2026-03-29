@@ -3,7 +3,7 @@ package model.shop;
 public abstract class Product {
     /**
      * Classe abstraite représentant un produit du magasin.
-     * Les produits peuvent être des graines, des clotures, de la main d'oeuvre ou de l'engrais.
+     * Les produits peuvent être des graines ou des installations.
      * Chaque produit a un nom, un prix et une quantité.
      * **/
     

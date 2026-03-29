@@ -2,13 +2,19 @@ package model.shop;
 
 /**
  * Classe représentant une installation du jeu.
- * Les installations peuvent Des clôtures, des graine ou des jardiniers.
- * Chaque installation a un nom, un prix et une quantité et un type (cloture, engrais ou jardinier).
+ * Les installations couvrent ici tous les objets "non graine" vendus en boutique:
+ * clôture, chemin, compost, jardinier, etc.
+ *
+ * Chaque installation garde seulement
+ * - un nom lisible,
+ * - un prix,
+ * - un stock en boutique,
+ * - un type métier.
  *
  **/
 public class Facility extends Product {
-    // atttributs propres à une installation 
-    private final FacilityType type; // type  (jardinier, cloture, engrais)
+    // Attribut propre à une installation : son type métier.
+    private final FacilityType type;
 
     // constructeur
     public Facility(String name, int price, int quantity, FacilityType type) {
@@ -18,11 +24,7 @@ public class Facility extends Product {
 
     // getter et setter
 
-    /**
-     * getType : méthode pour récupérer le type de l'installation (cloture, engrais ou jardinier)
-     *
-     * @return FacilityType : le type de l'installation (cloture, engrais ou jardinier)
-     **/
+    /** Renvoie le type métier de l'installation. */
     public FacilityType getType() {
         return type;
     }

@@ -82,6 +82,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         JButton pathButton = sidebarPanel.getPathButton();
         pathButton.addActionListener(this::poserCheminCaseActive);
 
+        JButton compostButton = sidebarPanel.getCompostButton();
+        compostButton.addActionListener(this::gererBoutonCompostCaseActive);
+
         JButton shopButton = sidebarPanel.getShopButton();
         shopButton.addActionListener(this::ouvrirBoutique);
 
@@ -103,6 +106,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         if (activeFieldCell == null
                 || !fieldPanel.isFarmableCell(activeFieldCell)
                 || grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y)
+                || grilleCulture.hasCompostAt(activeFieldCell.x, activeFieldCell.y)
                 || grilleCulture.isLabouree(activeFieldCell.x, activeFieldCell.y)) {
             return;
         }
@@ -228,6 +232,71 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     }
 
     /**
+     * Le compost se pose comme le chemin :
+     * uniquement via un bouton dédié, sur la case actuellement occupée par le joueur.
+     */
+    private void poserCompostCaseActive(ActionEvent event) {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
+        Point activeFieldCell = model.getActiveFieldCell();
+        if (activeFieldCell == null
+                || model.getSelectedFacilityType() != FacilityType.COMPOST
+                || !fieldPanel.isFarmableCell(activeFieldCell)
+                || !grilleCulture.canPlaceCompost(activeFieldCell.x, activeFieldCell.y)
+                || inventaire.possedeInstallation(FacilityType.COMPOST)) {
+            return;
+        }
+
+        grilleCulture.placeCompost(activeFieldCell.x, activeFieldCell.y, inventaire);
+        fieldPanel.clearCompostInfluenceHighlight();
+        if (inventaire.possedeInstallation(FacilityType.COMPOST)) {
+            model.clearSelectedInventoryItem();
+        }
+        inventoryStatusOverlay.repaint();
+    }
+
+    /**
+     * Le bouton compost peut avoir 2 fonctionnalités :
+     * - sur une case d'herbe libre, il pose le compost,
+     * - directement sur le compost déjà posé, il le remise dans l'inventaire.
+     */
+    private void gererBoutonCompostCaseActive(ActionEvent event) {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
+        Point activeFieldCell = model.getActiveFieldCell();
+        if (activeFieldCell == null || !fieldPanel.isFarmableCell(activeFieldCell)) {
+            return;
+        }
+
+        if (grilleCulture.hasCompostAt(activeFieldCell.x, activeFieldCell.y)) {
+            remiserCompostCaseActive(activeFieldCell);
+            return;
+        }
+
+        poserCompostCaseActive(event);
+    }
+
+    /**
+     * Replace le compost dans l'inventaire pour qu'il puisse être réutilisé plus tard.
+     * On efface aussi la surbrillance éventuelle, car elle n'a plus de sens sans compost posé.
+     */
+    private void remiserCompostCaseActive(Point activeFieldCell) {
+        if (activeFieldCell == null
+                || !fieldPanel.isFarmableCell(activeFieldCell)
+                || !grilleCulture.hasCompostAt(activeFieldCell.x, activeFieldCell.y)) {
+            return;
+        }
+
+        grilleCulture.storeCompost(activeFieldCell.x, activeFieldCell.y, inventaire);
+        fieldPanel.clearCompostInfluenceHighlight();
+        inventoryStatusOverlay.repaint();
+    }
+
+    /**
      * Ouvre la boutique plein écran et fige le jeu tant que le panneau reste visible.
      */
     private void ouvrirBoutique(ActionEvent event) {
@@ -237,6 +306,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
 
         stopPlayerMovement();
         fieldPanel.clearFencePreview();
+        fieldPanel.clearCompostInfluenceHighlight();
         shopOverlay.openShop();
     }
 
@@ -358,6 +428,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             // Quel que soit le cas, un clic sur une graine doit faire sortir
             // du mode clôture, donc on retire le preview éventuel.
             fieldPanel.clearFencePreview();
+            fieldPanel.clearCompostInfluenceHighlight();
             // On redessine la barre pour refléter immédiatement le changement de sélection.
             inventoryStatusOverlay.repaint();
             // Enfin, on rend le focus au panneau principal pour que le clavier
@@ -386,6 +457,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             // À partir du moment où un outil est choisi, l'overlay doit refléter
             // le nouvel état, et le focus doit retourner au jeu.
             fieldPanel.clearFencePreview();
+            fieldPanel.clearCompostInfluenceHighlight();
             inventoryStatusOverlay.repaint();
             movementView.requestFocusInWindow();
             return true;
@@ -476,9 +548,14 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             return;
         }
 
+        if (handleCompostInspection(e)) {
+            movementView.requestFocusInWindow();
+            return;
+        }
+
         // Quand le chemin est selectionne, on ne veut plus de pose a la souris.
         // Le clic ne doit donc pas declencher d'action "cachee" sur le terrain.
-        if (model.isPathPlacementSelected()) {
+        if (model.isPathPlacementSelected() || model.isCompostPlacementSelected()) {
             movementView.requestFocusInWindow();
             return;
         }
@@ -527,5 +604,44 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         player.setMoveDown(false);
         player.setMoveLeft(false);
         player.setMoveRight(false);
+    }
+
+    /**
+     * Un clic sur le compost posé sert uniquement à afficher sa zone d'effet.
+     *
+     * On ne consomme pas ce clic comme une action de pose :
+     * c'est un clic d'inspection / lecture pour aider le joueur à comprendre le bonus.
+     */
+    private boolean handleCompostInspection(MouseEvent event) {
+        Point clickedCell = getClickedFieldCell(event);
+        if (clickedCell == null) {
+            fieldPanel.clearCompostInfluenceHighlight();
+            return false;
+        }
+
+        if (!grilleCulture.hasCompostAt(clickedCell.x, clickedCell.y)) {
+            fieldPanel.clearCompostInfluenceHighlight();
+            return false;
+        }
+
+        fieldPanel.toggleCompostInfluenceHighlight();
+        return true;
+    }
+
+    /**
+     * Convertit un clic provenant d'une vue Swing quelconque
+     * vers une case logique du champ.
+     */
+    private Point getClickedFieldCell(MouseEvent event) {
+        if (!(event.getSource() instanceof Component)) {
+            return null;
+        }
+
+        Point pointInFieldPanel = SwingUtilities.convertPoint(
+                (Component) event.getSource(),
+                event.getPoint(),
+                fieldPanel
+        );
+        return fieldPanel.getGridPositionAt(pointInFieldPanel.x, pointInFieldPanel.y);
     }
 }

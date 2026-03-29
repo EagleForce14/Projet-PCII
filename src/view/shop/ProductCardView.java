@@ -31,6 +31,7 @@ public class ProductCardView extends JPanel {
 
     private final Product product;
     private final String categoryLabel;
+    private final String detailLabel;
     private final int remainingStock;
     private final int cartQuantity;
     private final boolean selected;
@@ -47,6 +48,7 @@ public class ProductCardView extends JPanel {
     public ProductCardView(
             Product product,
             String categoryLabel,
+            String detailLabel,
             int remainingStock,
             int cartQuantity,
             boolean selected,
@@ -58,6 +60,7 @@ public class ProductCardView extends JPanel {
     ) {
         this.product = product;
         this.categoryLabel = categoryLabel;
+        this.detailLabel = detailLabel == null ? "" : detailLabel.trim();
         this.remainingStock = remainingStock;
         this.cartQuantity = cartQuantity;
         this.selected = selected;
@@ -68,7 +71,7 @@ public class ProductCardView extends JPanel {
         this.onSelect = onSelect;
 
         setOpaque(false);
-        setPreferredSize(new Dimension(270, 154));
+        setPreferredSize(new Dimension(270, hasDetailLabel() ? 178 : 154));
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         // On ne garde qu'un retour visuel minimal:
@@ -143,9 +146,20 @@ public class ProductCardView extends JPanel {
         g2d.drawString(product.getName(), 120, 58);
 
         g2d.setFont(bodyFont);
-        g2d.setColor(TEXT_SECONDARY);
-        g2d.drawString(product.getPrice() + " EUR", 120, 86);
-        g2d.drawString("Stock : " + remainingStock, 120, 110);
+        if (hasDetailLabel()) {
+            /*
+             * Le texte d'effet est affiché directement sur la carte du catalogue.
+             */
+            g2d.setColor(new Color(176, 226, 136));
+            g2d.drawString(detailLabel, 120, 84);
+            g2d.setColor(TEXT_SECONDARY);
+            g2d.drawString(product.getPrice() + " EUR", 120, 108);
+            g2d.drawString("Stock : " + remainingStock, 120, 132);
+        } else {
+            g2d.setColor(TEXT_SECONDARY);
+            g2d.drawString(product.getPrice() + " EUR", 120, 86);
+            g2d.drawString("Stock : " + remainingStock, 120, 110);
+        }
 
         if (cartQuantity > 0) {
             // Le badge ne s'affiche que si l'article est deja dans le panier.
@@ -167,5 +181,9 @@ public class ProductCardView extends JPanel {
         }
 
         g2d.dispose();
+    }
+
+    private boolean hasDetailLabel() {
+        return !detailLabel.isBlank();
     }
 }

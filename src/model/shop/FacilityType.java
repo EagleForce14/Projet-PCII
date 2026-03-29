@@ -6,6 +6,6 @@ package model.shop;
 public enum FacilityType {
     CLOTURE,
     CHEMIN,
-    ENGRAIS,
+    COMPOST,
     JARDINIER;
 }

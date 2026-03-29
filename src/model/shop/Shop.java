@@ -41,7 +41,13 @@ public class Shop {
         // Le chemin est volontairement bon marché et disponible en plus grand stock,
         // car le joueur peut vouloir en acheter beaucoup.
         facilities.add(new Facility("Chemin", 12, 200, FacilityType.CHEMIN));
-        facilities.add(new Facility("Engrais", 30, 50, FacilityType.ENGRAIS));
+        /*
+         * Le compost est unique dans une partie.
+         * On lui donne donc un stock de 1 directement en boutique :
+         * cela évite d'ajouter une logique compliquée juste pour interdire
+         * un deuxième achat du même objet.
+         */
+        facilities.add(new Facility("Compost", 80, 1, FacilityType.COMPOST));
         facilities.add(new Facility("Jardinier", 100, 10, FacilityType.JARDINIER));
     }
 
@@ -219,7 +225,7 @@ public class Shop {
                         }
                     }
                     // ajout dans l'inventaire
-                    inventaire.ajoutInstallation((Facility) item.product, item.quantity);
+                    inventaire.ajoutInstallation(((Facility) item.product).getType(), item.quantity);
                 }
             }
             achatReussi = true;
