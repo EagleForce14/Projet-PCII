@@ -61,7 +61,7 @@ public class TestInventaire {
 
     @Test
     public void testAjoutEtUseInstallation() {
-        inventaire.ajoutInstallation(cloture, 3);
+        inventaire.ajoutInstallation(cloture.getType(), 3);
         assertNotNull(inventaire.getInstallations().get(FacilityType.CLOTURE));
         assertEquals(3, inventaire.getInstallations().get(FacilityType.CLOTURE).intValue());
 

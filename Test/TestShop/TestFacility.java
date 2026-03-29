@@ -19,7 +19,7 @@ public class TestFacility {
 
     @Test
     public void settersMettreAJour() {
-        Facility f = new Facility("Engrais", 30, 50, FacilityType.ENGRAIS);
+        Facility f = new Facility("Engrais", 30, 50, FacilityType.COMPOST);
         f.setPrice(45);
         f.setQuantity(80);
         assertEquals(45, f.getPrice());
