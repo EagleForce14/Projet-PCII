@@ -22,7 +22,9 @@ public class TestInflation {
             assertEquals(50, shop.getFacilities().get(0).getPrice());
 
             //on avance de 10 jours
-            shop.onNewDay(10);
+            for (int i = 0; i < 5; i++) {
+                shop.onNewDay(i);
+            }
 
             int newPriceSeed = shop.getSeeds().get(0).getPrice();
             int newPriceFacility = shop.getFacilities().get(0).getPrice();

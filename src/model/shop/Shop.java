@@ -6,11 +6,15 @@ import model.management.Money;
 import model.runtime.DayChangeListener;
 
 import java.util.ArrayList;
+import java.util.Random;
+
 
 
 public class Shop implements DayChangeListener {
     private static final int COMPOST_RESTOCK_DAY = 10;
     private static final int INITIAL_COMPOST_STOCK = 1;
+    final Random rand = new Random();
+
 
     /**
      * Classe représentant le magasin du jeu.
@@ -35,6 +39,7 @@ public class Shop implements DayChangeListener {
         shoppingCard = new ArrayList<>();
         currentDay = 1;
         compostRestockUnlocked = false;
+
 
         // Toutes les graines partagees avec l'inventaire sont visibles en boutique.
         addSeed("Tulipe", 8, Type.TULIPE);
@@ -329,21 +334,76 @@ public class Shop implements DayChangeListener {
         return compostRestockUnlocked;
     }
 
+
+    /**increasePricesByPercent
+     * @param percent : pourcentage en augmentation**/
+    public synchronized void increasePricesByPercent(double percent) {
+        increasePricesByPercent(percent, 0.0, Integer.MAX_VALUE, 0.0);
+    }
+
+
     /**
+     * increasePricesByPercent
      * Augmente tous les prix du magasin d'un certain pourcentage (arrondis à l'entier le plus proche).
      * Si percent est négatif, les prix baissent.
+     * l'augmentation se fait aléatoirement sur les produit pour avoir de la variété et augmenter ceux qui se vendent plus cher
+     * @param percent le pourcentage d'augmentation (ex: 10.0 pour +10%, -5.0 pour -5%)
+      * @param volatilityPercent la volatilité de l'augmentation, exprimée en pourcentage (ex: 20.0 pour une variation de +/-20% autour du pourcentage de base)
+     * @param expens le seuil de prix à partir duquel les produits sont considérés comme chers et ont une augmentation supplémentaire
+     * (ex: 50 pour considérer les produits à plus de 50 comme chers)
+     *  @param expensExtra le pourcentage d'augmentation supplémentaire pour les produits chers (ex: 10.0 pour +10% en plus pour les produits chers)
+     *
      */
-    public synchronized void increasePricesByPercent(double percent) {
-        if (percent == 0) {
-            return;
+    public synchronized void increasePricesByPercent(double percent,
+                                                     double volatilityPercent,
+                                                     int expens,
+                                                     double expensExtra) {
+
+        // toujours positive pour faciliter les calculs
+        if (volatilityPercent < 0) {
+            volatilityPercent = Math.abs(volatilityPercent);
         }
+
+        // on fixe la volatilité pour éviter les problèmes de concurrence avec les lambda
+        double finalVolatilityPercent = volatilityPercent;
+        // lambda pour calculer la variation aléatoire en fonction de la volatilité
+        java.util.function.Supplier<Double> nextPercent = () -> {
+            double rand = (new Random().nextDouble() * 2.0 - 1.0) * finalVolatilityPercent; // entre -volatilityPercent et +volatilityPercent
+            return percent * rand;
+        };
+
+        // on applique la variation aléatoire à chaque produit, avec un bonus pour les produits chers
         for (Seed seed : seeds) {
-            int newPrice = (int) Math.round(seed.getPrice() * (1.0 + percent / 100.0));
-            seed.setPrice(Math.max(0, newPrice));
+            double randVariation = (rand.nextDouble() * 2.0 - 1.0) * volatilityPercent; // entre -volatilityPercent et +volatilityPercent
+            double finalPercent = percent + randVariation;
+
+            if (seed.getPrice() > expens) {
+                finalPercent += rand.nextDouble() * expensExtra; // ajouter un bonus aléatoire pour les produits chers
+            }
+            // on fixe une augmentation minimale de 90% pour éviter que les prix ne deviennent trop bas
+            finalPercent = Math.max(finalPercent, 0.0);
+            int newPrice = (int) Math.round(seed.getPrice() * (1.0 + finalPercent / 100.0));
+
+            // on force une augmentation d'au moins 1
+            if (newPrice<= seed.getPrice() && finalPercent > 0) {
+                newPrice = seed.getPrice() + 1;
+            }
+            seed.setPrice(newPrice);
         }
         for (Facility facility : facilities) {
-            int newPrice = (int) Math.round(facility.getPrice() * (1.0 + percent / 100.0));
-            facility.setPrice(Math.max(0, newPrice));
+            double randVariation = (rand.nextDouble() * 2.0 - 1.0) * volatilityPercent; // entre -volatilityPercent et +volatilityPercent
+            double finalPercent = percent + randVariation;
+
+            if (facility.getPrice() > expens) {
+                finalPercent += rand.nextDouble() * expensExtra; // ajouter un bonus aléatoire pour les produits chers
+            }
+            finalPercent = Math.max(finalPercent, 90.0); //
+            int newPrice = (int) Math.round(facility.getPrice() * (1.0 + finalPercent / 100.0));
+            if (facility.getPrice() <= expens && finalPercent < 0) {
+                newPrice = facility.getPrice() + 1; // limiter la baisse à 10% pour les produits non chers
+            }
+
+            facility.setPrice( newPrice);
         }
     }
 
@@ -356,7 +416,7 @@ public class Shop implements DayChangeListener {
     public void onNewDay(int day) {
         currentDay = day;
         // Politique simple :
-        increasePricesByPercent(30.0);
+        increasePricesByPercent(3.0);
 
         /*
          * Au jour 10, on rouvre une seule fois l'achat du compost.
