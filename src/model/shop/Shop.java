@@ -3,11 +3,12 @@ package model.shop;
 import model.culture.Type;
 import model.management.Inventaire;
 import model.management.Money;
+import model.runtime.DayChangeListener;
 
 import java.util.ArrayList;
 
 
-public class Shop {
+public class Shop implements DayChangeListener {
     /**
      * Classe représentant le magasin du jeu.
      * Achat des graines, de clotures et de main d'oeuvre.
@@ -95,6 +96,35 @@ public class Shop {
         return totalPrice;
     }
 
+    /** Une methode pour modifier le prix des produits dans la boutique
+     * @param product : le produit dont on veut modifier le prix
+     * @param newPrice : le nouveau prix du produit
+     * **/
+    public synchronized boolean updateProductPrice(Product product, int newPrice) {
+
+        // Validation des paramètres d'entrée
+        if (product == null || newPrice < 0) {
+            return false;
+        }
+
+        // Recherche du produit dans les graines
+        for (Seed seed : seeds) {
+            if (seed.getName().equals(product.getName())) {
+                seed.setPrice(newPrice);
+                return true;
+            }
+        }
+
+        // Recherche du produit dans les installations
+        for (Facility facility : facilities) {
+            if (facility.getName().equals(product.getName())) {
+                facility.setPrice(newPrice);
+                return true;
+            }
+        }
+
+        return false; // Produit non trouvé
+    }
 
     /**
      * une méthode pour ajouter un produit à la liste des produits que le joueur souhaite acheter
@@ -103,11 +133,13 @@ public class Shop {
      *
      **/
     public synchronized Boolean addToShoppingCard(Product product, int quantity) {
-        if (product == null || quantity <= 0) {
+        if (product == null || quantity <= 0 || quantity > product.getQuantity()) {
             return false;
         }
 
         int desiredQuantity = getShoppingCardQuantity(product) + quantity;
+
+
         return setShoppingCardQuantity(product, desiredQuantity);
     }
 
@@ -263,5 +295,33 @@ public class Shop {
         seeds.add(new Seed(name, price, 100, type));
     }
 
+    /**
+     * Augmente tous les prix du magasin d'un certain pourcentage (arrondis à l'entier le plus proche).
+     * Si percent est négatif, les prix baissent.
+     */
+    public synchronized void increasePricesByPercent(double percent) {
+        if (percent == 0) {
+            return;
+        }
+        for (Seed seed : seeds) {
+            int newPrice = (int) Math.round(seed.getPrice() * (1.0 + percent / 100.0));
+            seed.setPrice(Math.max(0, newPrice));
+        }
+        for (Facility facility : facilities) {
+            int newPrice = (int) Math.round(facility.getPrice() * (1.0 + percent / 100.0));
+            facility.setPrice(Math.max(0, newPrice));
+        }
+    }
+
+    /**
+     * Implémentation de DayChangeListener : augmente automatiquement les prix d'un petit pourcentage
+     * à chaque début de jour. Valeur choisie par défaut : +30% par jour, ce qui correspond à une inflation assez forte
+     * pour être perceptible, mais pas trop rapide pour ne pas devenir ingérable.
+     */
+    @Override
+    public void onNewDay(int day) {
+        // Politique simple :
+        increasePricesByPercent(30.0);
+    }
 
 }

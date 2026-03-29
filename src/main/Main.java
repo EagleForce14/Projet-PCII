@@ -62,6 +62,8 @@ public class Main {
         Money playerMoney = new Money(150);
         Inventaire inventaire = new Inventaire();
         Shop shop = new Shop();
+        // Enregistrer shop pour qu'il recoive les notifications de changement de jour
+        jour.addDayChangeListener(shop);
         FieldPanel fieldPanel = new FieldPanel(grilleCulture);
 
         MovementModel model = new MovementModel();

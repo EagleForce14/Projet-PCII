@@ -2,6 +2,9 @@ package model.runtime;
 
 import model.objective.GestionnaireObjectifs;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 /** Thread qui fait avancer le temps dans le jeu */
 public class Jour extends Thread {
 
@@ -18,6 +21,9 @@ public class Jour extends Thread {
 
     /** Attribut représentant le gestionnaire d'objectifs */
     private GestionnaireObjectifs gestionnaireObjectifs;
+
+    // Listeners pour le changement de jour
+    private final List<DayChangeListener> dayChangeListeners = new CopyOnWriteArrayList<>();
 
     /** Constructeur de la classe Jour */
     public Jour() {
@@ -40,6 +46,11 @@ public class Jour extends Thread {
                 return;
             }
             jour++; // Incrémenter le jour
+
+            // Notifier les listeners avant de vérifier la validité du jour, afin qu'ils
+            // puissent ajuster leur état si besoin (par ex. changer les prix du shop).
+            notifyDayChangeListeners();
+
             if (!notifierChangementJour()) {
                 partieTerminee = true;
                 pauseController.setPaused(true);
@@ -71,5 +82,27 @@ public class Jour extends Thread {
     /** Méthode qui notifie le gestionnaire d'objectifs du changement de jour */
     public boolean notifierChangementJour() {
         return gestionnaireObjectifs.appliquerChangementsJour();
+    }
+
+    /** Enregistrement d'un listener pour le changement de jour */
+    public void addDayChangeListener(DayChangeListener listener) {
+        if (listener != null) {
+            dayChangeListeners.add(listener);
+        }
+    }
+
+    /** Retrait d'un listener */
+    public void removeDayChangeListener(DayChangeListener listener) {
+        dayChangeListeners.remove(listener);
+    }
+
+    private void notifyDayChangeListeners() {
+        for (DayChangeListener listener : dayChangeListeners) {
+            try {
+                listener.onNewDay(jour);
+            } catch (Exception ignored) {
+                // Un listener défaillant ne doit pas interrompre la boucle de jour
+            }
+        }
     }
 }
