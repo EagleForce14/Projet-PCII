@@ -13,7 +13,7 @@ import java.awt.Image;
 import java.awt.RenderingHints;
 
 /**
- * Petit renderer reutilisable pour les items pixel-art du projet.
+ * Petit renderer réutilisable pour les items pixel-art du projet.
  * On centralise les motifs ici pour que l'inventaire et la boutique
  * partagent exactement les memes illustrations.
  */
