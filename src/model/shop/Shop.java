@@ -55,6 +55,16 @@ public class Shop implements DayChangeListener {
         // car le joueur peut vouloir en acheter beaucoup.
         facilities.add(new Facility("Chemin", 12, 200, FacilityType.CHEMIN));
         /*
+         * La rivière se pose case par case.
+         * On lui donne donc un stock confortable:
+         * l'idée est de laisser le joueur dessiner de vrais tracés d'eau,
+         * pas d'acheter une case isolée de temps en temps.
+         *
+         * Son prix reste plus élevé qu'un simple chemin,
+         * car elle bloque le passage et apporte un vrai bonus agricole autour d'elle.
+         */
+        facilities.add(new Facility("Riviere", 35, 120, FacilityType.RIVIERE));
+        /*
          * Le compost démarre avec un stock initial de 1.
          * Un second compost est débloqué plus tard, au jour 10.
          * On sépare bien ces deux temps pour donner une progression claire au joueur.

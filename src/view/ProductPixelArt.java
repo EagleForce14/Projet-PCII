@@ -23,8 +23,10 @@ public final class ProductPixelArt {
     private static final int FENCE_ART_COLUMNS = 9;
     private static final int FENCE_ART_ROWS = 7;
     private static final int PATH_ART_MAX_SIDE = 7;
+    private static final int RIVER_ART_MAX_SIDE = 7;
     private static final int COMPOST_ART_MAX_SIDE = 6;
     private static final Image PATH_IMAGE = ImageLoader.load("/assets/stone.png");
+    private static final Image RIVER_IMAGE = ImageLoader.load("/assets/river.png");
     private static final Image COMPOST_IMAGE = ImageLoader.load("/assets/Compost.png");
 
     // Le constructeur de la classe
@@ -51,6 +53,9 @@ public final class ProductPixelArt {
         if (type == FacilityType.CHEMIN) {
             return getScaledImageSize(PATH_IMAGE, PATH_ART_MAX_SIDE * pixelSize).width;
         }
+        if (type == FacilityType.RIVIERE) {
+            return getScaledImageSize(RIVER_IMAGE, RIVER_ART_MAX_SIDE * pixelSize).width;
+        }
         if (type == FacilityType.COMPOST) {
             return getScaledImageSize(COMPOST_IMAGE, COMPOST_ART_MAX_SIDE * pixelSize).width;
         }
@@ -63,6 +68,9 @@ public final class ProductPixelArt {
         }
         if (type == FacilityType.CHEMIN) {
             return getScaledImageSize(PATH_IMAGE, PATH_ART_MAX_SIDE * pixelSize).height;
+        }
+        if (type == FacilityType.RIVIERE) {
+            return getScaledImageSize(RIVER_IMAGE, RIVER_ART_MAX_SIDE * pixelSize).height;
         }
         if (type == FacilityType.COMPOST) {
             return getScaledImageSize(COMPOST_IMAGE, COMPOST_ART_MAX_SIDE * pixelSize).height;
@@ -116,6 +124,9 @@ public final class ProductPixelArt {
                 break;
             case CHEMIN:
                 drawScaledImage(g2d, PATH_IMAGE, x, y, PATH_ART_MAX_SIDE * pixelSize);
+                break;
+            case RIVIERE:
+                drawScaledImage(g2d, RIVER_IMAGE, x, y, RIVER_ART_MAX_SIDE * pixelSize);
                 break;
             case COMPOST:
                 drawScaledImage(g2d, COMPOST_IMAGE, x, y, COMPOST_ART_MAX_SIDE * pixelSize);

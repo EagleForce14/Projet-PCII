@@ -871,8 +871,8 @@ public class ShopOverlay extends JPanel {
         }
         if (product instanceof Facility) {
             FacilityType type = ((Facility) product).getType();
-            if (type == FacilityType.CHEMIN || type == FacilityType.COMPOST) {
-                return "Decor / Boosts";
+            if (type == FacilityType.CHEMIN || type == FacilityType.RIVIERE || type == FacilityType.COMPOST) {
+                return "Décor / Boosts";
             }
             return "Installation";
         }
@@ -893,6 +893,8 @@ public class ShopOverlay extends JPanel {
         switch (type) {
             case CHEMIN:
                 return "Deplacement plus rapide";
+            case RIVIERE:
+                return "Bloque le passage\nPousse +30 % à proximité\nFlétrissement +30 % à proximité";
             case COMPOST:
                 if (shop.isCompostRestockUnlocked()) {
                     return "Rendement x2 des cultures proches";

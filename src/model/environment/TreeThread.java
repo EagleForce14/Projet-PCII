@@ -27,16 +27,16 @@ public class TreeThread extends Thread {
     private static final long GROWTH_RETRY_DELAY_MS = 250;
 
     private final TreeManager treeManager;
-    private final TreeObstacleMap treeObstacleMap;
+    private final FieldObstacleMap fieldObstacleMap;
     private final Unit playerUnit;
     private final EnemyModel enemyModel;
     private final Random random;
     private final GamePauseController pauseController;
     private volatile boolean actif = true;
 
-    public TreeThread(TreeManager treeManager, TreeObstacleMap treeObstacleMap, Unit playerUnit, EnemyModel enemyModel) {
+    public TreeThread(TreeManager treeManager, FieldObstacleMap fieldObstacleMap, Unit playerUnit, EnemyModel enemyModel) {
         this.treeManager = treeManager;
-        this.treeObstacleMap = treeObstacleMap;
+        this.fieldObstacleMap = fieldObstacleMap;
         this.playerUnit = playerUnit;
         this.enemyModel = enemyModel;
         this.random = new Random();
@@ -101,7 +101,7 @@ public class TreeThread extends Thread {
         List<Point> availableCells = new ArrayList<>();
         for (int column = 0; column < treeManager.getColumnCount(); column++) {
             for (int row = 0; row < treeManager.getRowCount(); row++) {
-                if (treeObstacleMap.canPlaceTreeAt(column, row)) {
+                if (fieldObstacleMap.canPlaceTreeAt(column, row)) {
                     availableCells.add(new Point(column, row));
                 }
             }
@@ -126,7 +126,7 @@ public class TreeThread extends Thread {
 
     private boolean isFutureMatureAreaOccupied(int gridX, int gridY) {
         if (playerUnit != null
-                && treeObstacleMap.matureTreeWouldOverlapCenteredBox(
+                && fieldObstacleMap.matureTreeWouldOverlapCenteredBox(
                         gridX,
                         gridY,
                         playerUnit.getX(),
@@ -142,7 +142,7 @@ public class TreeThread extends Thread {
         }
 
         for (EnemyUnit enemy : enemyModel.getEnemyUnits()) {
-            if (treeObstacleMap.matureTreeWouldOverlapCenteredBox(
+            if (fieldObstacleMap.matureTreeWouldOverlapCenteredBox(
                     gridX,
                     gridY,
                     enemy.getX(),

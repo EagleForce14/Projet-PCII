@@ -42,6 +42,7 @@ public class InventoryStatusOverlay extends JPanel {
     private static final FacilityType[] INVENTORY_FACILITY_ORDER = {
             FacilityType.CLOTURE,
             FacilityType.CHEMIN,
+            FacilityType.RIVIERE,
             FacilityType.COMPOST
     };
 

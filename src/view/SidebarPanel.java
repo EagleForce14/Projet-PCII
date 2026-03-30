@@ -53,6 +53,7 @@ public class SidebarPanel extends JPanel {
     private final JButton compostButton;
     private final JPanel pathActionRow;
     private final JPanel compostActionRow;
+    private final JPanel riverPlacementRow;
 
 
     // Petit cache local pour éviter d'appliquer setEnabled en boucle inutilement.
@@ -65,6 +66,7 @@ public class SidebarPanel extends JPanel {
     private boolean currentPathVisibleState;
     private boolean currentCompostEnabledState;
     private boolean currentCompostVisibleState;
+    private boolean currentRiverVisibleState;
     private String currentCompostButtonLabel;
 
     // Constructeur de la classe
@@ -142,12 +144,24 @@ public class SidebarPanel extends JPanel {
         compostActionRow = createSpecialActionRow(compostButton);
         compostActionRow.setVisible(false);
 
+        /*
+         * La rivière se pose à distance.
+         * On préfère donc afficher une consigne claire plutôt qu'un faux bouton d'action,
+         * pour bien assumer que ce mode se joue à la souris sur le champ.
+         */
+        riverPlacementRow = createInfoActionRow(
+                "Mode rivière",
+                "Cliquez une case libre du champ.\nL'eau bloquera ensuite le passage.\nUne fois placée, il n'est plus possible de la déplacer."
+        );
+        riverPlacementRow.setVisible(false);
+
         JPanel specialActionsPanel = new JPanel();
         specialActionsPanel.setOpaque(false);
         specialActionsPanel.setLayout(new BoxLayout(specialActionsPanel, BoxLayout.Y_AXIS));
         specialActionsPanel.setBorder(BorderFactory.createEmptyBorder(0, 16, 16, 16));
         specialActionsPanel.add(pathActionRow);
         specialActionsPanel.add(compostActionRow);
+        specialActionsPanel.add(riverPlacementRow);
 
         contentPanel.add(titleRow, BorderLayout.NORTH);
         contentPanel.add(buttonsGrid, BorderLayout.CENTER);
@@ -156,7 +170,7 @@ public class SidebarPanel extends JPanel {
 
         // Au démarrage, les boutons sont désactivés tant que l'unité déplaçable n'est pas
         // sur une case valide du champ.
-        applyButtonsEnabledState(false, false, false, false, false, false, false, false, false, "Poser compost");
+        applyButtonsEnabledState(false, false, false, false, false, false, false, false, false, false, "Poser compost");
     }
 
     /**
@@ -221,6 +235,40 @@ public class SidebarPanel extends JPanel {
     }
 
     /**
+     * Petit encart purement informatif pour les modes de pose "à distance".
+     * Le but n'est pas d'ajouter une nouvelle interaction,
+     * juste de rendre le comportement du mode courant limpide.
+     */
+    private JPanel createInfoActionRow(String titleText, String bodyText) {
+        JPanel row = new JPanel(new BorderLayout());
+        row.setOpaque(false);
+        row.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(88, 132, 170), 2),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+        ));
+
+        JPanel textStack = new JPanel();
+        textStack.setOpaque(false);
+        textStack.setLayout(new BoxLayout(textStack, BoxLayout.Y_AXIS));
+
+        JLabel titleLabel = new JLabel(titleText);
+        titleLabel.setForeground(new Color(235, 245, 255));
+        titleLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 10.5f));
+        titleLabel.setAlignmentX(LEFT_ALIGNMENT);
+
+        JLabel bodyLabel = new JLabel("<html>" + bodyText.replace("\n", "<br>") + "</html>");
+        bodyLabel.setForeground(new Color(198, 221, 241));
+        bodyLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 8.5f));
+        bodyLabel.setAlignmentX(LEFT_ALIGNMENT);
+
+        textStack.add(titleLabel);
+        textStack.add(new JLabel(" "));
+        textStack.add(bodyLabel);
+        row.add(textStack, BorderLayout.CENTER);
+        return row;
+    }
+
+    /**
      * Lit l'état dans le modèle et applique visuellement l'activation si nécessaire.
      */
     private void syncFromModel() {
@@ -233,6 +281,7 @@ public class SidebarPanel extends JPanel {
         boolean shouldEnablePath = shouldShowPathAction && canPlacePathActiveCell();
         boolean shouldDisplayCompostAction = shouldShowCompostAction();
         boolean shouldEnableCompost = canUseCompostButtonOnActiveCell();
+        boolean shouldShowRiverPlacement = movementModel.isRiverPlacementSelected();
         String compostButtonLabel = shouldShowRemiserCompostAction() ? "Remiser compost" : "Poser compost";
         if (shouldEnableLabour != currentLabourEnabledState
                 || shouldEnablePlant != currentPlantEnabledState
@@ -243,6 +292,7 @@ public class SidebarPanel extends JPanel {
                 || shouldShowPathAction != currentPathVisibleState
                 || shouldEnableCompost != currentCompostEnabledState
                 || shouldDisplayCompostAction != currentCompostVisibleState
+                || shouldShowRiverPlacement != currentRiverVisibleState
                 || !compostButtonLabel.equals(currentCompostButtonLabel)) {
             applyButtonsEnabledState(
                     shouldEnableLabour,
@@ -254,6 +304,7 @@ public class SidebarPanel extends JPanel {
                     shouldShowPathAction,
                     shouldEnableCompost,
                     shouldDisplayCompostAction,
+                    shouldShowRiverPlacement,
                     compostButtonLabel
             );
         }
@@ -266,6 +317,7 @@ public class SidebarPanel extends JPanel {
                                           boolean harvestEnabled, boolean cleanEnabled, boolean waterEnabled,
                                           boolean pathEnabled, boolean pathVisible,
                                           boolean compostEnabled, boolean compostVisible,
+                                          boolean riverVisible,
                                           String compostButtonLabel) {
         currentLabourEnabledState = labourEnabled;
         currentPlantEnabledState = plantEnabled;
@@ -276,6 +328,7 @@ public class SidebarPanel extends JPanel {
         currentPathVisibleState = pathVisible;
         currentCompostEnabledState = compostEnabled;
         currentCompostVisibleState = compostVisible;
+        currentRiverVisibleState = riverVisible;
         currentCompostButtonLabel = compostButtonLabel;
 
         labourButton.setEnabled(labourEnabled);
@@ -287,6 +340,7 @@ public class SidebarPanel extends JPanel {
         pathActionRow.setVisible(pathVisible);
         compostButton.setEnabled(compostEnabled);
         compostActionRow.setVisible(compostVisible);
+        riverPlacementRow.setVisible(riverVisible);
         compostButton.setText(compostButtonLabel);
 
         repaint();

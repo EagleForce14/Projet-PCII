@@ -43,14 +43,16 @@ public class Croissance extends Thread {
     /** Méthode qui calcule le délai pour le stade courant */
     private long delaiPourEtatActuel() {
         if (culture.getStadeCroissance() == Stade.MATURE) {
-            System.out.println("delai fletrissement : " + DELAI_AVANT_FLETRISSEMENT);
-            return DELAI_AVANT_FLETRISSEMENT;
+            // Une culture mature relit ici son multiplicateur de flétrissement.
+            // Cela permet à une rivière posée après coup d'allonger proprement
+            // le temps restant sans recréer la plante.
+            return Math.round(DELAI_AVANT_FLETRISSEMENT * culture.getWiltDelayMultiplier());
         } else if (culture.isArrosee()) {
-            System.out.println("delai arrosage : " + DELAI_CROISSANCE_ARROSE);
-            return DELAI_CROISSANCE_ARROSE;
+            // L'arrosage garde son bonus habituel,
+            // puis on applique éventuellement le bonus rivière par-dessus.
+            return Math.round(DELAI_CROISSANCE_ARROSE * culture.getGrowthDelayMultiplier());
         } else {
-            System.out.println("delai normal : " + DELAI_CROISSANCE);
-            return DELAI_CROISSANCE;
+            return Math.round(DELAI_CROISSANCE * culture.getGrowthDelayMultiplier());
         }
     }
 

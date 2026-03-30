@@ -1,5 +1,7 @@
 package model.culture;
 
+import java.util.function.BooleanSupplier;
+
 /** Classe représentant une zone de culture */
 public class ZoneCulture {
     /**
@@ -53,6 +55,14 @@ public class ZoneCulture {
      * @throws IllegalStateException si la zone de culture est déjà occupée par une culture
     **/
     public boolean planterCulture(Type type) {
+        return planterCulture(type, () -> false);
+    }
+
+    /**
+     * Variante utilisée par la grille quand la plante doit pouvoir relire
+     * un bonus d'environnement évolutif, comme la proximité d'une rivière.
+     */
+    public boolean planterCulture(Type type, BooleanSupplier riverBoostSupplier) {
         // Règle importante :
         // tant que le joueur n'a pas labouré la case, on reste sur de l'herbe.
         if (!labouree) {
@@ -63,7 +73,10 @@ public class ZoneCulture {
         if (culture != null) {
             throw new IllegalStateException("Il y a déjà une culture plantée dans cette zone.");
         } else {
-            this.culture = new Culture(type); // Plante une nouvelle culture du type demandé
+            // On transmet ici un petit fournisseur d'état
+            // plutôt qu'un booléen figé.
+            // Grâce à ça, la culture peut profiter d'une rivière ajoutée plus tard.
+            this.culture = new Culture(type, riverBoostSupplier);
             return true; // Indique que la culture a été plantée avec succès
         }
 

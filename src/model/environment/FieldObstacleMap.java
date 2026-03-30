@@ -6,13 +6,18 @@ import view.InventoryStatusOverlay;
 import java.awt.Rectangle;
 
 /**
- * Centralise les règles spatiales des arbres :
- * - placement aléatoire,
- * - écart minimum entre arbres,
- * - marge avec la grange,
- * - hitboxes de collision.
+ * Centralise les règles spatiales des obstacles fixes du champ.
+ *
+ * Aujourd'hui cela couvre :
+ * - les arbres,
+ * - la rivière,
+ * - et toutes les validations géométriques nécessaires autour d'eux.
+ *
+ * Le but est simple :
+ * éviter que le joueur, les lapins, les arbres et la vue
+ * ne réinventent chacun leur propre définition d'une case bloquante.
  */
-public class TreeObstacleMap {
+public class FieldObstacleMap {
     private static final double TREE_EDGE_MARGIN_RATIO = 0.25;
     private static final double TREE_TO_TREE_MARGIN_RATIO = 0.12;
     private static final double TREE_TO_BARN_MARGIN_RATIO = 0.18;
@@ -25,15 +30,15 @@ public class TreeObstacleMap {
     private final TreeManager treeManager;
     private final FieldPanel fieldPanel;
 
-    public TreeObstacleMap(TreeManager treeManager, FieldPanel fieldPanel) {
+    public FieldObstacleMap(TreeManager treeManager, FieldPanel fieldPanel) {
         this.treeManager = treeManager;
         this.fieldPanel = fieldPanel;
     }
 
     /**
-     * Le placement se fait en tenant compte de la future taille finale de l'arbre.
-     * Ainsi, un tronc qui pousse plus tard ne pourra pas empiéter sur la grange,
-     * sur le bord visible du champ ou sur un autre arbre.
+     * Le placement des arbres reste le cas le plus exigeant :
+     * on tient compte de leur future taille mature,
+     * du bord du champ, de la grange et des autres arbres.
      */
     public boolean canPlaceTreeAt(int gridX, int gridY) {
         if (treeManager.canPlaceTreeAt(gridX, gridY)) {
@@ -97,12 +102,18 @@ public class TreeObstacleMap {
     }
 
     /**
-     * Test utilisé par les entités mobiles.
+     * Test unique utilisé par toutes les entités mobiles.
+     * Si un jour on ajoute un autre obstacle fixe de terrain,
+     * c'est ici qu'il devra être branché.
      */
     public boolean canOccupyCenteredBox(double centerX, double centerY, int width, int height) {
         int left = (int) Math.round(centerX - (width / 2.0));
         int top = (int) Math.round(centerY - (height / 2.0));
         Rectangle entityBounds = new Rectangle(left, top, width, height);
+
+        if (intersectsPlacedRiver(entityBounds)) {
+            return false;
+        }
 
         for (TreeInstance tree : treeManager.getTreesSnapshot()) {
             Rectangle treeHitbox = getTreeHitbox(tree.getGridX(), tree.getGridY());
@@ -131,12 +142,18 @@ public class TreeObstacleMap {
     }
 
     /**
-     * La méthode permettant de bloquer des cases si l'arbre les recouvre (même partiellement)
+     * Répond à une question de gameplay "case par case".
+     * Une case est bloquée si la rivière l'occupe
+     * ou si un arbre la recouvre visuellement / physiquement.
      */
     public boolean blocksCell(int gridX, int gridY) {
         Rectangle cellBounds = fieldPanel.getLogicalCellBounds(gridX, gridY);
         if (cellBounds == null) {
             return false;
+        }
+
+        if (fieldPanel.getGrilleCulture().hasRiver(gridX, gridY)) {
+            return true;
         }
 
         for (TreeInstance tree : treeManager.getTreesSnapshot()) {
@@ -149,6 +166,29 @@ public class TreeObstacleMap {
 
             if (tree.getGridX() == gridX && tree.getGridY() == gridY) {
                 return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean intersectsPlacedRiver(Rectangle entityBounds) {
+        /*
+         * La grille reste petite.
+         * On choisit donc ici une boucle toute simple et très lisible :
+         * quelques centaines de tests d'intersection coûtent peu,
+         * alors que la clarté du code nous aide partout ailleurs.
+         */
+        for (int column = 0; column < fieldPanel.getColumnCount(); column++) {
+            for (int row = 0; row < fieldPanel.getRowCount(); row++) {
+                if (!fieldPanel.getGrilleCulture().hasRiver(column, row)) {
+                    continue;
+                }
+
+                Rectangle riverCellBounds = fieldPanel.getLogicalCellBounds(column, row);
+                if (riverCellBounds != null && riverCellBounds.intersects(entityBounds)) {
+                    return true;
+                }
             }
         }
 

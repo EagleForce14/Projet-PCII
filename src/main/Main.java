@@ -5,7 +5,7 @@ import controller.MovementController;
 import model.culture.GrilleCulture;
 import model.enemy.EnemyModel;
 import model.enemy.EnemyPhysicsThread;
-import model.environment.TreeObstacleMap;
+import model.environment.FieldObstacleMap;
 import model.environment.TreeManager;
 import model.environment.TreeThread;
 import model.movement.Barn;
@@ -16,6 +16,7 @@ import model.runtime.GamePauseController;
 import model.runtime.Jour;
 import model.management.Inventaire;
 import model.management.Money;
+import model.runtime.GameSession;
 import model.shop.Shop;
 import view.*;
 import view.shop.ShopOverlay;
@@ -23,7 +24,6 @@ import view.shop.ShopOverlay;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.OverlayLayout;
-import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Point;
@@ -33,10 +33,8 @@ public class Main {
     private static final Dimension GAME_AREA_PREFERRED_SIZE = new Dimension(1180, 850);
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            JFrame frame = createFrame();
-            installNewGame(frame, true);
-        });
+        JFrame frame = createFrame();
+        installNewGame(frame, true);
     }
 
     private static JFrame createFrame() {
@@ -70,20 +68,20 @@ public class Main {
         // Enregistrer shop pour qu'il recoive les notifications de changement de jour
         jour.addDayChangeListener(shop);
         FieldPanel fieldPanel = new FieldPanel(grilleCulture, treeManager);
-        TreeObstacleMap treeObstacleMap = new TreeObstacleMap(treeManager, fieldPanel);
-        fieldPanel.setTreeObstacleMap(treeObstacleMap);
+        FieldObstacleMap fieldObstacleMap = new FieldObstacleMap(treeManager, fieldPanel);
+        fieldPanel.setFieldObstacleMap(fieldObstacleMap);
 
         MovementModel model = new MovementModel();
         // Le joueur démarre hors du champ, près du coin haut-gauche de la grille.
         Point initialPlayerOffset = fieldPanel.getInitialPlayerOffset();
         Unit playerUnit = new Unit(initialPlayerOffset.x, initialPlayerOffset.y);
-        playerUnit.setTreeObstacleMap(treeObstacleMap);
+        playerUnit.setFieldObstacleMap(fieldObstacleMap);
         model.setPlayerUnit(playerUnit);
 
         EnemyModel enemyModel = new EnemyModel();
         enemyModel.setPlayer(playerUnit);
         enemyModel.setGrilleCulture(grilleCulture);
-        enemyModel.setTreeObstacleMap(treeObstacleMap);
+        enemyModel.setFieldObstacleMap(fieldObstacleMap);
         MovementView movementView = new MovementView(model, fieldPanel);
         movementView.setAlignmentX(0.5f);
         movementView.setAlignmentY(0.5f);
@@ -137,17 +135,9 @@ public class Main {
         PhysicsThread physicsThread = new PhysicsThread(model);
         EnemyPhysicsThread enemyPhysicsThread = new EnemyPhysicsThread(enemyModel);
         RenderThread renderThread = new RenderThread(contentPanel);
-        TreeThread treeThread = new TreeThread(treeManager, treeObstacleMap, playerUnit, enemyModel);
+        TreeThread treeThread = new TreeThread(treeManager, fieldObstacleMap, playerUnit, enemyModel);
+        GameSession session = new GameSession(jour, grilleCulture, physicsThread, enemyPhysicsThread, renderThread, treeThread);
 
-        /*
-         * On garde la session courante dans un petit holder pour pouvoir la couper
-         * proprement quand le joueur clique sur "Rejouer".
-         *
-         * Oui, c'est un tableau à un seul élément. Ce n'est pas le grand art,
-         * mais ici c'est volontairement le moyen le plus court pour laisser
-         * le callback accéder à la session construite juste après.
-         */
-        GameSession[] sessionHolder = new GameSession[1];
         GameOverOverlay gameOverOverlay = new GameOverOverlay(jour);
         gamePanel.add(gameOverOverlay);
         gamePanel.setComponentZOrder(gameOverOverlay, 0);
@@ -157,6 +147,7 @@ public class Main {
         new MovementController(
                 model,
                 movementView,
+                enemyModel,
                 enemyView,
                 actionSidebarPanel,
                 grilleCulture,
@@ -166,10 +157,8 @@ public class Main {
                 inventoryStatusOverlay,
                 shopOverlay,
                 gameOverOverlay,
-                () -> restartCurrentGame(frame, sessionHolder[0])
+                () -> restartCurrentGame(frame, session)
         );
-
-        sessionHolder[0] = new GameSession(jour, grilleCulture, physicsThread, enemyPhysicsThread, renderThread, treeThread);
 
         if (firstLaunch) {
             frame.pack();
@@ -185,7 +174,7 @@ public class Main {
 
         frame.validate();
         treeThread.installerArbresInitiaux();
-        Point safeInitialPlayerOffset = findSafeInitialPlayerOffset(fieldPanel, treeObstacleMap);
+        Point safeInitialPlayerOffset = findSafeInitialPlayerOffset(fieldPanel, fieldObstacleMap);
         playerUnit.setPosition(safeInitialPlayerOffset.x, safeInitialPlayerOffset.y);
 
         enemyModel.setViewportSize(gamePanel.getWidth(), gamePanel.getHeight());
@@ -195,14 +184,14 @@ public class Main {
         renderThread.start();
         treeThread.start();
 
-        SwingUtilities.invokeLater(movementView::requestFocusInWindow);
+        movementView.requestFocusInWindow();
     }
 
     /**
      * Les arbres initiaux étant posés après la création du joueur,
      * on choisit ici la case libre la plus proche du centre avant de lancer les threads.
      */
-    private static Point findSafeInitialPlayerOffset(FieldPanel fieldPanel, TreeObstacleMap treeObstacleMap) {
+    private static Point findSafeInitialPlayerOffset(FieldPanel fieldPanel, FieldObstacleMap fieldObstacleMap) {
         Point preferredOffset = fieldPanel.getInitialPlayerOffset();
         Point bestOffset = preferredOffset;
         long bestDistanceSquared = Long.MAX_VALUE;
@@ -210,7 +199,7 @@ public class Main {
         for (int column = 0; column < fieldPanel.getColumnCount(); column++) {
             for (int row = 0; row < fieldPanel.getRowCount(); row++) {
                 Point candidateOffset = fieldPanel.getLogicalCellCenter(column, row);
-                if (!canSpawnPlayerAt(candidateOffset, treeObstacleMap)) {
+                if (!canSpawnPlayerAt(candidateOffset, fieldObstacleMap)) {
                     continue;
                 }
 
@@ -225,10 +214,10 @@ public class Main {
         return bestOffset;
     }
 
-    private static boolean canSpawnPlayerAt(Point position, TreeObstacleMap treeObstacleMap) {
+    private static boolean canSpawnPlayerAt(Point position, FieldObstacleMap fieldObstacleMap) {
         return position != null
                 && Barn.canOccupyCenteredBox(position.x, position.y, Unit.SIZE, Unit.SIZE)
-                && (treeObstacleMap == null || treeObstacleMap.canOccupyCenteredBox(position.x, position.y, Unit.SIZE, Unit.SIZE));
+                && (fieldObstacleMap == null || fieldObstacleMap.canOccupyCenteredBox(position.x, position.y, Unit.SIZE, Unit.SIZE));
     }
 
     private static long squaredDistance(Point a, Point b) {
@@ -257,42 +246,5 @@ public class Main {
          */
         session.shutdown();
         installNewGame(frame, false);
-    }
-
-    /**
-     * Petit sac de références pour pouvoir arrêter la session en un seul endroit.
-     */
-    private static final class GameSession {
-        private final Jour jour;
-        private final GrilleCulture grilleCulture;
-        private final PhysicsThread physicsThread;
-        private final EnemyPhysicsThread enemyPhysicsThread;
-        private final RenderThread renderThread;
-        private final TreeThread treeThread;
-
-        private GameSession(Jour jour, GrilleCulture grilleCulture, PhysicsThread physicsThread,
-                            EnemyPhysicsThread enemyPhysicsThread, RenderThread renderThread, TreeThread treeThread) {
-            this.jour = jour;
-            this.grilleCulture = grilleCulture;
-            this.physicsThread = physicsThread;
-            this.enemyPhysicsThread = enemyPhysicsThread;
-            this.renderThread = renderThread;
-            this.treeThread = treeThread;
-        }
-
-        private void shutdown() {
-            /*
-             * On coupe d'abord les threads "invisibles" des cultures.
-             * Sans ça, on aurait l'impression d'avoir tout remis à zéro,
-             * alors que l'ancienne ferme continuerait discrètement à vivre.
-             */
-            grilleCulture.arreterToutesLesCultures();
-            jour.arreter();
-            jour.interrupt();
-            physicsThread.interrupt();
-            enemyPhysicsThread.interrupt();
-            renderThread.arreter();
-            treeThread.arreter();
-        }
     }
 }

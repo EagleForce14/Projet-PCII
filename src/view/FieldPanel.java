@@ -4,11 +4,12 @@ import model.culture.Culture;
 import model.culture.CellSide;
 import model.culture.GrilleCulture;
 import model.culture.Stade;
+import model.environment.FieldObstacleMap;
 import model.environment.TreeManager;
-import model.environment.TreeObstacleMap;
 import model.movement.Barn;
 
 import javax.swing.JPanel;
+import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -79,12 +80,13 @@ public class FieldPanel extends JPanel {
     // On lit directement l'état réel des cultures.
     private final GrilleCulture grilleCulture;
     private final TreeManager treeManager;
-    private TreeObstacleMap treeObstacleMap;
+    private FieldObstacleMap fieldObstacleMap;
 
     // Plusieurs variantes évitent un motif trop répétitif.
     private final Image[] grassTileImages;
     private final Image[] tilledTileImages;
     private final Image[] pathTileImages;
+    private final Image[] riverTileImages;
 
     // Images associées aux différents stades visuels d'une culture.
     private final Image jeunePousseImage;
@@ -100,6 +102,15 @@ public class FieldPanel extends JPanel {
     // Le preview mémorise à la fois la case survolée et le bord réellement visé.
     private FencePreview fencePreview;
 
+    /*
+     * La rivière se pose à la souris sur une case entière.
+     * On garde donc un petit état de preview séparé :
+     * - quelle case est visée,
+     * - et si cette pose est réellement valide.
+     */
+    private Point riverPreviewCell;
+    private boolean riverPreviewValid;
+
     // Cet indicateur dit seulement si la zone du compost doit être montrée ou non.
     // Les cases exactes sont relues directement depuis la grille au moment du dessin.
     private boolean compostInfluenceVisible;
@@ -113,6 +124,7 @@ public class FieldPanel extends JPanel {
         this.grassTileImages = TerrainTileFactory.createGrassTiles(PIXEL_ART_TILE_SIZE);
         this.tilledTileImages = TerrainTileFactory.createSoilTiles(PIXEL_ART_TILE_SIZE);
         this.pathTileImages = TerrainTileFactory.createPathTiles(PIXEL_ART_TILE_SIZE);
+        this.riverTileImages = TerrainTileFactory.createRiverTiles(PIXEL_ART_TILE_SIZE);
         this.jeunePousseImage = ImageLoader.load("/assets/jeune_pousse.png");
         this.croissanceInterImage = ImageLoader.load("/assets/croissance_inter.png");
         this.maturiteImage = ImageLoader.load("/assets/maturite.png");
@@ -124,8 +136,8 @@ public class FieldPanel extends JPanel {
         setOpaque(false);
     }
 
-    public void setTreeObstacleMap(TreeObstacleMap treeObstacleMap) {
-        this.treeObstacleMap = treeObstacleMap;
+    public void setFieldObstacleMap(FieldObstacleMap fieldObstacleMap) {
+        this.fieldObstacleMap = fieldObstacleMap;
     }
 
     // Les getters pour l'attribut grilleCulture, et pour la largeur et la hauteur de la grille
@@ -193,6 +205,27 @@ public class FieldPanel extends JPanel {
 
     public void clearFencePreview() {
         setFencePreview(null);
+    }
+
+    /**
+     * Le contrôleur prépare ici la preview de rivière.
+     * On stocke à la fois la case et sa validité
+     * pour pouvoir expliquer visuellement "ici oui" ou "ici non"
+     * sans recalculer la règle au moment du paint.
+     */
+    public void setRiverPreview(Point riverPreviewCell, boolean valid) {
+        Point nextCell = riverPreviewCell == null ? null : new Point(riverPreviewCell);
+        if (Objects.equals(this.riverPreviewCell, nextCell) && riverPreviewValid == valid) {
+            return;
+        }
+
+        this.riverPreviewCell = nextCell;
+        this.riverPreviewValid = riverPreviewCell != null && valid;
+        repaint();
+    }
+
+    public void clearRiverPreview() {
+        setRiverPreview(null, false);
     }
 
     /**
@@ -416,19 +449,20 @@ public class FieldPanel extends JPanel {
     public boolean isFarmableCell(Point cell) {
         return cell != null
                 && !isBlockedByBarn(cell)
-                && !isBlockedByTree(cell.x, cell.y);
+                && !isBlockedByStaticObstacle(cell.x, cell.y);
     }
 
     /**
-     * Une case peut être bloquée par l'arbre posé dessus,
-     * mais aussi par la canopée d'un arbre voisin devenue très grande.
+     * Une case peut être bloquée par une rivière,
+     * par l'arbre posé dessus,
+     * ou par la canopée d'un arbre voisin devenue très grande.
      */
-    public boolean isBlockedByTree(int gridX, int gridY) {
-        if (treeObstacleMap != null) {
-            return treeObstacleMap.blocksCell(gridX, gridY);
+    public boolean isBlockedByStaticObstacle(int gridX, int gridY) {
+        if (fieldObstacleMap != null) {
+            return fieldObstacleMap.blocksCell(gridX, gridY);
         }
 
-        return treeManager.hasTreeAt(gridX, gridY);
+        return grilleCulture.hasRiver(gridX, gridY) || treeManager.hasTreeAt(gridX, gridY);
     }
 
     /**
@@ -708,7 +742,9 @@ public class FieldPanel extends JPanel {
      */
     private Image getGroundTile(int gridX, int gridY) {
         Image[] variants;
-        if (grilleCulture.hasPath(gridX, gridY)) {
+        if (grilleCulture.hasRiver(gridX, gridY)) {
+            variants = riverTileImages;
+        } else if (grilleCulture.hasPath(gridX, gridY)) {
             variants = pathTileImages;
         } else if (grilleCulture.isLabouree(gridX, gridY)) {
             variants = tilledTileImages;
@@ -1162,6 +1198,75 @@ public class FieldPanel extends JPanel {
     }
 
     /**
+     * La pose de rivière doit être très lisible,
+     * justement parce qu'on ne passe pas par la case sous le joueur.
+     * On affiche donc le sprite réel avec une transparence,
+     * puis un code couleur très franc :
+     * bleu si la pose est autorisée, rouge chaud sinon.
+     */
+    private void drawRiverPreviewOverlay(Graphics2D g2) {
+        if (riverPreviewCell == null) {
+            return;
+        }
+
+        Rectangle previewBounds = getCellBounds(riverPreviewCell.x, riverPreviewCell.y);
+        if (previewBounds == null) {
+            return;
+        }
+
+        Image previewTile = (riverTileImages == null || riverTileImages.length == 0) ? null : riverTileImages[0];
+        Graphics2D previewGraphics = (Graphics2D) g2.create();
+        previewGraphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+
+        if (previewTile != null) {
+            float alpha = riverPreviewValid ? 0.72f : 0.38f;
+            previewGraphics.setComposite(AlphaComposite.SrcOver.derive(alpha));
+            previewGraphics.drawImage(
+                    previewTile,
+                    previewBounds.x,
+                    previewBounds.y,
+                    previewBounds.width,
+                    previewBounds.height,
+                    this
+            );
+            previewGraphics.setComposite(AlphaComposite.SrcOver);
+        }
+
+        Color fillColor = riverPreviewValid
+                ? new Color(87, 176, 255, 70)
+                : new Color(198, 93, 74, 88);
+        Color borderColor = riverPreviewValid
+                ? new Color(194, 237, 255, 230)
+                : new Color(255, 210, 178, 235);
+
+        previewGraphics.setColor(fillColor);
+        previewGraphics.fillRect(previewBounds.x, previewBounds.y, previewBounds.width, previewBounds.height);
+
+        previewGraphics.setColor(borderColor);
+        previewGraphics.drawRect(previewBounds.x, previewBounds.y, previewBounds.width - 1, previewBounds.height - 1);
+        previewGraphics.drawRect(previewBounds.x + 1, previewBounds.y + 1, previewBounds.width - 3, previewBounds.height - 3);
+
+        if (!riverPreviewValid) {
+            // Le petit X rend l'interdiction instantanément lisible,
+            // même si le joueur regarde le champ en mouvement.
+            previewGraphics.drawLine(
+                    previewBounds.x + 3,
+                    previewBounds.y + 3,
+                    previewBounds.x + previewBounds.width - 4,
+                    previewBounds.y + previewBounds.height - 4
+            );
+            previewGraphics.drawLine(
+                    previewBounds.x + previewBounds.width - 4,
+                    previewBounds.y + 3,
+                    previewBounds.x + 3,
+                    previewBounds.y + previewBounds.height - 4
+            );
+        }
+
+        previewGraphics.dispose();
+    }
+
+    /**
      * Dessine la grille (avec les images).
      */
     @Override
@@ -1180,6 +1285,7 @@ public class FieldPanel extends JPanel {
         drawCompostInfluenceOverlay(g2);
         drawPlacedFences(g2);
         drawFencePreviewOverlay(g2);
+        drawRiverPreviewOverlay(g2);
 
         g2.dispose();
     }

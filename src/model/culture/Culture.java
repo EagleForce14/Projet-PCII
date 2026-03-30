@@ -1,7 +1,20 @@
 package model.culture;
 
+import java.util.function.BooleanSupplier;
+
 /** Classe représentant une culture */
 public class Culture {
+    /*
+     * La rivière accélère la pousse de 30 % :
+     * on conserve donc 70 % du temps normal pour les stades de croissance.
+     */
+    private static final double RIVER_GROWTH_DELAY_MULTIPLIER = 0.70;
+
+    /*
+     * À l'inverse, une plante proche de l'eau reste viable plus longtemps.
+     * 130 % signifie donc "30 % de temps en plus avant le flétrissement".
+     */
+    private static final double RIVER_WILT_DELAY_MULTIPLIER = 1.30;
 
     /** Attribut représentant le stade de croissance de la culture */
     private Stade stadeCroissance;
@@ -15,17 +28,34 @@ public class Culture {
     /** Attribut stockant si la culture a été arrosée */
     private boolean arrosee;
 
+    /*
+     * On ne fige pas le bonus rivière au moment de la plantation.
+     * À la place, on garde un petit fournisseur d'état :
+     * si une rivière est posée plus tard à côté de la case,
+     * la culture peut adapter son chrono au prochain recalcul.
+     */
+    private final BooleanSupplier riverBoostSupplier;
+
     /** Constructeur de la classe Culture qui initialise le stade de croissance et démarre le thread de croissance */
     public Culture(Type type) {
+        this(type, () -> false);
+    }
+
+    /**
+     * Variante utilisée par la grille quand une culture a besoin
+     * de relire dynamiquement son environnement.
+     */
+    public Culture(Type type, BooleanSupplier riverBoostSupplier) {
         if (type == null) {
             throw new IllegalArgumentException("Le type de culture ne peut pas être null.");
         }
 
         this.type = type;
         this.stadeCroissance = Stade.JEUNE_POUSSE;
+        this.arrosee = false;
+        this.riverBoostSupplier = riverBoostSupplier == null ? () -> false : riverBoostSupplier;
         this.threadCroissance = new Croissance(this);
         this.threadCroissance.start(); // Démarrer le thread de croissance
-        this.arrosee = false;
     }
 
     /** Méthode qui fait grandir la culture et renvoie le nouveau stade de croissance */
@@ -96,6 +126,33 @@ public class Culture {
         return arrosee;
     }
 
+    /**
+     * Le bonus rivière n'a rien d'absolu :
+     * il dépend de l'état actuel des cases voisines.
+     * Cette lecture reste donc volontairement dynamique.
+     */
+    public double getGrowthDelayMultiplier() {
+        return isBoostedByRiver() ? RIVER_GROWTH_DELAY_MULTIPLIER : 1.0;
+    }
+
+    /**
+     * Même idée pour le temps avant flétrissement.
+     * On veut que la culture profite d'une rivière ajoutée ensuite,
+     * sans avoir à la replanter.
+     */
+    public double getWiltDelayMultiplier() {
+        return isBoostedByRiver() ? RIVER_WILT_DELAY_MULTIPLIER : 1.0;
+    }
+
+    /**
+     * Quand le contexte change autour de la culture,
+     * on réveille simplement le thread pour qu'il recalcule son temps restant.
+     * C'est plus léger et plus sûr que de bricoler directement son chrono depuis la grille.
+     */
+    public void notifierContexteCroissanceModifie() {
+        threadCroissance.reveillerPourRecalculDelai();
+    }
+
     /** Méthode qui permet de manger la culture seulement si elle est à maturité */
     public boolean manger() {
         // Vérifie si la culture est à maturité avant de la manger
@@ -105,5 +162,9 @@ public class Culture {
         } else {
             throw new IllegalStateException("La culture n'est pas à maturité et ne peut pas être mangée.");
         }
+    }
+
+    private boolean isBoostedByRiver() {
+        return riverBoostSupplier != null && riverBoostSupplier.getAsBoolean();
     }
 }

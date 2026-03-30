@@ -1,6 +1,6 @@
 package model.movement;
 
-import model.environment.TreeObstacleMap;
+import model.environment.FieldObstacleMap;
 
 /**
  * Représente une entité déplaçable.
@@ -29,7 +29,7 @@ public class Unit {
      * pour ne pas compliquer inutilement le déplacement.
      */
     private volatile int currentSpeed = NORMAL_SPEED;
-    private TreeObstacleMap treeObstacleMap;
+    private FieldObstacleMap fieldObstacleMap;
 
     // Le constructeur de la classe.
     public Unit(int x, int y) {
@@ -93,14 +93,16 @@ public class Unit {
     public void setMoveLeft(boolean moveLeft) { this.moveLeft = moveLeft; }
     public void setMoveRight(boolean moveRight) { this.moveRight = moveRight; }
     public void setCurrentSpeed(int currentSpeed) { this.currentSpeed = currentSpeed; }
-    public void setTreeObstacleMap(TreeObstacleMap treeObstacleMap) { this.treeObstacleMap = treeObstacleMap; }
+    public void setFieldObstacleMap(FieldObstacleMap fieldObstacleMap) { this.fieldObstacleMap = fieldObstacleMap; }
 
     /**
-     * Le joueur partage le même filtre d'occupation pour tous les obstacles fixes.
+     * Le joueur partage exactement le même filtre d'occupation
+     * que les autres entités mobiles.
+     * Ainsi, une rivière ou un arbre bloquera toujours tout le monde de la même façon.
      */
     private boolean canOccupy(double centerX, double centerY) {
         return Barn.canOccupyCenteredBox(centerX, centerY, SIZE, SIZE)
-                && (treeObstacleMap == null || treeObstacleMap.canOccupyCenteredBox(centerX, centerY, SIZE, SIZE));
+                && (fieldObstacleMap == null || fieldObstacleMap.canOccupyCenteredBox(centerX, centerY, SIZE, SIZE));
     }
 
     /**

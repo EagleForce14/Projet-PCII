@@ -83,11 +83,25 @@ public class GrilleCulture {
     private final boolean[][] pathCells;
 
     /*
+     * La rivière occupe elle aussi toute la surface d'une case.
+     * On la stocke donc comme le chemin : un simple drapeau par case.
+     */
+    private final boolean[][] riverCells;
+
+    /*
      * Portée choisie pour le compost.
      * On utilise ici une distance de Manhattan :
      * le bonus forme un "diamant" lisible autour du compost.
      */
     private static final int COMPOST_RANGE = 2;
+
+    /*
+     * Pour la rivière, on choisit un voisinage très proche :
+     * la case elle-même n'est jamais cultivable,
+     * mais toutes les cases adjacentes (y compris en diagonale)
+     * profitent d'un petit microclimat plus humide.
+     */
+    private static final int RIVER_BOOST_RADIUS = 1;
 
     /** Attribut représentant le gestionnaire d'objectifs */
     private final GestionnaireObjectifs gestionnaireObjectifs;
@@ -104,12 +118,14 @@ public class GrilleCulture {
         this.fenceMasks = new int[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         this.compostCell = null;
         this.pathCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
+        this.riverCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         // Toute la map démarre en herbe :
         // chaque case existe déjà, mais aucune n'est labourée au lancement.
         for (int i = 0; i < LARGEUR_GRILLE; i++) {
             for (int j = 0; j < HAUTEUR_GRILLE; j++) {
                 grille[i][j] = new ZoneCulture(false);
                 pathCells[i][j] = false;
+                riverCells[i][j] = false;
             }
         }
     }
@@ -214,6 +230,9 @@ public class GrilleCulture {
         if (hasPath(x, y)) {
             throw new IllegalStateException("Impossible de labourer une case recouverte par un chemin.");
         }
+        if (hasRiver(x, y)) {
+            throw new IllegalStateException("Impossible de labourer une case occupée par une rivière.");
+        }
         if (hasCompostAt(x, y)) {
             throw new IllegalStateException("Impossible de labourer une case recouverte par un compost.");
         }
@@ -237,6 +256,15 @@ public class GrilleCulture {
      */
     public boolean hasPath(int x, int y) {
         return estDansGrille(x, y) && pathCells[x][y];
+    }
+
+    /**
+     * Lecture simple de l'état "rivière" d'une case.
+     * La vue l'utilise pour son rendu
+     * et les règles métier pour bloquer déplacements et placements.
+     */
+    public boolean hasRiver(int x, int y) {
+        return estDansGrille(x, y) && riverCells[x][y];
     }
 
     /**
@@ -275,6 +303,7 @@ public class GrilleCulture {
     public boolean canPlacePath(int x, int y) {
         return estDansGrille(x, y)
                 && !hasPath(x, y)
+                && !hasRiver(x, y)
                 && !hasCompostAt(x, y)
                 && !isLabouree(x, y)
                 && getCulture(x, y) == null;
@@ -296,6 +325,40 @@ public class GrilleCulture {
     }
 
     /**
+     * Une rivière se pose sur une case d'herbe totalement libre.
+     *
+     * Important :
+     * on la traite comme un vrai obstacle de terrain.
+     * Donc pas de labour, pas de culture, pas de chemin, pas de compost sur la même case.
+     */
+    public boolean canPlaceRiver(int x, int y) {
+        return estDansGrille(x, y)
+                && !hasRiver(x, y)
+                && !hasPath(x, y)
+                && !hasCompostAt(x, y)
+                && !isLabouree(x, y)
+                && getCulture(x, y) == null;
+    }
+
+    /**
+     * Pose une case de rivière puis réveille les cultures voisines.
+     * Ce réveil est important :
+     * une plante déjà en train de pousser doit profiter du bonus sans attendre d'être replantée.
+     */
+    public void placeRiver(int x, int y, Inventaire inventaire) {
+        if (inventaire == null || inventaire.possedeInstallation(FacilityType.RIVIERE)) {
+            throw new IllegalStateException("Aucune rivière n'est disponible dans l'inventaire.");
+        }
+        if (!canPlaceRiver(x, y)) {
+            throw new IllegalStateException("La rivière doit être posée sur une case d'herbe libre.");
+        }
+
+        riverCells[x][y] = true;
+        inventaire.UseInstallation(FacilityType.RIVIERE);
+        notifyCulturesNearRiverPlacement(x, y);
+    }
+
+    /**
      * Le compost se pose seulement sur de l'herbe libre.
      *
      * Les règles :
@@ -308,6 +371,7 @@ public class GrilleCulture {
         return estDansGrille(x, y)
                 && !hasCompost()
                 && !hasPath(x, y)
+                && !hasRiver(x, y)
                 && !isLabouree(x, y)
                 && getCulture(x, y) == null;
     }
@@ -380,6 +444,34 @@ public class GrilleCulture {
         return affectedCells;
     }
 
+    /**
+     * Dit si une case de terre est assez proche d'une rivière pour recevoir son bonus.
+     *
+     * On inclut volontairement les diagonales :
+     * visuellement, cela donne une zone d'humidité compacte et facile à comprendre.
+     */
+    public boolean isCellBoostedByRiver(int x, int y) {
+        if (!estDansGrille(x, y) || !isLabouree(x, y)) {
+            return false;
+        }
+
+        for (int deltaX = -RIVER_BOOST_RADIUS; deltaX <= RIVER_BOOST_RADIUS; deltaX++) {
+            for (int deltaY = -RIVER_BOOST_RADIUS; deltaY <= RIVER_BOOST_RADIUS; deltaY++) {
+                if (deltaX == 0 && deltaY == 0) {
+                    continue;
+                }
+
+                int candidateX = x + deltaX;
+                int candidateY = y + deltaY;
+                if (hasRiver(candidateX, candidateY)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     /** Méthode qui plante une culture dans la grille */
     public void planterCulture(int x, int y, Type type, Inventaire inventaire) {
         if (!inventaire.possedeGraine(type)) {
@@ -392,8 +484,11 @@ public class GrilleCulture {
         if (hasPath(x, y)) {
             throw new IllegalStateException("Impossible de planter sur une case recouverte par un chemin.");
         }
+        if (hasRiver(x, y)) {
+            throw new IllegalStateException("Impossible de planter sur une case occupée par une rivière.");
+        }
 
-        if (grille[x][y].planterCulture(type)) {
+        if (grille[x][y].planterCulture(type, () -> isCellBoostedByRiver(x, y))) {
             // Met à jour les objectifs liés à la plantation de cultures
             gestionnaireObjectifs.mettreAJourObjectifsPlanter(type);
         }
@@ -465,6 +560,28 @@ public class GrilleCulture {
                 Culture culture = getCulture(x, y);
                 if (culture != null) {
                     culture.arreterCroissance();
+                }
+            }
+        }
+    }
+
+    /**
+     * Quand une rivière apparaît, seules les cultures toutes proches sont concernées.
+     * La grille est petite, donc on préfère ici une boucle ultra lisible
+     * à une optimisation prématurée plus opaque.
+     */
+    private void notifyCulturesNearRiverPlacement(int riverX, int riverY) {
+        for (int deltaX = -RIVER_BOOST_RADIUS; deltaX <= RIVER_BOOST_RADIUS; deltaX++) {
+            for (int deltaY = -RIVER_BOOST_RADIUS; deltaY <= RIVER_BOOST_RADIUS; deltaY++) {
+                int candidateX = riverX + deltaX;
+                int candidateY = riverY + deltaY;
+                if (!estDansGrille(candidateX, candidateY)) {
+                    continue;
+                }
+
+                Culture culture = getCulture(candidateX, candidateY);
+                if (culture != null) {
+                    culture.notifierContexteCroissanceModifie();
                 }
             }
         }

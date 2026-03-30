@@ -40,7 +40,7 @@ public class TreeManager {
 
     /**
      * Un arbre ne peut apparaître que sur une case encore en herbe,
-     * donc non labourée, sans culture, sans chemin, sans compost
+     * donc non labourée, sans culture, sans chemin, sans rivière, sans compost
      * et sans autre arbre.
      */
     public synchronized boolean canPlaceTreeAt(int gridX, int gridY) {
@@ -48,6 +48,7 @@ public class TreeManager {
                 || trees[gridX][gridY] != null
                 || grilleCulture.isLabouree(gridX, gridY)
                 || grilleCulture.hasPath(gridX, gridY)
+                || grilleCulture.hasRiver(gridX, gridY)
                 || grilleCulture.hasCompostAt(gridX, gridY)
                 || grilleCulture.getCulture(gridX, gridY) != null;
     }

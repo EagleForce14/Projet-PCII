@@ -105,23 +105,31 @@ public class MovementModel {
     }
 
     /**
-     * Helper :
-     * le contrôleur n'a pas a deviner la signification d'une comparaison d'enum.
+     * on préfère donner au contrôleur des méthodes explicites
+     * plutôt que de le laisser répéter des comparaisons d'énumérations partout.
      */
     public boolean isFencePlacementSelected() {
-        return selectedFacilityType != FacilityType.CLOTURE;
+        return !isSelectedFacility(FacilityType.CLOTURE);
     }
 
     public boolean isPathPlacementSelected() {
-        return selectedFacilityType == FacilityType.CHEMIN;
+        return isSelectedFacility(FacilityType.CHEMIN);
+    }
+
+    public boolean isRiverPlacementSelected() {
+        return isSelectedFacility(FacilityType.RIVIERE);
     }
 
     public boolean isCompostPlacementSelected() {
-        return selectedFacilityType == FacilityType.COMPOST;
+        return isSelectedFacility(FacilityType.COMPOST);
     }
 
     // Accesseur pour la vue (qui a besoin d'afficher TOUTES les unités)
     public List<Unit> getUnits() {
         return units;
+    }
+
+    private boolean isSelectedFacility(FacilityType type) {
+        return selectedFacilityType == type;
     }
 }

@@ -2,6 +2,7 @@ package controller;
 
 import java.awt.Point;
 import java.awt.Component;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -15,6 +16,8 @@ import model.culture.Culture;
 import model.culture.GrilleCulture;
 import model.culture.Stade;
 import model.culture.Type;
+import model.enemy.EnemyModel;
+import model.enemy.EnemyUnit;
 import model.movement.MovementModel;
 import model.movement.Unit;
 import model.management.Inventaire;
@@ -33,6 +36,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     private final Money playerMoney;
     private final Inventaire inventaire;
     private final MovementView movementView;
+    private final EnemyModel enemyModel;
     private final EnemyView enemyView;
     private final FieldPanel fieldPanel;
     private final InventoryStatusOverlay inventoryStatusOverlay;
@@ -40,7 +44,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     private final GamePauseController pauseController;
 
     // Constructeur de la classe
-    public MovementController(MovementModel model, MovementView view, EnemyView enemyView, SidebarPanel sidebarPanel,
+    public MovementController(MovementModel model, MovementView view, EnemyModel enemyModel, EnemyView enemyView, SidebarPanel sidebarPanel,
                               GrilleCulture grilleCulture, Money playerMoney, Inventaire inventaire,
                               FieldPanel fieldPanel, InventoryStatusOverlay inventoryStatusOverlay, ShopOverlay shopOverlay,
                               GameOverOverlay gameOverOverlay, Runnable restartGameAction) {
@@ -49,6 +53,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         this.playerMoney = playerMoney;
         this.inventaire = inventaire;
         this.movementView = view;
+        this.enemyModel = enemyModel;
         this.enemyView = enemyView;
         this.fieldPanel = fieldPanel;
         this.inventoryStatusOverlay = inventoryStatusOverlay;
@@ -303,6 +308,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
 
         stopPlayerMovement();
         fieldPanel.clearFencePreview();
+        fieldPanel.clearRiverPreview();
         fieldPanel.clearCompostInfluenceHighlight();
         shopOverlay.openShop();
     }
@@ -375,6 +381,124 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     }
 
     /**
+     * La rivière a un comportement un peu particulier :
+     * on ne peut justement pas demander au joueur de marcher sur la future case,
+     * puisque cette case deviendra bloquante.
+     *
+     * On assume donc clairement une pose à distance à la souris,
+     * avec preview sur la case entière.
+     */
+    private void updateRiverPlacementPreview(MouseEvent event) {
+        if (pauseController.isPaused()
+                || !model.isRiverPlacementSelected()
+                || inventaire.possedeInstallation(FacilityType.RIVIERE)) {
+            fieldPanel.clearRiverPreview();
+            return;
+        }
+
+        Point hoveredCell = getClickedFieldCell(event);
+        if (hoveredCell == null) {
+            fieldPanel.clearRiverPreview();
+            return;
+        }
+
+        fieldPanel.setRiverPreview(hoveredCell, canPlaceRiverAt(hoveredCell));
+    }
+
+    /**
+     * Un clic en mode rivière consomme le clic même si la case est invalide :
+     * le joueur est alors clairement dans un mode de pose,
+     * pas dans un mode d'inspection ou de sélection de lapin.
+     */
+    private boolean handleRiverPlacementClick(MouseEvent event) {
+        if (pauseController.isPaused() || !model.isRiverPlacementSelected()) {
+            return false;
+        }
+
+        Point clickedCell = getClickedFieldCell(event);
+        if (clickedCell == null || inventaire.possedeInstallation(FacilityType.RIVIERE)) {
+            updateRiverPlacementPreview(event);
+            return true;
+        }
+
+        if (!canPlaceRiverAt(clickedCell)) {
+            fieldPanel.setRiverPreview(clickedCell, false);
+            return true;
+        }
+
+        grilleCulture.placeRiver(clickedCell.x, clickedCell.y, inventaire);
+
+        if (inventaire.possedeInstallation(FacilityType.RIVIERE)) {
+            model.clearSelectedInventoryItem();
+            fieldPanel.clearRiverPreview();
+        } else {
+            fieldPanel.setRiverPreview(clickedCell, false);
+            updateRiverPlacementPreview(event);
+        }
+
+        inventoryStatusOverlay.repaint();
+        return true;
+    }
+
+    /**
+     * Toute la validation de pose de la rivière passe par ce helper.
+     * Cela évite d'avoir une règle dans la grille,
+     * une autre dans la preview,
+     * et encore une autre au clic final.
+     */
+    private boolean canPlaceRiverAt(Point targetCell) {
+        return targetCell != null
+                && fieldPanel.isFarmableCell(targetCell)
+                && grilleCulture.canPlaceRiver(targetCell.x, targetCell.y)
+                && !isCellOccupiedByPlayer(targetCell)
+                && !isCellOccupiedByEnemy(targetCell);
+    }
+
+    /**
+     * On refuse la pose si le joueur mord encore sur la case visée.
+     * Sinon on pourrait créer une case bloquante directement sous lui.
+     */
+    private boolean isCellOccupiedByPlayer(Point targetCell) {
+        Unit player = model.getPlayerUnit();
+        return player != null && doesCenteredEntityIntersectCell(targetCell, player.getX(), player.getY(), Unit.SIZE);
+    }
+
+    /**
+     * Même principe pour les lapins :
+     * une rivière ne doit jamais apparaître sous un ennemi en train de bouger.
+     */
+    private boolean isCellOccupiedByEnemy(Point targetCell) {
+        if (enemyModel == null) {
+            return false;
+        }
+
+        for (EnemyUnit enemy : enemyModel.getEnemyUnits()) {
+            if (doesCenteredEntityIntersectCell(targetCell, enemy.getX(), enemy.getY(), EnemyUnit.getCollisionSize())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Les positions des entités sont stockées dans le repère logique centré du champ.
+     * On reconstruit donc ici leur hitbox dans ce même repère,
+     * puis on la compare à la case ciblée.
+     */
+    private boolean doesCenteredEntityIntersectCell(Point targetCell, double centerX, double centerY, int hitboxSize) {
+        Rectangle targetCellBounds = fieldPanel.getLogicalCellBounds(targetCell.x, targetCell.y);
+        if (targetCellBounds == null) {
+            return false;
+        }
+
+        int left = (int) Math.round(centerX - (hitboxSize / 2.0));
+        int top = (int) Math.round(centerY - (hitboxSize / 2.0));
+        Rectangle entityBounds = new Rectangle(left, top, hitboxSize, hitboxSize);
+        return targetCellBounds.intersects(entityBounds);
+    }
+
+    /**
      * Un clic sur l'inventaire choisit explicitement l'action en attente.
      * Recliquer sur le slot déjà sélectionné annule simplement ce mode.
      *
@@ -425,6 +549,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             // Quel que soit le cas, un clic sur une graine doit faire sortir
             // du mode clôture, donc on retire le preview éventuel.
             fieldPanel.clearFencePreview();
+            fieldPanel.clearRiverPreview();
             fieldPanel.clearCompostInfluenceHighlight();
             // On redessine la barre pour refléter immédiatement le changement de sélection.
             inventoryStatusOverlay.repaint();
@@ -454,6 +579,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             // À partir du moment où un outil est choisi, l'overlay doit refléter
             // le nouvel état, et le focus doit retourner au jeu.
             fieldPanel.clearFencePreview();
+            fieldPanel.clearRiverPreview();
             fieldPanel.clearCompostInfluenceHighlight();
             inventoryStatusOverlay.repaint();
             movementView.requestFocusInWindow();
@@ -550,6 +676,11 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             return;
         }
 
+        if (handleRiverPlacementClick(e)) {
+            movementView.requestFocusInWindow();
+            return;
+        }
+
         if (handleCompostInspection(e)) {
             movementView.requestFocusInWindow();
             return;
@@ -577,11 +708,13 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     @Override
     public void mouseEntered(MouseEvent e) {
         updateFencePlacementPreview(e);
+        updateRiverPlacementPreview(e);
     }
 
     @Override
     public void mouseExited(MouseEvent e) {
         fieldPanel.clearFencePreview();
+        fieldPanel.clearRiverPreview();
     }
 
     @Override
@@ -590,6 +723,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     @Override
     public void mouseMoved(MouseEvent e) {
         updateFencePlacementPreview(e);
+        updateRiverPlacementPreview(e);
     }
 
     /**

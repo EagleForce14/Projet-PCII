@@ -26,9 +26,15 @@ public final class TerrainTileFactory {
     }
 
     public static Image[] createSoilTiles(int pixelSize) {
-        return new Image[] {
-                createReferenceSoilTile(pixelSize)
-        };
+        Image soilTile = ImageLoader.load("/assets/Terre.png");
+        if (soilTile != null) {
+            return new Image[] { soilTile };
+        }
+        return null;
+//
+//        return new Image[] {
+//                createReferenceSoilTile(pixelSize)
+//        };
     }
 
     /**
@@ -37,6 +43,17 @@ public final class TerrainTileFactory {
     public static Image[] createPathTiles(int pixelSize) {
         return new Image[] {
                 ImageLoader.load("/assets/stone.png")
+        };
+    }
+
+    /**
+     * La rivière repose uniquement sur son sprite dédié.
+     * On évite volontairement toute génération procédurale ici
+     * pour rester parfaitement fidèle à l'image fournie.
+     */
+    public static Image[] createRiverTiles(int pixelSize) {
+        return new Image[] {
+                ImageLoader.load("/assets/river.png")
         };
     }
 
@@ -378,65 +395,65 @@ public final class TerrainTileFactory {
         return result;
     }
 
-    /**
-     * La terre reste une tuile fixe 16x16.
-     *
-     * Ici la stabilite du motif est voulue :
-     * l'utilisateur a valide un look proche de cette reference,
-     * donc on ne cherche pas de generation procedurale.
-     */
-    private static BufferedImage createReferenceSoilTile(int pixelSize) {
-        Color darkest = new Color(67, 43, 29);
-        Color dark = new Color(92, 58, 38);
-        Color mid = new Color(121, 78, 49);
-        Color warm = new Color(156, 103, 66);
-        Color light = new Color(191, 133, 86);
-
-        String[] pattern = {
-                "CCBBAACDCCBBAADC",
-                "BBAADDCCBBAACCCB",
-                "CBADDCBBCCDDBBAC",
-                "DBCCBAADCCBBAADC",
-                "CCBBAADDBCCCBBAA",
-                "BAADCCBBAADCCCBD",
-                "ADCCBBADCCBBAADC",
-                "CCBBADCCBBAADCCB",
-                "BBAADCCCBBAADDBC",
-                "CCDBBAADCCBBAACC",
-                "BAADCCBBAADCCBBD",
-                "ADCCBBAADCCCBBAA",
-                "CCBBAADCCBBAADDC",
-                "BBAADCCCBBAACCCB",
-                "CBDCCBBAADCCBBAD",
-                "DCCBBAADCCBBAACC"
-        };
-
-        BufferedImage base = createTransparentTile(16);
-        for (int y = 0; y < pattern.length; y++) {
-            String row = pattern[y];
-            for (int x = 0; x < row.length(); x++) {
-                paintPixel(base, x, y, getSoilColor(row.charAt(x), darkest, dark, mid, warm, light));
-            }
-        }
-
-        return scaleNearest(base, pixelSize);
-    }
-
-
-    private static Color getSoilColor(char code, Color darkest, Color dark, Color mid, Color warm, Color light) {
-        switch (code) {
-            case 'A':
-                return light;
-            case 'B':
-                return warm;
-            case 'C':
-                return mid;
-            case 'D':
-                return dark;
-            default:
-                return darkest;
-        }
-    }
+//    /**
+//     * La terre reste une tuile fixe 16x16.
+//     *
+//     * Ici la stabilite du motif est voulue :
+//     * l'utilisateur a valide un look proche de cette reference,
+//     * donc on ne cherche pas de generation procedurale.
+//     */
+//    private static BufferedImage createReferenceSoilTile(int pixelSize) {
+//        Color darkest = new Color(67, 43, 29);
+//        Color dark = new Color(92, 58, 38);
+//        Color mid = new Color(121, 78, 49);
+//        Color warm = new Color(156, 103, 66);
+//        Color light = new Color(191, 133, 86);
+//
+//        String[] pattern = {
+//                "CCBBAACDCCBBAADC",
+//                "BBAADDCCBBAACCCB",
+//                "CBADDCBBCCDDBBAC",
+//                "DBCCBAADCCBBAADC",
+//                "CCBBAADDBCCCBBAA",
+//                "BAADCCBBAADCCCBD",
+//                "ADCCBBADCCBBAADC",
+//                "CCBBADCCBBAADCCB",
+//                "BBAADCCCBBAADDBC",
+//                "CCDBBAADCCBBAACC",
+//                "BAADCCBBAADCCBBD",
+//                "ADCCBBAADCCCBBAA",
+//                "CCBBAADCCBBAADDC",
+//                "BBAADCCCBBAACCCB",
+//                "CBDCCBBAADCCBBAD",
+//                "DCCBBAADCCBBAACC"
+//        };
+//
+//        BufferedImage base = createTransparentTile(16);
+//        for (int y = 0; y < pattern.length; y++) {
+//            String row = pattern[y];
+//            for (int x = 0; x < row.length(); x++) {
+//                paintPixel(base, x, y, getSoilColor(row.charAt(x), darkest, dark, mid, warm, light));
+//            }
+//        }
+//
+//        return scaleNearest(base, pixelSize);
+//    }
+//
+//
+//    private static Color getSoilColor(char code, Color darkest, Color dark, Color mid, Color warm, Color light) {
+//        switch (code) {
+//            case 'A':
+//                return light;
+//            case 'B':
+//                return warm;
+//            case 'C':
+//                return mid;
+//            case 'D':
+//                return dark;
+//            default:
+//                return darkest;
+//        }
+//    }
 
     private static BufferedImage scaleNearest(BufferedImage source, int pixelSize) {
         if (pixelSize == source.getWidth()) {
