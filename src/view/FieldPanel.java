@@ -78,7 +78,6 @@ public class FieldPanel extends JPanel {
     private final Image[] grassTileImages;
     private final Image[] tilledTileImages;
     private final Image[] pathTileImages;
-    private final Image[] stoneWithGrassTileImages;
     private final Image[] riverTileImages;
 
     // Images associées aux différents stades visuels d'une culture.
@@ -116,8 +115,7 @@ public class FieldPanel extends JPanel {
         this.treeManager = treeManager;
         this.grassTileImages = TerrainTileFactory.createGrassTiles(PIXEL_ART_TILE_SIZE);
         this.tilledTileImages = TerrainTileFactory.createSoilTiles(PIXEL_ART_TILE_SIZE);
-        this.pathTileImages = TerrainTileFactory.createPathTiles(PIXEL_ART_TILE_SIZE);
-        this.stoneWithGrassTileImages = TerrainTileFactory.createStoneWithGrass(PIXEL_ART_TILE_SIZE);
+        this.pathTileImages = TerrainTileFactory.createStoneWithGrass(PIXEL_ART_TILE_SIZE);
         this.riverTileImages = TerrainTileFactory.createRiverTiles(PIXEL_ART_TILE_SIZE);
         this.jeunePousseImage = ImageLoader.load("/assets/jeune_pousse.png");
         this.croissanceInterImage = ImageLoader.load("/assets/croissance_inter.png");
@@ -759,7 +757,7 @@ public class FieldPanel extends JPanel {
     private Image getGroundTile(int gridX, int gridY) {
         Image[] variants;
         if (isBlockedByBarn(gridX, gridY)) {
-            variants = stoneWithGrassTileImages;
+            variants = pathTileImages;
         } else if (grilleCulture.hasRiver(gridX, gridY)) {
             variants = riverTileImages;
         } else if (grilleCulture.hasPath(gridX, gridY)) {

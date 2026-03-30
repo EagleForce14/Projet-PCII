@@ -38,16 +38,8 @@ public final class TerrainTileFactory {
     }
 
     /**
-     * Tuile de chemin en pierre chargée depuis une image.
-     */
-    public static Image[] createPathTiles(int pixelSize) {
-        return new Image[] {
-                ImageLoader.load("/assets/stone.png")
-        };
-    }
-
-    /**
-     * Sol mixte pierre + herbe utilisé autour de la grange.
+     * Sol mixte pierre + herbe partagé par les chemins
+     * et par la zone désactivée autour de la grange.
      */
     public static Image[] createStoneWithGrass(int pixelSize) {
         return new Image[] {

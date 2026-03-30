@@ -25,7 +25,7 @@ public final class ProductPixelArt {
     private static final int PATH_ART_MAX_SIDE = 7;
     private static final int RIVER_ART_MAX_SIDE = 7;
     private static final int COMPOST_ART_MAX_SIDE = 6;
-    private static final Image PATH_IMAGE = ImageLoader.load("/assets/stone.png");
+    private static final Image PATH_IMAGE = ImageLoader.load("/assets/stone_with_grass.png");
     private static final Image RIVER_IMAGE = ImageLoader.load("/assets/river.png");
     private static final Image COMPOST_IMAGE = ImageLoader.load("/assets/Compost.png");
 
