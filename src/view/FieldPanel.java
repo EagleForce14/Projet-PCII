@@ -229,8 +229,9 @@ public class FieldPanel extends JPanel {
     }
 
     /**
-     * Le compost étant unique dans la partie, un simple booléen suffit :
-     * soit on montre sa zone d'effet, soit on la cache.
+     * L'overlay de compost reste volontairement binaire :
+     * soit on montre les zones boostées par les composts posés,
+     * soit on les cache toutes d'un coup.
      */
     public void toggleCompostInfluenceHighlight() {
         compostInfluenceVisible = !compostInfluenceVisible;
@@ -616,7 +617,7 @@ public class FieldPanel extends JPanel {
         CellSide bestSide = null;
         int bestDistance = Integer.MAX_VALUE;
         for (CellSide side : CellSide.values()) {
-            if (!grilleCulture.canPlaceFence(cell.x, cell.y, side)) {
+            if (grilleCulture.canPlaceFence(cell.x, cell.y, side)) {
                 continue;
             }
 
@@ -1137,8 +1138,8 @@ public class FieldPanel extends JPanel {
     }
 
     /**
-     * Quand le joueur clique sur le compost,
-     * on affiche les cases de terre actuellement boostées autour de lui.
+     * Quand le joueur clique sur un compost,
+     * on affiche toutes les cases de terre actuellement boostées par les composts posés.
      */
     private void drawCompostInfluenceOverlay(Graphics2D g2) {
         if (!compostInfluenceVisible) {

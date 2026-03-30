@@ -897,9 +897,9 @@ public class ShopOverlay extends JPanel {
                 return "Bloque le passage\nPousse +30 % à proximité\nFlétrissement +30 % à proximité";
             case COMPOST:
                 if (shop.isCompostRestockUnlocked()) {
-                    return "Rendement x2 des cultures proches";
+                    return "Rendement x2 des cultures proches\nMaximum 2 sur la carte";
                 }
-                return "Rendement x2 des cultures proches\nLe produit sera réapprovisionné\nau jour 10.";
+                return "Rendement x2 des cultures proches\n2e compost disponible\nau jour 10";
             default:
                 return "";
         }

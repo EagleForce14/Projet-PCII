@@ -66,11 +66,13 @@ public class GrilleCulture {
     private final int[][] fenceMasks;
 
     /*
-     * Le compost est volontairement unique dans la partie.
-     * Au lieu d'un tableau par case, un simple point suffit donc.
-     * null signifie "aucun compost encore pose".
+     * Les composts sont peu nombreux par design :
+     * on en autorise au maximum deux sur la map.
+     *
+     * Une petite liste de positions reste donc plus simple et plus lisible
+     * qu'une matrice dédiée supplémentaire.
      */
-    private Point compostCell;
+    private final List<Point> compostCells;
 
     /*
      * Les chemins occupent la surface complete d'une case.
@@ -91,9 +93,14 @@ public class GrilleCulture {
     /*
      * Portée choisie pour le compost.
      * On utilise ici une distance de Manhattan :
-     * le bonus forme un "diamant" lisible autour du compost.
+     * le bonus forme un "diamant" lisible autour de chaque compost.
      */
     private static final int COMPOST_RANGE = 2;
+
+    /*
+     * au total, la ferme ne peut jamais accueillir plus de deux composts posés en même temps.
+     */
+    private static final int MAX_COMPOST_COUNT = 2;
 
     /*
      * Pour la rivière, on choisit un voisinage très proche :
@@ -116,7 +123,7 @@ public class GrilleCulture {
         this.gestionnaireObjectifs = gestionnaireObjectifs;
         this.grille = new ZoneCulture[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         this.fenceMasks = new int[LARGEUR_GRILLE][HAUTEUR_GRILLE];
-        this.compostCell = null;
+        this.compostCells = new ArrayList<>();
         this.pathCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         this.riverCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         // Toute la map démarre en herbe :
@@ -171,18 +178,18 @@ public class GrilleCulture {
                 || !isLabouree(x, y)
                 || hasPath(x, y)
                 || hasFence(x, y, side)) {
-            return false;
+            return true;
         }
 
         int neighborX = x + side.getDeltaX();
         int neighborY = y + side.getDeltaY();
         if (!estDansGrille(neighborX, neighborY)) {
-            return true;
+            return false;
         }
 
         CellSide oppositeSide = side.opposite();
         if (oppositeSide == null || hasFence(neighborX, neighborY, oppositeSide)) {
-            return false;
+            return true;
         }
 
         /*
@@ -194,10 +201,10 @@ public class GrilleCulture {
          * il reste visuellement logique d'avoir une clôture entre terre et chemin.
          */
         if (hasPath(neighborX, neighborY)) {
-            return true;
+            return false;
         }
 
-        return !isLabouree(neighborX, neighborY);
+        return isLabouree(neighborX, neighborY);
     }
 
     /**
@@ -210,7 +217,7 @@ public class GrilleCulture {
         if (inventaire == null || inventaire.possedeInstallation(FacilityType.CLOTURE)) {
             throw new IllegalStateException("Aucune cloture n'est disponible dans l'inventaire.");
         }
-        if (!canPlaceFence(x, y, side)) {
+        if (canPlaceFence(x, y, side)) {
             throw new IllegalStateException("Cette cloture doit etre posee sur le bord libre d'une case de terre.");
         }
 
@@ -268,19 +275,26 @@ public class GrilleCulture {
     }
 
     /**
-     * Dit si un compost est deja pose quelque part sur la map.
-     * Comme il est unique, cela revient a verifier si le point existe.
+     * Dit si au moins un compost est déjà posé quelque part sur la map.
      */
     public boolean hasCompost() {
-        return compostCell != null;
+        return !compostCells.isEmpty();
     }
 
     /**
-     * Expose la position du compost en la copiant,
+     * Expose les positions des composts en les recopiant,
      * pour éviter qu'un appelant modifie l'état interne de la grille.
      */
-    public Point getCompostCell() {
-        return compostCell == null ? null : new Point(compostCell);
+    public List<Point> getCompostCells() {
+        return new ArrayList<>(compostCells);
+    }
+
+    /**
+     * Petit helper de lecture pratique pour les règles d'interface
+     * qui veulent afficher explicitement combien de composts sont déjà posés.
+     */
+    public int getCompostCount() {
+        return compostCells.size();
     }
 
     /**
@@ -288,7 +302,7 @@ public class GrilleCulture {
      * quand ils veulent savoir si la case cliquée correspond au compost.
      */
     public boolean hasCompostAt(int x, int y) {
-        return compostCell != null && compostCell.x == x && compostCell.y == y;
+        return findCompostIndexAt(x, y) >= 0;
     }
 
     /**
@@ -362,14 +376,15 @@ public class GrilleCulture {
      * Le compost se pose seulement sur de l'herbe libre.
      *
      * Les règles :
-     * - un seul compost pour toute la partie,
+     * - pas plus de deux composts posés en même temps,
      * - pas sur une case deja labourée,
      * - pas sur un chemin,
      * - pas sur une case deja occupee.
      */
     public boolean canPlaceCompost(int x, int y) {
         return estDansGrille(x, y)
-                && !hasCompost()
+                && getCompostCount() < MAX_COMPOST_COUNT
+                && !hasCompostAt(x, y)
                 && !hasPath(x, y)
                 && !hasRiver(x, y)
                 && !isLabouree(x, y)
@@ -377,7 +392,9 @@ public class GrilleCulture {
     }
 
     /**
-     * Pose le compost puis consomme l'objet de l'inventaire.
+     * Pose un compost puis consomme l'objet de l'inventaire.
+     * On garde volontairement la validation ici, pour que le contrôleur et l'interface
+     * profitent exactement des mêmes règles que le coeur du gameplay.
      */
     public void placeCompost(int x, int y, Inventaire inventaire) {
         if (inventaire == null || inventaire.possedeInstallation(FacilityType.COMPOST)) {
@@ -387,7 +404,7 @@ public class GrilleCulture {
             throw new IllegalStateException("Le compost doit etre pose sur une case d'herbe libre.");
         }
 
-        compostCell = new Point(x, y);
+        compostCells.add(new Point(x, y));
         inventaire.UseInstallation(FacilityType.COMPOST);
     }
 
@@ -398,11 +415,12 @@ public class GrilleCulture {
         if (inventaire == null) {
             throw new IllegalStateException("Impossible de remiser le compost sans inventaire.");
         }
-        if (!hasCompostAt(x, y)) {
+        int compostIndex = findCompostIndexAt(x, y);
+        if (compostIndex < 0) {
             throw new IllegalStateException("Aucun compost n'est posé sur cette case.");
         }
 
-        compostCell = null;
+        compostCells.remove(compostIndex);
         inventaire.ajoutInstallation(FacilityType.COMPOST, 1);
     }
 
@@ -415,12 +433,17 @@ public class GrilleCulture {
      * mais cette herbe ne gagne rien tant qu'elle n'est pas transformée en terre.
      */
     public boolean isCellBoostedByCompost(int x, int y) {
-        if (!estDansGrille(x, y) || !isLabouree(x, y) || compostCell == null) {
+        if (!estDansGrille(x, y) || !isLabouree(x, y) || compostCells.isEmpty()) {
             return false;
         }
 
-        int distance = Math.abs(x - compostCell.x) + Math.abs(y - compostCell.y);
-        return distance <= COMPOST_RANGE;
+        for (Point compostCell : compostCells) {
+            int distance = Math.abs(x - compostCell.x) + Math.abs(y - compostCell.y);
+            if (distance <= COMPOST_RANGE) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -429,7 +452,7 @@ public class GrilleCulture {
      */
     public List<Point> getCompostAffectedSoilCells() {
         List<Point> affectedCells = new ArrayList<>();
-        if (compostCell == null) {
+        if (compostCells.isEmpty()) {
             return affectedCells;
         }
 
@@ -442,6 +465,20 @@ public class GrilleCulture {
         }
 
         return affectedCells;
+    }
+
+    /**
+     * Comme on ne gère que deux composts au maximum,
+     * une petite boucle est plus claire qu'une structure plus lourde.
+     */
+    private int findCompostIndexAt(int x, int y) {
+        for (int index = 0; index < compostCells.size(); index++) {
+            Point compostCell = compostCells.get(index);
+            if (compostCell.x == x && compostCell.y == y) {
+                return index;
+            }
+        }
+        return -1;
     }
 
     /**

@@ -136,7 +136,7 @@ public class SidebarPanel extends JPanel {
         pathActionRow.setVisible(false);
 
         /*
-         * Le compost est un boost important et unique.
+         * Le compost est un boost important et rare.
          * On lui donne donc un bouton plus "spécial" visuellement
          * pour qu'on sente immédiatement qu'il ne joue pas le même rôle qu'un simple chemin.
          */
@@ -397,8 +397,8 @@ public class SidebarPanel extends JPanel {
 
     /**
      * Le compost se pose lui aussi sur une case d'herbe libre,
-     * mais avec une contrainte de plus :
-     * il est unique sur toute la partie.
+     * avec une limite simple à retenir :
+     * pas plus de deux composts sur la map en même temps.
      */
     private boolean canPlaceCompostActiveCell() {
         Point activeFieldCell = movementModel.getActiveFieldCell();
