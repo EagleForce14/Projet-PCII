@@ -1,38 +1,48 @@
 package model.movement;
 
+import java.awt.Dimension;
 import java.awt.Rectangle;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+
+import javax.imageio.ImageIO;
 
 /**
  * Représente la grange, un obstacle fixe situé en haut du champ.
  * Les entités (Unité, Ennemis) ne peuvent pas la traverser.
  */
 public class Barn {
-    // Dimensions logiques adaptées au rendu visuel
-    public static final int WIDTH = 290;
-    public static final int HEIGHT = 290;
+    private static final String ASSET_PATH = "/assets/barn.png";
+    private static final double SPRITE_SCALE = 0.30;
+    private static final double HITBOX_WIDTH_RATIO = 0.92;
+    private static final double HITBOX_HEIGHT_RATIO = 0.8;
+    private static final double HITBOX_BOTTOM_INSET_RATIO = 0.10;
+    private static final Dimension SPRITE_SIZE = loadSpriteSize();
+
+    // La taille affichée suit désormais les dimensions réelles du PNG
+    // pour éviter d'écraser une image plus large ou plus plate.
+    public static final int WIDTH = Math.max(1, (int) Math.round(SPRITE_SIZE.width * SPRITE_SCALE));
+    public static final int HEIGHT = Math.max(1, (int) Math.round(SPRITE_SIZE.height * SPRITE_SCALE));
     
-    // Position x pour être centrée horizontalement (0 est le centre)
-    public static final int X = -WIDTH / 2 + 90;
-    // Position y de la grange.
-    // On la descend un peu pour qu'elle soit moins collée au haut de l'écran.
-    public static final int Y = -420;
+    // Position x pour être centrée horizontalement (0 est le centre).
+    public static final int X = -WIDTH / 2;
+    // On la garde un peu dégagée du bord haut, mais plus basse qu'avant.
+    public static final int Y = -400;
 
     /**
      * Retourne la zone de collision (hitbox).
-     * Celle-ci est réduite par rapport à la taille globale pour 
-     * correspondre au mieux aux contours réels (murs de la grange) sur le PNG.
+     * Celle-ci reste plus étroite et plus basse que l'image entière :
+     * le joueur et les lapins ne doivent pas heurter le toit ou le vide autour du sprite.
+     *
      * @return Rectangle représentant les limites infranchissables de la grange
      */
     public static Rectangle getCollisionBounds() {
-        int marginLeft = 24;
-        int marginRight = 24;
-        int marginTop = 44;
-        int marginBottom = 64;
-
-        int hitboxWidth = WIDTH - marginLeft - marginRight;
-        int hitboxHeight = HEIGHT - marginTop - marginBottom;
-        int hitboxX = X + marginLeft; 
-        int hitboxY = Y + marginTop;
+        int hitboxWidth = Math.max(1, (int) Math.round(WIDTH * HITBOX_WIDTH_RATIO));
+        int hitboxHeight = Math.max(1, (int) Math.round(HEIGHT * HITBOX_HEIGHT_RATIO));
+        int hitboxX = X + ((WIDTH - hitboxWidth) / 2);
+        int hitboxY = Y + HEIGHT - hitboxHeight - Math.max(1, (int) Math.round(HEIGHT * HITBOX_BOTTOM_INSET_RATIO));
         
         return new Rectangle(hitboxX, hitboxY, hitboxWidth, hitboxHeight);
     }
@@ -53,5 +63,31 @@ public class Barn {
      */
     public static boolean canOccupyCenteredBox(double centerX, double centerY, int width, int height) {
         return !collidesWithCenteredBox(centerX, centerY, width, height);
+    }
+
+    private static Dimension loadSpriteSize() {
+        BufferedImage image = null;
+
+        try {
+            URL imageUrl = Barn.class.getResource(ASSET_PATH);
+            if (imageUrl != null) {
+                image = ImageIO.read(imageUrl);
+            } else {
+                File file = new File("src" + ASSET_PATH);
+                if (file.exists()) {
+                    image = ImageIO.read(file);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Impossible de lire les dimensions de la grange : " + ASSET_PATH);
+            e.printStackTrace();
+        }
+
+        if (image != null) {
+            return new Dimension(image.getWidth(), image.getHeight());
+        }
+
+        // Fallback historique : on retombe sur l'équivalent visuel d'environ 290x290.
+        return new Dimension(967, 967);
     }
 }

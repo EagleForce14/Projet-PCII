@@ -8,7 +8,7 @@ import java.awt.Rectangle;
  */
 public final class TreeGeometry {
     public static final double TRUNK_TILE_SCALE = 0.80;
-    public static final double MATURE_TREE_TILE_SCALE = 3.85;
+    public static final double MATURE_TREE_TILE_SCALE = 3.65;
     public static final double MATURE_TREE_ANCHOR_X_RATIO = 0.50;
     public static final double MATURE_TREE_ANCHOR_Y_RATIO = 0.76;
 

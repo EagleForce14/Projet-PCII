@@ -44,6 +44,9 @@ public class FieldObstacleMap {
         if (treeManager.canPlaceTreeAt(gridX, gridY)) {
             return false;
         }
+        if (fieldPanel.isBlockedByBarn(gridX, gridY)) {
+            return false;
+        }
 
         Rectangle cellBounds = fieldPanel.getLogicalCellBounds(gridX, gridY);
         Rectangle candidateBounds = TreeGeometry.buildAnchoredScaledBounds(
@@ -111,6 +114,10 @@ public class FieldObstacleMap {
         int top = (int) Math.round(centerY - (height / 2.0));
         Rectangle entityBounds = new Rectangle(left, top, width, height);
 
+        if (intersectsBarnCourtyard(entityBounds)) {
+            return false;
+        }
+
         if (intersectsPlacedRiver(entityBounds)) {
             return false;
         }
@@ -152,6 +159,10 @@ public class FieldObstacleMap {
             return false;
         }
 
+        if (fieldPanel.isBlockedByBarn(gridX, gridY)) {
+            return true;
+        }
+
         if (fieldPanel.getGrilleCulture().hasRiver(gridX, gridY)) {
             return true;
         }
@@ -170,6 +181,11 @@ public class FieldObstacleMap {
         }
 
         return false;
+    }
+
+    private boolean intersectsBarnCourtyard(Rectangle entityBounds) {
+        Rectangle barnCourtyardBounds = fieldPanel.getBarnCourtyardLogicalBounds();
+        return barnCourtyardBounds != null && barnCourtyardBounds.intersects(entityBounds);
     }
 
     private boolean intersectsPlacedRiver(Rectangle entityBounds) {

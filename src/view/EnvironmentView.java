@@ -47,6 +47,7 @@ public class EnvironmentView extends JPanel {
 
         if (barnImage != null) {
             Rectangle barnBounds = fieldPanel.getBarnScreenBounds();
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
             g2.drawImage(barnImage, barnBounds.x, barnBounds.y, barnBounds.width, barnBounds.height, null);
         }
 

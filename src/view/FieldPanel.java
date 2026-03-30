@@ -65,14 +65,6 @@ public class FieldPanel extends JPanel {
     private static final Color FENCE_SLAT_DARK = new Color(174, 78, 18);
     private static final Color FENCE_WOOD_SHADOW = new Color(73, 46, 25, 95);
 
-    /*
-     * Constante pour gérer les cases inaccessibles trop proches de la grange.
-     * une case n'est interdite que si une portion significative de sa surface
-     * est réellement recouverte par la hitbox de collision de la grange.
-     * On applique un pourcentage de 35%.
-     */
-    private static final double BARN_BLOCKED_CELL_RATIO = 0.35;
-
     // Vitesse de pulsation de l'animation d'arrosage.
     // Plus la valeur est grande, plus le halo "respire" vite.
     private static final double WATER_PULSE_SPEED = 0.008;
@@ -86,6 +78,7 @@ public class FieldPanel extends JPanel {
     private final Image[] grassTileImages;
     private final Image[] tilledTileImages;
     private final Image[] pathTileImages;
+    private final Image[] plankTileImages;
     private final Image[] riverTileImages;
 
     // Images associées aux différents stades visuels d'une culture.
@@ -124,6 +117,7 @@ public class FieldPanel extends JPanel {
         this.grassTileImages = TerrainTileFactory.createGrassTiles(PIXEL_ART_TILE_SIZE);
         this.tilledTileImages = TerrainTileFactory.createSoilTiles(PIXEL_ART_TILE_SIZE);
         this.pathTileImages = TerrainTileFactory.createPathTiles(PIXEL_ART_TILE_SIZE);
+        this.plankTileImages = TerrainTileFactory.createPlankTiles(PIXEL_ART_TILE_SIZE);
         this.riverTileImages = TerrainTileFactory.createRiverTiles(PIXEL_ART_TILE_SIZE);
         this.jeunePousseImage = ImageLoader.load("/assets/jeune_pousse.png");
         this.croissanceInterImage = ImageLoader.load("/assets/croissance_inter.png");
@@ -436,15 +430,22 @@ public class FieldPanel extends JPanel {
             return false;
         }
 
-        Rectangle barnBounds = getBarnLogicalBounds();
-        Rectangle overlap = logicalCellBounds.intersection(barnBounds);
-        if (overlap.isEmpty()) {
+        Rectangle barnCourtyardBounds = getBarnCourtyardLogicalBounds();
+        if (barnCourtyardBounds == null || !barnCourtyardBounds.intersects(logicalCellBounds)) {
             return false;
         }
 
-        double overlapArea = overlap.getWidth() * overlap.getHeight();
-        double cellArea = logicalCellBounds.getWidth() * logicalCellBounds.getHeight();
-        return overlapArea >= cellArea * BARN_BLOCKED_CELL_RATIO;
+        Rectangle barnSpriteBounds = getBarnLogicalDrawBounds();
+        if (barnSpriteBounds != null && barnSpriteBounds.intersects(logicalCellBounds)) {
+            return true;
+        }
+
+        /*
+         * La cour de planches autour de la grange doit elle aussi désactiver les cases.
+         * Comme l'utilisateur a demandé d'inclure les cases partiellement visibles,
+         * toute intersection avec cette bordure suffit ici.
+         */
+        return true;
     }
 
     public boolean isFarmableCell(Point cell) {
@@ -479,16 +480,30 @@ public class FieldPanel extends JPanel {
         return buildLogicalCellBounds(gridX, gridY, getFieldBounds());
     }
 
-    private Rectangle getBarnLogicalBounds() {
-        return Barn.getCollisionBounds();
-    }
-
     /**
-     * Expose le rectangle logique associé à la grange.
+     * Expose le rectangle logique associé au sprite complet de la grange.
      * Cela sert aux règles visuelles de placement des arbres, plus strictes que la seule hitbox.
      */
     public Rectangle getBarnLogicalDrawBounds() {
         return new Rectangle(Barn.X, Barn.Y, Barn.WIDTH, Barn.HEIGHT);
+    }
+
+    /**
+     * Cour de service autour de la grange :
+     * elle colle à la grange, mais on retire volontairement la première rangée du haut
+     * pour éviter d'afficher des cases de planches au-dessus du toit.
+     */
+    public Rectangle getBarnCourtyardLogicalBounds() {
+        Rectangle barnDrawBounds = getBarnLogicalDrawBounds();
+        Rectangle fieldBounds = getFieldBounds();
+        int tileSize = getTileSize(fieldBounds);
+        int topInset = Math.min(tileSize, Math.max(0, barnDrawBounds.height));
+        return new Rectangle(
+                barnDrawBounds.x,
+                barnDrawBounds.y + topInset,
+                barnDrawBounds.width,
+                Math.max(0, barnDrawBounds.height - topInset)
+        );
     }
 
     private Point getLogicalCellCenter(int gridX, int gridY, Rectangle fieldBounds) {
@@ -743,7 +758,9 @@ public class FieldPanel extends JPanel {
      */
     private Image getGroundTile(int gridX, int gridY) {
         Image[] variants;
-        if (grilleCulture.hasRiver(gridX, gridY)) {
+        if (isBlockedByBarn(gridX, gridY)) {
+            variants = plankTileImages;
+        } else if (grilleCulture.hasRiver(gridX, gridY)) {
             variants = riverTileImages;
         } else if (grilleCulture.hasPath(gridX, gridY)) {
             variants = pathTileImages;

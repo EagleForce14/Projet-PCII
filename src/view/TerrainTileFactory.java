@@ -47,6 +47,16 @@ public final class TerrainTileFactory {
     }
 
     /**
+     * Zone de service autour de la grange.
+     * On la rend avec les planches fournies par l'utilisateur.
+     */
+    public static Image[] createStoneWithGrassTiles(int pixelSize) {
+        return new Image[] {
+                ImageLoader.load("/assets/stone_with_grass.png")
+        };
+    }
+
+    /**
      * La rivière repose uniquement sur son sprite dédié.
      * On évite volontairement toute génération procédurale ici
      * pour rester parfaitement fidèle à l'image fournie.
