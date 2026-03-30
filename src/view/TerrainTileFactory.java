@@ -47,10 +47,9 @@ public final class TerrainTileFactory {
     }
 
     /**
-     * Zone de service autour de la grange.
-     * On la rend avec les planches fournies par l'utilisateur.
+     * Sol mixte pierre + herbe utilisé autour de la grange.
      */
-    public static Image[] createStoneWithGrassTiles(int pixelSize) {
+    public static Image[] createStoneWithGrass(int pixelSize) {
         return new Image[] {
                 ImageLoader.load("/assets/stone_with_grass.png")
         };

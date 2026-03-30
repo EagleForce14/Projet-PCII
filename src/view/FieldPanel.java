@@ -78,7 +78,7 @@ public class FieldPanel extends JPanel {
     private final Image[] grassTileImages;
     private final Image[] tilledTileImages;
     private final Image[] pathTileImages;
-    private final Image[] plankTileImages;
+    private final Image[] stoneWithGrassTileImages;
     private final Image[] riverTileImages;
 
     // Images associées aux différents stades visuels d'une culture.
@@ -117,7 +117,7 @@ public class FieldPanel extends JPanel {
         this.grassTileImages = TerrainTileFactory.createGrassTiles(PIXEL_ART_TILE_SIZE);
         this.tilledTileImages = TerrainTileFactory.createSoilTiles(PIXEL_ART_TILE_SIZE);
         this.pathTileImages = TerrainTileFactory.createPathTiles(PIXEL_ART_TILE_SIZE);
-        this.plankTileImages = TerrainTileFactory.createPlankTiles(PIXEL_ART_TILE_SIZE);
+        this.stoneWithGrassTileImages = TerrainTileFactory.createStoneWithGrass(PIXEL_ART_TILE_SIZE);
         this.riverTileImages = TerrainTileFactory.createRiverTiles(PIXEL_ART_TILE_SIZE);
         this.jeunePousseImage = ImageLoader.load("/assets/jeune_pousse.png");
         this.croissanceInterImage = ImageLoader.load("/assets/croissance_inter.png");
@@ -441,7 +441,7 @@ public class FieldPanel extends JPanel {
         }
 
         /*
-         * La cour de planches autour de la grange doit elle aussi désactiver les cases.
+         * La zone pierre + herbe autour de la grange doit elle aussi désactiver les cases.
          * Comme l'utilisateur a demandé d'inclure les cases partiellement visibles,
          * toute intersection avec cette bordure suffit ici.
          */
@@ -489,9 +489,9 @@ public class FieldPanel extends JPanel {
     }
 
     /**
-     * Cour de service autour de la grange :
+     * Zone pierre + herbe autour de la grange :
      * elle colle à la grange, mais on retire volontairement la première rangée du haut
-     * pour éviter d'afficher des cases de planches au-dessus du toit.
+     * pour éviter d'afficher cette texture au-dessus du toit.
      */
     public Rectangle getBarnCourtyardLogicalBounds() {
         Rectangle barnDrawBounds = getBarnLogicalDrawBounds();
@@ -759,7 +759,7 @@ public class FieldPanel extends JPanel {
     private Image getGroundTile(int gridX, int gridY) {
         Image[] variants;
         if (isBlockedByBarn(gridX, gridY)) {
-            variants = plankTileImages;
+            variants = stoneWithGrassTileImages;
         } else if (grilleCulture.hasRiver(gridX, gridY)) {
             variants = riverTileImages;
         } else if (grilleCulture.hasPath(gridX, gridY)) {
