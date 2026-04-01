@@ -8,7 +8,7 @@ import java.awt.image.BufferedImage;
  * Fabrique des tuiles de terrain.
  *
  * Ici il y a deux familles de tuiles :
- * - l'herbe, qui doit rappeler la reference visuelle validee par l'utilisateur,
+ * - l'herbe, qui doit utiliser directement l'asset valide par l'utilisateur,
  * - la terre, qui reste une tuile pixel art fixe.
  */
 public final class TerrainTileFactory {
@@ -20,9 +20,12 @@ public final class TerrainTileFactory {
     }
 
     public static Image[] createGrassTiles(int pixelSize) {
-        return new Image[] {
-                createReferenceGrassTile(pixelSize)
-        };
+        Image grassTile = ImageLoader.load("/assets/grass.png");
+        if (grassTile != null) {
+            return new Image[] { grassTile };
+        }
+
+        return new Image[] { createReferenceGrassTile(pixelSize) };
     }
 
     public static Image[] createSoilTiles(int pixelSize) {

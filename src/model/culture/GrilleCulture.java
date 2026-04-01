@@ -91,6 +91,13 @@ public class GrilleCulture {
     private final boolean[][] riverCells;
 
     /*
+     * Certaines cases de rivière font partie du decor initial
+     * et doivent utiliser un sprite dedie (`river2.png`).
+     * Elles restent de vraies cases de rivière pour toutes les regles.
+     */
+    private final boolean[][] decorativeRiverCells;
+
+    /*
      * Portée choisie pour le compost.
      * On utilise ici une distance de Manhattan :
      * le bonus forme un "diamant" lisible autour de chaque compost.
@@ -126,6 +133,7 @@ public class GrilleCulture {
         this.compostCells = new ArrayList<>();
         this.pathCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         this.riverCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
+        this.decorativeRiverCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         // Toute la map démarre en herbe :
         // chaque case existe déjà, mais aucune n'est labourée au lancement.
         for (int i = 0; i < LARGEUR_GRILLE; i++) {
@@ -133,6 +141,7 @@ public class GrilleCulture {
                 grille[i][j] = new ZoneCulture(false);
                 pathCells[i][j] = false;
                 riverCells[i][j] = false;
+                decorativeRiverCells[i][j] = false;
             }
         }
     }
@@ -275,6 +284,14 @@ public class GrilleCulture {
     }
 
     /**
+     * Variante de rivière reservee au decor fixe du champ.
+     * Elle partage exactement les memes regles de blocage.
+     */
+    public boolean hasDecorativeRiver(int x, int y) {
+        return estDansGrille(x, y) && decorativeRiverCells[x][y];
+    }
+
+    /**
      * Dit si au moins un compost est déjà posé quelque part sur la map.
      */
     public boolean hasCompost() {
@@ -370,6 +387,19 @@ public class GrilleCulture {
         riverCells[x][y] = true;
         inventaire.UseInstallation(FacilityType.RIVIERE);
         notifyCulturesNearRiverPlacement(x, y);
+    }
+
+    /**
+     * Pose une rivière fixe au chargement de la partie.
+     * On n'utilise pas l'inventaire ici car il s'agit d'un element de decor.
+     */
+    public void placeDecorativeRiver(int x, int y) {
+        if (!canPlaceRiver(x, y)) {
+            throw new IllegalStateException("La rivière decorative doit être posée sur une case d'herbe libre.");
+        }
+
+        riverCells[x][y] = true;
+        decorativeRiverCells[x][y] = true;
     }
 
     /**

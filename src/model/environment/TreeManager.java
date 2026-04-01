@@ -4,6 +4,7 @@ import model.culture.GrilleCulture;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Centralise uniquement l'état des arbres du champ.
@@ -11,11 +12,13 @@ import java.util.List;
 public class TreeManager {
     private final GrilleCulture grilleCulture;
     private final TreeInstance[][] trees;
+    private final Random random;
 
     // le constructeur
     public TreeManager(GrilleCulture grilleCulture) {
         this.grilleCulture = grilleCulture;
         this.trees = new TreeInstance[grilleCulture.getLargeur()][grilleCulture.getHauteur()];
+        this.random = new Random();
     }
 
     public int getColumnCount() {
@@ -59,7 +62,7 @@ public class TreeManager {
             return false;
         }
 
-        trees[gridX][gridY] = new TreeInstance(gridX, gridY, mature);
+        trees[gridX][gridY] = new TreeInstance(gridX, gridY, mature, shouldUseAlternateMatureSprite());
         return true;
     }
 
@@ -91,5 +94,34 @@ public class TreeManager {
 
     private boolean isInsideGrid(int gridX, int gridY) {
         return gridX >= 0 && gridX < trees.length && gridY >= 0 && gridY < trees[gridX].length;
+    }
+
+    /**
+     * Le tirage reste aléatoire tant qu'il ne ferait pas passer `arbre2`
+     * en majorité sur le total des arbres déjà posés.
+     */
+    private boolean shouldUseAlternateMatureSprite() {
+        int defaultSpriteCount = 0;
+        int alternateSpriteCount = 0;
+
+        for (TreeInstance[] treeColumn : trees) {
+            for (TreeInstance tree : treeColumn) {
+                if (tree == null) {
+                    continue;
+                }
+
+                if (tree.usesAlternateMatureSprite()) {
+                    alternateSpriteCount++;
+                } else {
+                    defaultSpriteCount++;
+                }
+            }
+        }
+
+        if ((alternateSpriteCount + 1) > defaultSpriteCount) {
+            return false;
+        }
+
+        return random.nextBoolean();
     }
 }

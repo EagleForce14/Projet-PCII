@@ -79,6 +79,7 @@ public class FieldPanel extends JPanel {
     private final Image[] tilledTileImages;
     private final Image[] pathTileImages;
     private final Image[] riverTileImages;
+    private final Image decorativeRiverTileImage;
 
     // Images associées aux différents stades visuels d'une culture.
     private final Image jeunePousseImage;
@@ -117,6 +118,7 @@ public class FieldPanel extends JPanel {
         this.tilledTileImages = TerrainTileFactory.createSoilTiles(PIXEL_ART_TILE_SIZE);
         this.pathTileImages = TerrainTileFactory.createStoneWithGrass(PIXEL_ART_TILE_SIZE);
         this.riverTileImages = TerrainTileFactory.createRiverTiles(PIXEL_ART_TILE_SIZE);
+        this.decorativeRiverTileImage = ImageLoader.load("/assets/river2.png");
         this.jeunePousseImage = ImageLoader.load("/assets/jeune_pousse.png");
         this.croissanceInterImage = ImageLoader.load("/assets/croissance_inter.png");
         this.maturiteImage = ImageLoader.load("/assets/maturite.png");
@@ -758,6 +760,8 @@ public class FieldPanel extends JPanel {
         Image[] variants;
         if (isBlockedByBarn(gridX, gridY)) {
             variants = pathTileImages;
+        } else if (grilleCulture.hasDecorativeRiver(gridX, gridY)) {
+            return decorativeRiverTileImage != null ? decorativeRiverTileImage : getFirstAvailableTile(riverTileImages);
         } else if (grilleCulture.hasRiver(gridX, gridY)) {
             variants = riverTileImages;
         } else if (grilleCulture.hasPath(gridX, gridY)) {
@@ -773,6 +777,14 @@ public class FieldPanel extends JPanel {
 
         int variantIndex = Math.floorMod((gridX * 31) + (gridY * 17), variants.length);
         return variants[variantIndex];
+    }
+
+    private Image getFirstAvailableTile(Image[] variants) {
+        if (variants == null || variants.length == 0) {
+            return null;
+        }
+
+        return variants[0];
     }
 
     /**

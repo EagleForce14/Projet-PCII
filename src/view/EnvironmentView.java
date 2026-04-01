@@ -6,22 +6,35 @@ import model.environment.TreeManager;
 
 import javax.swing.JPanel;
 
+import java.awt.AlphaComposite;
+import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 
 /**
  * Vue dédiée à l'affichage des éléments fixes de l'environnement,
  * comme la grange et les arbres.
  */
 public class EnvironmentView extends JPanel {
+    private static final Color TREE_GROUND_SHADOW_COLOR = new Color(7, 10, 4, 62);
+    private static final Color TREE_GLOBAL_SHADOW_COLOR = new Color(6, 8, 4, 52);
+
     private final FieldPanel fieldPanel;
     private final TreeManager treeManager;
     private final Image barnImage;
     private final Image treeImage;
+    private final Image alternateTreeImage;
     private final Image trunkImage;
+    private final BufferedImage treeGroundShadowImage;
+    private final BufferedImage alternateTreeGroundShadowImage;
+    private final BufferedImage trunkGroundShadowImage;
+    private final BufferedImage treeShadowImage;
+    private final BufferedImage alternateTreeShadowImage;
+    private final BufferedImage trunkShadowImage;
 
     // Le constructeur de la vue
     public EnvironmentView(FieldPanel fieldPanel, TreeManager treeManager) {
@@ -29,7 +42,14 @@ public class EnvironmentView extends JPanel {
         this.treeManager = treeManager;
         this.barnImage = ImageLoader.load("/assets/barn.png");
         this.treeImage = ImageLoader.load("/assets/arbre.png");
+        this.alternateTreeImage = ImageLoader.load("/assets/arbre2.png");
         this.trunkImage = ImageLoader.load("/assets/tronc_arbre.png");
+        this.treeGroundShadowImage = createShadowImage(treeImage, TREE_GROUND_SHADOW_COLOR);
+        this.alternateTreeGroundShadowImage = createShadowImage(alternateTreeImage, TREE_GROUND_SHADOW_COLOR);
+        this.trunkGroundShadowImage = createShadowImage(trunkImage, TREE_GROUND_SHADOW_COLOR);
+        this.treeShadowImage = createShadowImage(treeImage, TREE_GLOBAL_SHADOW_COLOR);
+        this.alternateTreeShadowImage = createShadowImage(alternateTreeImage, TREE_GLOBAL_SHADOW_COLOR);
+        this.trunkShadowImage = createShadowImage(trunkImage, TREE_GLOBAL_SHADOW_COLOR);
         this.setOpaque(false);
         this.setDoubleBuffered(true);
     }
@@ -62,18 +82,26 @@ public class EnvironmentView extends JPanel {
                 continue;
             }
 
+            Rectangle drawBounds;
             if (tree.isMature()) {
-                drawTree(g2, treeImage,
-                        computeTreeBounds(
-                                treeImage,
-                                cellBounds,
-                                TreeGeometry.MATURE_TREE_TILE_SCALE,
-                                TreeGeometry.MATURE_TREE_ANCHOR_X_RATIO,
-                                TreeGeometry.MATURE_TREE_ANCHOR_Y_RATIO
-                        )
+                Image matureTreeImage = getMatureTreeImage(tree);
+                BufferedImage matureTreeGroundShadowImage = getTreeGroundShadowImage(tree);
+                BufferedImage matureTreeShadowImage = getTreeShadowImage(tree);
+                drawBounds = computeTreeBounds(
+                        matureTreeImage,
+                        cellBounds,
+                        TreeGeometry.MATURE_TREE_TILE_SCALE,
+                        TreeGeometry.MATURE_TREE_ANCHOR_X_RATIO,
+                        TreeGeometry.MATURE_TREE_ANCHOR_Y_RATIO
                 );
+                drawTreeShadow(g2, matureTreeGroundShadowImage, cellBounds, drawBounds, true);
+                drawGlobalTreeShadow(g2, matureTreeShadowImage, drawBounds, true);
+                drawTree(g2, matureTreeImage, drawBounds);
             } else {
-                drawTree(g2, trunkImage, computeTreeBounds(trunkImage, cellBounds, TreeGeometry.TRUNK_TILE_SCALE, 0.50, 0.50));
+                drawBounds = computeTreeBounds(trunkImage, cellBounds, TreeGeometry.TRUNK_TILE_SCALE, 0.50, 0.50);
+                drawTreeShadow(g2, trunkGroundShadowImage, cellBounds, drawBounds, false);
+                drawGlobalTreeShadow(g2, trunkShadowImage, drawBounds, false);
+                drawTree(g2, trunkImage, drawBounds);
             }
         }
     }
@@ -130,5 +158,110 @@ public class EnvironmentView extends JPanel {
                 drawBounds.height,
                 this
         );
+    }
+
+    /**
+     * Ombre au sol basée sur la silhouette de l'arbre, fortement aplatie.
+     * Cela garde une forme proche du sprite tout en restant visiblement posée au sol.
+     */
+    private void drawTreeShadow(Graphics2D g2, Image shadowImage, Rectangle cellBounds, Rectangle drawBounds, boolean mature) {
+        if (shadowImage == null || cellBounds == null || drawBounds == null) {
+            return;
+        }
+
+        Graphics2D shadowGraphics = (Graphics2D) g2.create();
+        shadowGraphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+
+        int cellSize = Math.max(1, Math.min(cellBounds.width, cellBounds.height));
+        int shadowWidth = Math.max(cellSize, (int) Math.round(drawBounds.width * (mature ? 0.92 : 0.98)));
+        int shadowHeight = Math.max(
+                Math.max(10, cellSize / 3),
+                (int) Math.round(drawBounds.height * (mature ? 0.22 : 0.28))
+        );
+
+        int trunkCenterX = drawBounds.x + (int) Math.round(
+                drawBounds.width * (mature ? TreeGeometry.MATURE_TREE_ANCHOR_X_RATIO : 0.50)
+        );
+        int trunkCenterY = drawBounds.y + (int) Math.round(
+                drawBounds.height * (mature ? TreeGeometry.MATURE_TREE_ANCHOR_Y_RATIO : 0.50)
+        );
+
+        shadowGraphics.drawImage(
+                shadowImage,
+                trunkCenterX - (shadowWidth / 2),
+                trunkCenterY - (shadowHeight / 2),
+                shadowWidth,
+                shadowHeight,
+                this
+        );
+        shadowGraphics.dispose();
+    }
+
+    /**
+     * Ajoute une ombre portée très légère derrière tout le sprite.
+     * L'offset reste faible pour éviter un effet trop dramatique.
+     */
+    private void drawGlobalTreeShadow(Graphics2D g2, Image shadowImage, Rectangle drawBounds, boolean mature) {
+        if (shadowImage == null || drawBounds == null) {
+            return;
+        }
+
+        int offsetX = Math.max(2, (int) Math.round(drawBounds.width * (mature ? 0.024 : 0.032)));
+        int offsetY = Math.max(2, (int) Math.round(drawBounds.height * (mature ? 0.028 : 0.036)));
+
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g2.drawImage(
+                shadowImage,
+                drawBounds.x + offsetX,
+                drawBounds.y + offsetY,
+                drawBounds.width,
+                drawBounds.height,
+                this
+        );
+    }
+
+    private Image getMatureTreeImage(TreeInstance tree) {
+        if (tree.usesAlternateMatureSprite() && alternateTreeImage != null) {
+            return alternateTreeImage;
+        }
+
+        return treeImage;
+    }
+
+    private BufferedImage getTreeGroundShadowImage(TreeInstance tree) {
+        if (tree.usesAlternateMatureSprite() && alternateTreeGroundShadowImage != null) {
+            return alternateTreeGroundShadowImage;
+        }
+
+        return treeGroundShadowImage;
+    }
+
+    private BufferedImage getTreeShadowImage(TreeInstance tree) {
+        if (tree.usesAlternateMatureSprite() && alternateTreeShadowImage != null) {
+            return alternateTreeShadowImage;
+        }
+
+        return treeShadowImage;
+    }
+
+    private BufferedImage createShadowImage(Image image, Color shadowColor) {
+        if (image == null) {
+            return null;
+        }
+
+        int width = image.getWidth(this);
+        int height = image.getHeight(this);
+        if (width <= 0 || height <= 0) {
+            return null;
+        }
+
+        BufferedImage shadowImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D shadowGraphics = shadowImage.createGraphics();
+        shadowGraphics.drawImage(image, 0, 0, this);
+        shadowGraphics.setComposite(AlphaComposite.SrcIn);
+        shadowGraphics.setColor(shadowColor);
+        shadowGraphics.fillRect(0, 0, width, height);
+        shadowGraphics.dispose();
+        return shadowImage;
     }
 }
