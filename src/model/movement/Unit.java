@@ -1,5 +1,6 @@
 package model.movement;
 
+import model.Combat.CombatUnit;
 import model.environment.FieldObstacleMap;
 
 /**
@@ -31,10 +32,17 @@ public class Unit {
     private volatile int currentSpeed = NORMAL_SPEED;
     private FieldObstacleMap fieldObstacleMap;
 
+    // Attribut pour la gestion des combats
+    private CombatUnit combatUnit;
+
+    // Attribut qui indique si l'unité est dans la grotte ou non
+    private volatile boolean inCave = false;
+
     // Le constructeur de la classe.
     public Unit(int x, int y) {
         this.x = x;
         this.y = y;
+        combatUnit = new CombatUnit();
     }
 
     // On met à jour la position selon le flag activé
@@ -116,5 +124,27 @@ public class Unit {
         int dx = this.x - targetX;
         int dy = this.y - targetY;
         return (dx * dx + dy * dy) <= (INFLUENCE_RADIUS * INFLUENCE_RADIUS);
+    }
+
+    /**
+     * Méthode qui vérifie si l'unité est dans la grotte ou non.
+     * @return true si l'unité est dans la grotte, false sinon.
+     */
+    public boolean isInCave() {
+        return inCave;
+    }
+
+    /** 
+     * Méthode qui permet de faire rentrer l'unité dans la grotte 
+     */
+    public void enterCave() {
+        inCave = true;
+    }
+
+    /** 
+     * Méthode qui permet de faire sortir l'unité de la grotte 
+     */
+    public void exitCave() {
+        inCave = false;
     }
 }
