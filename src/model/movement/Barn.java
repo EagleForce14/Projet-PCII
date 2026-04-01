@@ -19,6 +19,7 @@ public class Barn {
     private static final double HITBOX_WIDTH_RATIO = 0.92;
     private static final double HITBOX_HEIGHT_RATIO = 0.8;
     private static final double HITBOX_BOTTOM_INSET_RATIO = 0.10;
+    private static final int HORIZONTAL_SHIFT_RIGHT = 108;
     private static final Dimension SPRITE_SIZE = loadSpriteSize();
 
     // La taille affichée suit désormais les dimensions réelles du PNG
@@ -26,8 +27,9 @@ public class Barn {
     public static final int WIDTH = Math.max(1, (int) Math.round(SPRITE_SIZE.width * SPRITE_SCALE));
     public static final int HEIGHT = Math.max(1, (int) Math.round(SPRITE_SIZE.height * SPRITE_SCALE));
     
-    // Position x pour être centrée horizontalement (0 est le centre).
-    public static final int X = -WIDTH / 2;
+    // Position x dans le repère logique du champ.
+    // On décale volontairement la boutique/grange vers la droite d'environ une case.
+    public static final int X = (-WIDTH / 2) + HORIZONTAL_SHIFT_RIGHT;
     // On la garde un peu dégagée du bord haut, mais plus basse qu'avant.
     public static final int Y = -400;
 

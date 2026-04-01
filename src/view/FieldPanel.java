@@ -79,7 +79,8 @@ public class FieldPanel extends JPanel {
     private final Image[] tilledTileImages;
     private final Image[] pathTileImages;
     private final Image[] riverTileImages;
-    private final Image decorativeRiverTileImage;
+    private final Image decorativeRiverEntryTileImage;
+    private final Image decorativeRiverContinuationTileImage;
 
     // Images associées aux différents stades visuels d'une culture.
     private final Image jeunePousseImage;
@@ -118,7 +119,8 @@ public class FieldPanel extends JPanel {
         this.tilledTileImages = TerrainTileFactory.createSoilTiles(PIXEL_ART_TILE_SIZE);
         this.pathTileImages = TerrainTileFactory.createStoneWithGrass(PIXEL_ART_TILE_SIZE);
         this.riverTileImages = TerrainTileFactory.createRiverTiles(PIXEL_ART_TILE_SIZE);
-        this.decorativeRiverTileImage = ImageLoader.load("/assets/river2.png");
+        this.decorativeRiverEntryTileImage = ImageLoader.load("/assets/entreeRiviere.png");
+        this.decorativeRiverContinuationTileImage = ImageLoader.load("/assets/river2.png");
         this.jeunePousseImage = ImageLoader.load("/assets/jeune_pousse.png");
         this.croissanceInterImage = ImageLoader.load("/assets/croissance_inter.png");
         this.maturiteImage = ImageLoader.load("/assets/maturite.png");
@@ -761,7 +763,7 @@ public class FieldPanel extends JPanel {
         if (isBlockedByBarn(gridX, gridY)) {
             variants = pathTileImages;
         } else if (grilleCulture.hasDecorativeRiver(gridX, gridY)) {
-            return decorativeRiverTileImage != null ? decorativeRiverTileImage : getFirstAvailableTile(riverTileImages);
+            return getDecorativeRiverTile(gridY);
         } else if (grilleCulture.hasRiver(gridX, gridY)) {
             variants = riverTileImages;
         } else if (grilleCulture.hasPath(gridX, gridY)) {
@@ -777,6 +779,22 @@ public class FieldPanel extends JPanel {
 
         int variantIndex = Math.floorMod((gridX * 31) + (gridY * 17), variants.length);
         return variants[variantIndex];
+    }
+
+    /**
+     * La toute première case de la colonne utilise l'entrée de rivière.
+     * Toutes les cases suivantes prolongent la rivière avec `river2.png`.
+     */
+    private Image getDecorativeRiverTile(int gridY) {
+        if (gridY == 0 && decorativeRiverEntryTileImage != null) {
+            return decorativeRiverEntryTileImage;
+        }
+
+        if (decorativeRiverContinuationTileImage != null) {
+            return decorativeRiverContinuationTileImage;
+        }
+
+        return getFirstAvailableTile(riverTileImages);
     }
 
     private Image getFirstAvailableTile(Image[] variants) {

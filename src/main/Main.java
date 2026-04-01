@@ -31,8 +31,7 @@ import java.awt.Rectangle;
 
 public class Main {
     private static final Dimension GAME_AREA_MINIMUM_SIZE = new Dimension(960, 690);
-    private static final Dimension GAME_AREA_PREFERRED_SIZE = new Dimension(1180, 850);
-    private static final int DECORATIVE_RIVER_LENGTH = 11;
+    private static final Dimension GAME_AREA_PREFERRED_SIZE = new Dimension(1180, 885);
     private static final int DECORATIVE_RIVER_COLUMNS_LEFT_OF_BARN = 2;
     private static final int DECORATIVE_RIVER_FALLBACK_COLUMN = 4;
 
@@ -232,7 +231,7 @@ public class Main {
     }
 
     /**
-     * Ajoute la colonne fixe de 11 cases de rivière demandee
+     * Ajoute la colonne fixe de rivière demandee
      * avant l'installation des arbres initiaux.
      */
     private static void installDecorativeRiverColumn(GrilleCulture grilleCulture, FieldPanel fieldPanel) {
@@ -241,8 +240,7 @@ public class Main {
             return;
         }
 
-        int riverLength = Math.min(DECORATIVE_RIVER_LENGTH, grilleCulture.getHauteur());
-        for (int row = 0; row < riverLength; row++) {
+        for (int row = 0; row < grilleCulture.getHauteur(); row++) {
             grilleCulture.placeDecorativeRiver(riverColumn, row);
         }
     }
