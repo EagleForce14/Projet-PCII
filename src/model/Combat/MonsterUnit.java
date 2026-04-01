@@ -18,7 +18,7 @@ import java.util.Random;
  * apparition hors écran, entrée dans le champ, promenade, éventuelle recherche d'une culture,
  * attente de 5 secondes sur la culture avant de manger, ou retour/fuite vers l'extérieur.
  */
-public class EnemyUnit {
+public class MonsterUnit {
     // La taille de la zone de "sécurité" autour de la grange (on ne peut pas traverser cette zone i.e.
     // on ne peut pas traverser la grange)
 
@@ -108,7 +108,7 @@ public class EnemyUnit {
     private final FieldObstacleMap fieldObstacleMap;
 
     // On construit ici une unité ennemie avec les dimensions connues au moment de son apparition.
-    public MonsterUnit(int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight,
+    public  MonsterUnit(int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight,
                      GestionnaireObjectifs gestionnaireObjectifs, FieldObstacleMap fieldObstacleMap) {
         this.viewportWidth = viewportWidth;
         this.viewportHeight = viewportHeight;

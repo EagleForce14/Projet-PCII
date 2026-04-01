@@ -121,7 +121,7 @@ public class MonsterModel {
 
 
 
-    public List<EnemyUnit> getEnemyUnits() {
-        return enemies;
+    public List<MonsterUnit> getEnemyUnits() {
+        return monsters;
     }
 }
