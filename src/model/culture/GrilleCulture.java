@@ -372,24 +372,6 @@ public class GrilleCulture {
     }
 
     /**
-     * Pose une case de rivière puis réveille les cultures voisines.
-     * Ce réveil est important :
-     * une plante déjà en train de pousser doit profiter du bonus sans attendre d'être replantée.
-     */
-    public void placeRiver(int x, int y, Inventaire inventaire) {
-        if (inventaire == null || inventaire.possedeInstallation(FacilityType.RIVIERE)) {
-            throw new IllegalStateException("Aucune rivière n'est disponible dans l'inventaire.");
-        }
-        if (!canPlaceRiver(x, y)) {
-            throw new IllegalStateException("La rivière doit être posée sur une case d'herbe libre.");
-        }
-
-        riverCells[x][y] = true;
-        inventaire.UseInstallation(FacilityType.RIVIERE);
-        notifyCulturesNearRiverPlacement(x, y);
-    }
-
-    /**
      * Pose une rivière fixe au chargement de la partie.
      * On n'utilise pas l'inventaire ici car il s'agit d'un element de decor.
      */
@@ -627,28 +609,6 @@ public class GrilleCulture {
                 Culture culture = getCulture(x, y);
                 if (culture != null) {
                     culture.arreterCroissance();
-                }
-            }
-        }
-    }
-
-    /**
-     * Quand une rivière apparaît, seules les cultures toutes proches sont concernées.
-     * La grille est petite, donc on préfère ici une boucle ultra lisible
-     * à une optimisation prématurée plus opaque.
-     */
-    private void notifyCulturesNearRiverPlacement(int riverX, int riverY) {
-        for (int deltaX = -RIVER_BOOST_RADIUS; deltaX <= RIVER_BOOST_RADIUS; deltaX++) {
-            for (int deltaY = -RIVER_BOOST_RADIUS; deltaY <= RIVER_BOOST_RADIUS; deltaY++) {
-                int candidateX = riverX + deltaX;
-                int candidateY = riverY + deltaY;
-                if (!estDansGrille(candidateX, candidateY)) {
-                    continue;
-                }
-
-                Culture culture = getCulture(candidateX, candidateY);
-                if (culture != null) {
-                    culture.notifierContexteCroissanceModifie();
                 }
             }
         }

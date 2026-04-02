@@ -116,10 +116,6 @@ public class MovementModel {
         return isSelectedFacility(FacilityType.CHEMIN);
     }
 
-    public boolean isRiverPlacementSelected() {
-        return isSelectedFacility(FacilityType.RIVIERE);
-    }
-
     public boolean isCompostPlacementSelected() {
         return isSelectedFacility(FacilityType.COMPOST);
     }
