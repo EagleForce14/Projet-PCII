@@ -5,6 +5,7 @@ import model.culture.CellSide;
 import model.culture.GrilleCulture;
 import model.culture.Stade;
 import model.environment.FieldObstacleMap;
+import model.environment.PredefinedFieldLayout;
 import model.environment.TreeManager;
 import model.movement.Barn;
 
@@ -79,6 +80,10 @@ public class FieldPanel extends JPanel {
     private final Image[] tilledTileImages;
     private final Image[] pathTileImages;
     private final Image[] riverTileImages;
+    private final Image marshTileImage;
+    private final Image marshCenterTileImage;
+    private final Image marshLeftEdgeTileImage;
+    private final Image wetSoilTileImage;
     private final Image decorativeRiverEntryTileImage;
     private final Image decorativeRiverContinuationTileImage;
 
@@ -119,6 +124,10 @@ public class FieldPanel extends JPanel {
         this.tilledTileImages = TerrainTileFactory.createSoilTiles(PIXEL_ART_TILE_SIZE);
         this.pathTileImages = TerrainTileFactory.createStoneWithGrass(PIXEL_ART_TILE_SIZE);
         this.riverTileImages = TerrainTileFactory.createRiverTiles(PIXEL_ART_TILE_SIZE);
+        this.marshTileImage = ImageLoader.load("/assets/marecages.png");
+        this.marshCenterTileImage = ImageLoader.load("/assets/marecagesCenter.png");
+        this.marshLeftEdgeTileImage = ImageLoader.load("/assets/marecagesGauche.png");
+        this.wetSoilTileImage = ImageLoader.load("/assets/TerreMouillee.png");
         this.decorativeRiverEntryTileImage = ImageLoader.load("/assets/entreeRiviere.png");
         this.decorativeRiverContinuationTileImage = ImageLoader.load("/assets/river2.png");
         this.jeunePousseImage = ImageLoader.load("/assets/jeune_pousse.png");
@@ -769,7 +778,12 @@ public class FieldPanel extends JPanel {
         } else if (grilleCulture.hasPath(gridX, gridY)) {
             variants = pathTileImages;
         } else if (grilleCulture.isLabouree(gridX, gridY)) {
+            if (PredefinedFieldLayout.isLeftOfDecorativeRiver(this, gridX) && wetSoilTileImage != null) {
+                return wetSoilTileImage;
+            }
             variants = tilledTileImages;
+        } else if (PredefinedFieldLayout.isLeftOfDecorativeRiver(this, gridX)) {
+            return getLeftMarshTile(gridX);
         } else {
             variants = grassTileImages;
         }
@@ -779,6 +793,30 @@ public class FieldPanel extends JPanel {
 
         int variantIndex = Math.floorMod((gridX * 31) + (gridY * 17), variants.length);
         return variants[variantIndex];
+    }
+
+    /**
+     * Le marécage gauche du champ utilise trois variantes selon la colonne :
+     * bord contre la rivière, centre, et bord de fenêtre.
+     */
+    private Image getLeftMarshTile(int gridX) {
+        if (PredefinedFieldLayout.isLeftWindowEdgeColumn(this, gridX) && marshLeftEdgeTileImage != null) {
+            return marshLeftEdgeTileImage;
+        }
+
+        if (PredefinedFieldLayout.isAdjacentLeftToDecorativeRiver(this, gridX) && marshTileImage != null) {
+            return marshTileImage;
+        }
+
+        if (marshCenterTileImage != null) {
+            return marshCenterTileImage;
+        }
+
+        if (marshTileImage != null) {
+            return marshTileImage;
+        }
+
+        return getFirstAvailableTile(grassTileImages);
     }
 
     /**
@@ -1124,15 +1162,47 @@ public class FieldPanel extends JPanel {
      * On sépare ce travail pour éviter de mélanger le choix du fond avec le reste du rendu.
      */
     private void drawGroundTile(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
+        if (isBlockedByBarn(gridX, gridY) || grilleCulture.hasPath(gridX, gridY)) {
+            drawLayeredStoneWithGrassGroundTile(g2, cellBounds);
+            return;
+        }
+
         Image groundTile = getGroundTile(gridX, gridY);
         if (groundTile != null) {
-            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-            g2.drawImage(groundTile, cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height, this);
+            drawScaledTile(g2, groundTile, cellBounds);
             return;
         }
 
         g2.setColor(DEFAULT_GRASS_FILL);
         g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height);
+    }
+
+    /**
+     * Pour les zones pierre + herbe, on garde une vraie base d'herbe
+     * puis on superpose la dalle pierre + herbe par-dessus.
+     */
+    private void drawLayeredStoneWithGrassGroundTile(Graphics2D g2, Rectangle cellBounds) {
+        Image grassTile = getFirstAvailableTile(grassTileImages);
+        if (grassTile != null) {
+            drawScaledTile(g2, grassTile, cellBounds);
+        } else {
+            g2.setColor(DEFAULT_GRASS_FILL);
+            g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height);
+        }
+
+        Image stoneWithGrassTile = getFirstAvailableTile(pathTileImages);
+        if (stoneWithGrassTile != null) {
+            drawScaledTile(g2, stoneWithGrassTile, cellBounds);
+        }
+    }
+
+    private void drawScaledTile(Graphics2D g2, Image tile, Rectangle cellBounds) {
+        if (tile == null || cellBounds == null) {
+            return;
+        }
+
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g2.drawImage(tile, cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height, this);
     }
 
     /**

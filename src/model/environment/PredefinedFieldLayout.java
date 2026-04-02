@@ -83,14 +83,44 @@ public final class PredefinedFieldLayout {
             return false;
         }
 
-        int riverColumn = resolveDecorativeRiverColumn(fieldPanel);
-        if (riverColumn <= 0 || gridX < 0 || gridX >= riverColumn) {
+        if (!isLeftOfDecorativeRiver(fieldPanel, gridX)) {
             return false;
         }
 
         int firstReservedRow = FIRST_TILLED_ROW;
         int lastReservedRow = FIRST_TILLED_ROW + ((TILLED_STRIP_COUNT - 1) * TILLED_ROW_STEP);
         return gridY >= firstReservedRow && gridY <= lastReservedRow;
+    }
+
+    /**
+     * Indique si une colonne se situe strictement à gauche de la rivière décorative.
+     */
+    public static boolean isLeftOfDecorativeRiver(FieldPanel fieldPanel, int gridX) {
+        if (fieldPanel == null) {
+            return false;
+        }
+
+        int riverColumn = resolveDecorativeRiverColumn(fieldPanel);
+        return gridX >= 0 && gridX < riverColumn;
+    }
+
+    /**
+     * Colonne immédiatement collée à gauche de la rivière décorative.
+     */
+    public static boolean isAdjacentLeftToDecorativeRiver(FieldPanel fieldPanel, int gridX) {
+        if (fieldPanel == null) {
+            return false;
+        }
+
+        int riverColumn = resolveDecorativeRiverColumn(fieldPanel);
+        return riverColumn > 0 && gridX == (riverColumn - 1);
+    }
+
+    /**
+     * Dernière colonne visible du côté gauche de la map.
+     */
+    public static boolean isLeftWindowEdgeColumn(FieldPanel fieldPanel, int gridX) {
+        return fieldPanel != null && gridX == 0;
     }
 
     /**
