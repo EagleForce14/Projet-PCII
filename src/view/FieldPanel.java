@@ -65,6 +65,11 @@ public class FieldPanel extends JPanel {
     private static final Color FENCE_SLAT_LIGHT = new Color(255, 170, 72);
     private static final Color FENCE_SLAT_DARK = new Color(174, 78, 18);
     private static final Color FENCE_WOOD_SHADOW = new Color(73, 46, 25, 95);
+    private static final int BARN_BUSH_HORIZONTAL_SHIFT_COLUMNS = -3;
+    private static final int BARN_TOP_STONE_COLUMN_WIDTH = 2;
+    private static final double BARN_BUSH_FILL_RATIO = 1.18;
+    private static final double BARN_BUSH_UPWARD_OFFSET_RATIO = 0.05;
+    private static final double BARN_BUSH_HORIZONTAL_OFFSET_RATIO = 0.08;
 
     // Vitesse de pulsation de l'animation d'arrosage.
     // Plus la valeur est grande, plus le halo "respire" vite.
@@ -84,6 +89,7 @@ public class FieldPanel extends JPanel {
     private final Image marshCenterTileImage;
     private final Image marshLeftEdgeTileImage;
     private final Image wetSoilTileImage;
+    private final Image bushTileImage;
     private final Image decorativeRiverEntryTileImage;
     private final Image decorativeRiverContinuationTileImage;
 
@@ -128,6 +134,7 @@ public class FieldPanel extends JPanel {
         this.marshCenterTileImage = ImageLoader.load("/assets/marecagesCenter.png");
         this.marshLeftEdgeTileImage = ImageLoader.load("/assets/marecagesGauche.png");
         this.wetSoilTileImage = ImageLoader.load("/assets/TerreMouillee.png");
+        this.bushTileImage = ImageLoader.load("/assets/bush.png");
         this.decorativeRiverEntryTileImage = ImageLoader.load("/assets/entreeRiviere.png");
         this.decorativeRiverContinuationTileImage = ImageLoader.load("/assets/river2.png");
         this.jeunePousseImage = ImageLoader.load("/assets/jeune_pousse.png");
@@ -447,8 +454,8 @@ public class FieldPanel extends JPanel {
         }
 
         Rectangle barnSpriteBounds = getBarnLogicalDrawBounds();
-        if (barnSpriteBounds != null && barnSpriteBounds.intersects(logicalCellBounds)) {
-            return true;
+        if (barnSpriteBounds != null) {
+            barnSpriteBounds.intersects(logicalCellBounds);
         }
 
         /*
@@ -1019,7 +1026,7 @@ public class FieldPanel extends JPanel {
         g2.fillRect(x, y, width, height);
 
         g2.setColor(FENCE_WOOD_MID);
-        g2.fillRect(x + 1, y + 1, Math.max(1, width - 2), Math.max(1, height - 2));
+        g2.fillRect(x + 1, y + 1, getInsetSpan(width, 2), getInsetSpan(height, 2));
     }
 
     /**
@@ -1028,7 +1035,7 @@ public class FieldPanel extends JPanel {
      * et on assombrit le côté droit.
      */
     private void drawHorizontalPostRelief(Graphics2D g2, int x, int y, int width, int height) {
-        int innerHeight = Math.max(1, height - 2);
+        int innerHeight = getInsetSpan(height, 2);
 
         g2.setColor(FENCE_WOOD_LIGHT);
         g2.fillRect(x + 1, y + 1, Math.max(2, width / 3), innerHeight);
@@ -1042,7 +1049,7 @@ public class FieldPanel extends JPanel {
      * on éclaire le haut et on ombre légèrement le bas.
      */
     private void drawVerticalPostRelief(Graphics2D g2, int x, int y, int width, int height) {
-        int innerWidth = Math.max(1, width - 2);
+        int innerWidth = getInsetSpan(width, 2);
 
         g2.setColor(FENCE_WOOD_LIGHT);
         g2.fillRect(x + 1, y + 1, innerWidth, Math.max(2, height / 3));
@@ -1060,10 +1067,10 @@ public class FieldPanel extends JPanel {
         int capY = outerOnTop ? y : y + height - Math.max(3, height / 3);
         int capHeight = Math.max(3, height / 3);
         g2.setColor(FENCE_CAP_DARK);
-        g2.fillRect(x + 1, capY, Math.max(1, width - 2), capHeight);
+        g2.fillRect(x + 1, capY, getInsetSpan(width, 2), capHeight);
 
         g2.setColor(FENCE_CAP_LIGHT);
-        g2.fillRect(x + 2, capY + 1, Math.max(1, width - 4), 1);
+        g2.fillRect(x + 2, capY + 1, getInsetSpan(width, 4), 1);
     }
 
     /**
@@ -1075,10 +1082,10 @@ public class FieldPanel extends JPanel {
         int capX = outerOnRight ? x + width - Math.max(3, width / 3) : x;
         int capWidth = Math.max(3, width / 3);
         g2.setColor(FENCE_CAP_DARK);
-        g2.fillRect(capX, y + 1, capWidth, Math.max(1, height - 2));
+        g2.fillRect(capX, y + 1, capWidth, getInsetSpan(height, 2));
 
         g2.setColor(FENCE_CAP_LIGHT);
-        g2.fillRect(capX + (outerOnRight ? 0 : 1), y + 2, 1, Math.max(1, height - 4));
+        g2.fillRect(capX + (outerOnRight ? 0 : 1), y + 2, 1, getInsetSpan(height, 4));
     }
 
     private void drawHorizontalPost(Graphics2D g2, int x, int y, int width, int height, boolean outerOnTop) {
@@ -1094,36 +1101,26 @@ public class FieldPanel extends JPanel {
     }
 
     private void drawHorizontalSlat(Graphics2D g2, int x, int y, int width, int height, boolean outerOnTop) {
-        g2.setColor(FENCE_OUTLINE);
-        g2.fillRect(x, y, width, height);
-
-        // Les lattes sont volontairement plus orangées que les poteaux
-        // pour se détacher immédiatement de la terre du champ.
-        g2.setColor(FENCE_SLAT_FILL);
-        g2.fillRect(x + 1, y + 1, Math.max(1, width - 2), Math.max(1, height - 2));
+        drawSlatBase(g2, x, y, width, height);
 
         g2.setColor(outerOnTop ? FENCE_SLAT_LIGHT : FENCE_SLAT_DARK);
-        g2.fillRect(x + 1, outerOnTop ? y + 1 : y + height - 2, Math.max(1, width - 2), 1);
+        g2.fillRect(x + 1, outerOnTop ? y + 1 : y + height - 2, getInsetSpan(width, 2), 1);
 
         if (height >= 4) {
             g2.setColor(FENCE_SLAT_DARK);
-            g2.fillRect(x + Math.max(2, width / 3), y + 1, 1, Math.max(1, height - 2));
+            g2.fillRect(x + Math.max(2, width / 3), y + 1, 1, getInsetSpan(height, 2));
         }
     }
 
     private void drawVerticalSlat(Graphics2D g2, int x, int y, int width, int height, boolean outerOnRight) {
-        g2.setColor(FENCE_OUTLINE);
-        g2.fillRect(x, y, width, height);
-
-        g2.setColor(FENCE_SLAT_FILL);
-        g2.fillRect(x + 1, y + 1, Math.max(1, width - 2), Math.max(1, height - 2));
+        drawSlatBase(g2, x, y, width, height);
 
         g2.setColor(outerOnRight ? FENCE_SLAT_DARK : FENCE_SLAT_LIGHT);
-        g2.fillRect(outerOnRight ? x + width - 2 : x + 1, y + 1, 1, Math.max(1, height - 2));
+        g2.fillRect(outerOnRight ? x + width - 2 : x + 1, y + 1, 1, getInsetSpan(height, 2));
 
         if (width >= 4) {
             g2.setColor(FENCE_SLAT_DARK);
-            g2.fillRect(x + 1, y + Math.max(2, height / 3), Math.max(1, width - 2), 1);
+            g2.fillRect(x + 1, y + Math.max(2, height / 3), getInsetSpan(width, 2), 1);
         }
     }
 
@@ -1137,6 +1134,7 @@ public class FieldPanel extends JPanel {
      */
     private void drawCell(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
         drawGroundTile(g2, gridX, gridY, cellBounds);
+        drawBarnTopBushDecoration(g2, gridX, gridY, cellBounds);
 
         Culture culture = grilleCulture.getCulture(gridX, gridY);
         Image cultureImage = getCultureImage(culture);
@@ -1163,6 +1161,10 @@ public class FieldPanel extends JPanel {
      */
     private void drawGroundTile(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
         if (isBlockedByBarn(gridX, gridY) || grilleCulture.hasPath(gridX, gridY)) {
+            drawLayeredStoneWithGrassGroundTile(g2, cellBounds);
+            return;
+        }
+        if (isBarnTopStoneColumnCell(gridX, gridY)) {
             drawLayeredStoneWithGrassGroundTile(g2, cellBounds);
             return;
         }
@@ -1206,6 +1208,152 @@ public class FieldPanel extends JPanel {
     }
 
     /**
+     * Ajoute une ligne de buissons au-dessus de la boutique :
+     * on prend la première rangée libre au-dessus de ses cases occupées,
+     * puis on n'utilise que la moitié centrale de cette largeur.
+     */
+    private void drawBarnTopBushDecoration(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
+        if (bushTileImage == null || cellBounds == null) {
+            return;
+        }
+        if (!isBarnTopBushCell(gridX, gridY)) {
+            return;
+        }
+
+        drawDecorativeSprite(g2, bushTileImage, cellBounds);
+    }
+
+    private boolean isBarnTopBushCell(int gridX, int gridY) {
+        Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
+        if (barnBlockedGridBounds == null || barnBlockedGridBounds.y <= 0) {
+            return false;
+        }
+
+        int bushRow = barnBlockedGridBounds.y - 1;
+        int occupiedWidth = barnBlockedGridBounds.width;
+        int bushWidth = Math.max(1, (occupiedWidth / 2) - 1);
+        int leftBushStartColumn = barnBlockedGridBounds.x
+                + ((occupiedWidth - bushWidth) / 2)
+                + BARN_BUSH_HORIZONTAL_SHIFT_COLUMNS;
+        int leftBushEndColumnExclusive = Math.min(getColumnCount(), leftBushStartColumn + bushWidth);
+
+        int stoneStartColumn = barnBlockedGridBounds.x
+                + Math.max(0, (barnBlockedGridBounds.width - BARN_TOP_STONE_COLUMN_WIDTH) / 2);
+        int stoneEndColumnExclusive = Math.min(getColumnCount(), stoneStartColumn + BARN_TOP_STONE_COLUMN_WIDTH);
+        int rightBushStartColumn = stoneEndColumnExclusive;
+        int rightBushEndColumnExclusive = Math.min(getColumnCount(), rightBushStartColumn + bushWidth);
+
+        return gridY == bushRow
+                && ((gridX >= leftBushStartColumn && gridX < leftBushEndColumnExclusive)
+                || (gridX >= rightBushStartColumn && gridX < rightBushEndColumnExclusive));
+    }
+
+    private boolean isBarnTopStoneColumnCell(int gridX, int gridY) {
+        Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
+        if (barnBlockedGridBounds == null || barnBlockedGridBounds.y <= 0) {
+            return false;
+        }
+
+        int stoneStartColumn = barnBlockedGridBounds.x
+                + Math.max(0, (barnBlockedGridBounds.width - BARN_TOP_STONE_COLUMN_WIDTH) / 2);
+        int stoneEndColumnExclusive = Math.min(getColumnCount(), stoneStartColumn + BARN_TOP_STONE_COLUMN_WIDTH);
+        return gridY >= 0
+                && gridY < barnBlockedGridBounds.y
+                && gridX >= stoneStartColumn
+                && gridX < stoneEndColumnExclusive;
+    }
+
+    private Rectangle getBarnBlockedGridBounds() {
+        int minBlockedColumn = Integer.MAX_VALUE;
+        int maxBlockedColumn = Integer.MIN_VALUE;
+        int topBlockedRow = Integer.MAX_VALUE;
+        int bottomBlockedRow = Integer.MIN_VALUE;
+
+        for (int column = 0; column < getColumnCount(); column++) {
+            for (int row = 0; row < getRowCount(); row++) {
+                if (!isBlockedByBarn(column, row)) {
+                    continue;
+                }
+
+                minBlockedColumn = Math.min(minBlockedColumn, column);
+                maxBlockedColumn = Math.max(maxBlockedColumn, column);
+                topBlockedRow = Math.min(topBlockedRow, row);
+                bottomBlockedRow = Math.max(bottomBlockedRow, row);
+            }
+        }
+
+        if (minBlockedColumn == Integer.MAX_VALUE) {
+            return null;
+        }
+
+        return new Rectangle(
+                minBlockedColumn,
+                topBlockedRow,
+                (maxBlockedColumn - minBlockedColumn) + 1,
+                (bottomBlockedRow - topBlockedRow) + 1
+        );
+    }
+
+    private void drawDecorativeSprite(
+            Graphics2D g2,
+            Image sprite,
+            Rectangle cellBounds
+    ) {
+        if (sprite == null || cellBounds == null) {
+            return;
+        }
+
+        int imageWidth = sprite.getWidth(this);
+        int imageHeight = sprite.getHeight(this);
+        if (imageWidth <= 0 || imageHeight <= 0) {
+            return;
+        }
+
+        int availableWidth = scaleSize(cellBounds.width, BARN_BUSH_FILL_RATIO);
+        int availableHeight = scaleSize(cellBounds.height, BARN_BUSH_FILL_RATIO);
+        double scale = Math.min(
+                (double) availableWidth / imageWidth,
+                (double) availableHeight / imageHeight
+        );
+
+        int drawWidth = scaleSize(imageWidth, scale);
+        int drawHeight = scaleSize(imageHeight, scale);
+        int horizontalOffset = scaleOffset(cellBounds.width, BARN_BUSH_HORIZONTAL_OFFSET_RATIO);
+        int drawX = cellBounds.x + ((cellBounds.width - drawWidth) / 2) + horizontalOffset;
+        int upwardOffset = scalePositiveOffset(cellBounds.height);
+        int drawY = cellBounds.y + cellBounds.height - drawHeight - upwardOffset;
+
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g2.drawImage(sprite, drawX, drawY, drawWidth, drawHeight, this);
+    }
+
+    private void drawSlatBase(Graphics2D g2, int x, int y, int width, int height) {
+        g2.setColor(FENCE_OUTLINE);
+        g2.fillRect(x, y, width, height);
+
+        // Les lattes sont volontairement plus orangées que les poteaux
+        // pour se détacher immédiatement de la terre du champ.
+        g2.setColor(FENCE_SLAT_FILL);
+        g2.fillRect(x + 1, y + 1, getInsetSpan(width, 2), getInsetSpan(height, 2));
+    }
+
+    private int getInsetSpan(int size, int totalInset) {
+        return Math.max(1, size - totalInset);
+    }
+
+    private int scaleSize(int size, double ratio) {
+        return Math.max(1, (int) Math.round(size * ratio));
+    }
+
+    private int scaleOffset(int size, double ratio) {
+        return (int) Math.round(size * ratio);
+    }
+
+    private int scalePositiveOffset(int size) {
+        return Math.max(0, scaleOffset(size, FieldPanel.BARN_BUSH_UPWARD_OFFSET_RATIO));
+    }
+
+    /**
      * Dit si la case affichée est celle actuellement occupée par le joueur
      * et si cette case peut réellement être utilisée côté gameplay.
      */
@@ -1221,11 +1369,7 @@ public class FieldPanel extends JPanel {
      * un voile jaune et deux contours pour bien ressortir sur l'herbe comme sur la terre.
      */
     private void drawCellHighlight(Graphics2D g2, Rectangle cellBounds) {
-        g2.setColor(HIGHLIGHT_FILL);
-        g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height);
-        g2.setColor(HIGHLIGHT_BORDER);
-        g2.drawRect(cellBounds.x, cellBounds.y, cellBounds.width - 1, cellBounds.height - 1);
-        g2.drawRect(cellBounds.x + 1, cellBounds.y + 1, cellBounds.width - 3, cellBounds.height - 3);
+        drawFilledOverlayWithDoubleBorder(g2, cellBounds, HIGHLIGHT_FILL, HIGHLIGHT_BORDER);
     }
 
     /**
@@ -1267,12 +1411,7 @@ public class FieldPanel extends JPanel {
                 continue;
             }
 
-            g2.setColor(COMPOST_RANGE_FILL);
-            g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height);
-
-            g2.setColor(COMPOST_RANGE_BORDER);
-            g2.drawRect(cellBounds.x, cellBounds.y, cellBounds.width - 1, cellBounds.height - 1);
-            g2.drawRect(cellBounds.x + 1, cellBounds.y + 1, cellBounds.width - 3, cellBounds.height - 3);
+            drawFilledOverlayWithDoubleBorder(g2, cellBounds, COMPOST_RANGE_FILL, COMPOST_RANGE_BORDER);
         }
     }
 
@@ -1355,12 +1494,7 @@ public class FieldPanel extends JPanel {
                 ? new Color(194, 237, 255, 230)
                 : new Color(255, 210, 178, 235);
 
-        previewGraphics.setColor(fillColor);
-        previewGraphics.fillRect(previewBounds.x, previewBounds.y, previewBounds.width, previewBounds.height);
-
-        previewGraphics.setColor(borderColor);
-        previewGraphics.drawRect(previewBounds.x, previewBounds.y, previewBounds.width - 1, previewBounds.height - 1);
-        previewGraphics.drawRect(previewBounds.x + 1, previewBounds.y + 1, previewBounds.width - 3, previewBounds.height - 3);
+        drawFilledOverlayWithDoubleBorder(previewGraphics, previewBounds, fillColor, borderColor);
 
         if (!riverPreviewValid) {
             // Le petit X rend l'interdiction instantanément lisible,
@@ -1380,6 +1514,24 @@ public class FieldPanel extends JPanel {
         }
 
         previewGraphics.dispose();
+    }
+
+    private void drawFilledOverlayWithDoubleBorder(
+            Graphics2D g2,
+            Rectangle bounds,
+            Color fillColor,
+            Color borderColor
+    ) {
+        if (g2 == null || bounds == null) {
+            return;
+        }
+
+        g2.setColor(fillColor);
+        g2.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+
+        g2.setColor(borderColor);
+        g2.drawRect(bounds.x, bounds.y, bounds.width - 1, bounds.height - 1);
+        g2.drawRect(bounds.x + 1, bounds.y + 1, bounds.width - 3, bounds.height - 3);
     }
 
     /**
