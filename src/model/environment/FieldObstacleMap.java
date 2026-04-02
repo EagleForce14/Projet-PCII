@@ -47,6 +47,9 @@ public class FieldObstacleMap {
         if (fieldPanel.isBlockedByBarn(gridX, gridY)) {
             return false;
         }
+        if (PredefinedFieldLayout.blocksTreeSpawnInLeftRiverSection(fieldPanel, gridX, gridY)) {
+            return false;
+        }
 
         Rectangle cellBounds = fieldPanel.getLogicalCellBounds(gridX, gridY);
         Rectangle candidateBounds = TreeGeometry.buildAnchoredScaledBounds(

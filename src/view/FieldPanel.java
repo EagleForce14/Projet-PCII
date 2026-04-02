@@ -782,8 +782,8 @@ public class FieldPanel extends JPanel {
     }
 
     /**
-     * La toute première case de la colonne utilise l'entrée de rivière.
-     * Toutes les cases suivantes prolongent la rivière avec `river2.png`.
+     * La première case de la colonne utilise l'entrée de rivière,
+     * puis toutes les suivantes prolongent la rivière avec `river2.png`.
      */
     private Image getDecorativeRiverTile(int gridY) {
         if (gridY == 0 && decorativeRiverEntryTileImage != null) {

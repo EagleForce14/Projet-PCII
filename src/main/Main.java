@@ -6,6 +6,7 @@ import model.culture.GrilleCulture;
 import model.enemy.EnemyModel;
 import model.enemy.EnemyPhysicsThread;
 import model.environment.FieldObstacleMap;
+import model.environment.PredefinedFieldLayout;
 import model.environment.TreeManager;
 import model.environment.TreeThread;
 import model.movement.Barn;
@@ -27,13 +28,10 @@ import javax.swing.OverlayLayout;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Point;
-import java.awt.Rectangle;
 
 public class Main {
     private static final Dimension GAME_AREA_MINIMUM_SIZE = new Dimension(960, 690);
     private static final Dimension GAME_AREA_PREFERRED_SIZE = new Dimension(1180, 885);
-    private static final int DECORATIVE_RIVER_COLUMNS_LEFT_OF_BARN = 2;
-    private static final int DECORATIVE_RIVER_FALLBACK_COLUMN = 4;
 
     public static void main(String[] args) {
         JFrame frame = createFrame();
@@ -176,7 +174,7 @@ public class Main {
         }
 
         frame.validate();
-        installDecorativeRiverColumn(grilleCulture, fieldPanel);
+        PredefinedFieldLayout.apply(fieldPanel);
         treeThread.installerArbresInitiaux();
         Point safeInitialPlayerOffset = findSafeInitialPlayerOffset(fieldPanel, fieldObstacleMap);
         playerUnit.setPosition(safeInitialPlayerOffset.x, safeInitialPlayerOffset.y);
@@ -228,56 +226,6 @@ public class Main {
         long deltaX = (long) a.x - b.x;
         long deltaY = (long) a.y - b.y;
         return (deltaX * deltaX) + (deltaY * deltaY);
-    }
-
-    /**
-     * Ajoute la colonne fixe de rivière demandee
-     * avant l'installation des arbres initiaux.
-     */
-    private static void installDecorativeRiverColumn(GrilleCulture grilleCulture, FieldPanel fieldPanel) {
-        int riverColumn = resolveDecorativeRiverColumn(fieldPanel);
-        if (riverColumn < 0 || riverColumn >= grilleCulture.getLargeur()) {
-            return;
-        }
-
-        for (int row = 0; row < grilleCulture.getHauteur(); row++) {
-            grilleCulture.placeDecorativeRiver(riverColumn, row);
-        }
-    }
-
-    /**
-     * On repere la premiere colonne touchee par l'image de la boutique/grange,
-     * puis on se decale de deux cases vers la gauche.
-     * Un fallback fixe garde un resultat stable si le layout n'est pas encore resolu.
-     */
-    private static int resolveDecorativeRiverColumn(FieldPanel fieldPanel) {
-        Rectangle barnBounds = fieldPanel.getBarnLogicalDrawBounds();
-        Rectangle fieldBounds = fieldPanel.getFieldLogicalBounds();
-        int leftmostBarnColumn = -1;
-
-        for (int column = 0; column < fieldPanel.getColumnCount(); column++) {
-            Rectangle firstCellBounds = fieldPanel.getLogicalCellBounds(column, 0);
-            if (firstCellBounds == null) {
-                continue;
-            }
-
-            Rectangle columnBounds = new Rectangle(
-                    firstCellBounds.x,
-                    fieldBounds.y,
-                    firstCellBounds.width,
-                    fieldBounds.height
-            );
-            if (columnBounds.intersects(barnBounds)) {
-                leftmostBarnColumn = column;
-                break;
-            }
-        }
-
-        if (leftmostBarnColumn < 0) {
-            return DECORATIVE_RIVER_FALLBACK_COLUMN;
-        }
-
-        return Math.max(0, leftmostBarnColumn - DECORATIVE_RIVER_COLUMNS_LEFT_OF_BARN);
     }
 
     private static JPanel createGamePanel() {
