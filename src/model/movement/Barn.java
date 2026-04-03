@@ -20,7 +20,10 @@ public class Barn {
     private static final double HITBOX_HEIGHT_RATIO = 0.8;
     private static final double HITBOX_BOTTOM_INSET_RATIO = 0.10;
     private static final int HORIZONTAL_SHIFT_RIGHT = 108;
+    private static final int DEFAULT_TILE_SIZE = 54;
+    private static final int LEFT_SHIFT_COLUMNS = 0;
     private static final Dimension SPRITE_SIZE = loadSpriteSize();
+    private static volatile int currentTileSize = DEFAULT_TILE_SIZE;
 
     // La taille affichée suit désormais les dimensions réelles du PNG
     // pour éviter d'écraser une image plus large ou plus plate.
@@ -28,10 +31,24 @@ public class Barn {
     public static final int HEIGHT = Math.max(1, (int) Math.round(SPRITE_SIZE.height * SPRITE_SCALE));
     
     // Position x dans le repère logique du champ.
-    // On décale volontairement la boutique/grange vers la droite d'environ une case.
-    public static final int X = (-WIDTH / 2) + HORIZONTAL_SHIFT_RIGHT;
+    // On garde ici le placement historique de référence.
+    private static final int BASE_X = (-WIDTH / 2) + HORIZONTAL_SHIFT_RIGHT;
     // On la garde un peu dégagée du bord haut, mais plus basse qu'avant.
     public static final int Y = -400;
+
+    public static int getDrawX() {
+        return BASE_X - (LEFT_SHIFT_COLUMNS * currentTileSize);
+    }
+
+    public static int getHorizontalTileShiftColumns() {
+        return LEFT_SHIFT_COLUMNS;
+    }
+
+    public static void updateTileSize(int tileSize) {
+        if (tileSize > 0) {
+            currentTileSize = tileSize;
+        }
+    }
 
     /**
      * Retourne la zone de collision (hitbox).
@@ -43,7 +60,7 @@ public class Barn {
     public static Rectangle getCollisionBounds() {
         int hitboxWidth = Math.max(1, (int) Math.round(WIDTH * HITBOX_WIDTH_RATIO));
         int hitboxHeight = Math.max(1, (int) Math.round(HEIGHT * HITBOX_HEIGHT_RATIO));
-        int hitboxX = X + ((WIDTH - hitboxWidth) / 2);
+        int hitboxX = getDrawX() + ((WIDTH - hitboxWidth) / 2);
         int hitboxY = Y + HEIGHT - hitboxHeight - Math.max(1, (int) Math.round(HEIGHT * HITBOX_BOTTOM_INSET_RATIO));
         
         return new Rectangle(hitboxX, hitboxY, hitboxWidth, hitboxHeight);

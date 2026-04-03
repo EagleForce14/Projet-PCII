@@ -83,6 +83,12 @@ public class FieldPanel extends JPanel {
     private static final double BARN_BUSH_FILL_RATIO = 1.18;
     private static final double BARN_BUSH_UPWARD_OFFSET_RATIO = 0.05;
     private static final double BARN_BUSH_HORIZONTAL_OFFSET_RATIO = 0.08;
+    private static final double VERTICAL_BUSH_WIDTH_RATIO = 0.82;
+    private static final double VERTICAL_BUSH_HEIGHT_RATIO = 1.18;
+    private static final double VERTICAL_BUSH_RIGHT_INSET_RATIO = 0.06;
+    private static final double VERTICAL_BUSH_UPWARD_OFFSET_RATIO = 0.03;
+    private static final int VERTICAL_BUSH_LEFT_PIXEL_SHIFT = 3;
+    private static final int VERTICAL_BUSH_RIGHT_PIXEL_SHIFT = 3;
 
     // Vitesse de pulsation de l'animation d'arrosage.
     // Plus la valeur est grande, plus le halo "respire" vite.
@@ -103,6 +109,8 @@ public class FieldPanel extends JPanel {
     private final Image marshLeftEdgeTileImage;
     private final Image wetSoilTileImage;
     private final Image bushTileImage;
+    private final Image verticalBushTileImage;
+    private final Image verticalBushRightTileImage;
     private final Image decorativeRiverEntryTileImage;
     private final Image decorativeRiverContinuationTileImage;
 
@@ -123,6 +131,10 @@ public class FieldPanel extends JPanel {
     // Cet indicateur dit seulement si la zone du compost doit être montrée ou non.
     // Les cases exactes sont relues directement depuis la grille au moment du dessin.
     private boolean compostInfluenceVisible;
+    private Rectangle cachedBarnDecorFieldBounds;
+    private Rectangle cachedBarnBlockedGridBounds;
+    private int cachedDecorativeRiverColumn = Integer.MIN_VALUE;
+    private Rectangle cachedRightRiverUpperDecorationLogicalBounds;
 
     /**
      * Initialise la carte.
@@ -139,6 +151,8 @@ public class FieldPanel extends JPanel {
         this.marshLeftEdgeTileImage = ImageLoader.load("/assets/marecagesGauche.png");
         this.wetSoilTileImage = ImageLoader.load("/assets/TerreMouillee.png");
         this.bushTileImage = ImageLoader.load("/assets/bush.png");
+        this.verticalBushTileImage = ImageLoader.load("/assets/bush_vertical.png");
+        this.verticalBushRightTileImage = ImageLoader.load("/assets/bush_vertical_right.png");
         this.decorativeRiverEntryTileImage = ImageLoader.load("/assets/entreeRiviere.png");
         this.decorativeRiverContinuationTileImage = ImageLoader.load("/assets/river2.png");
         this.jeunePousseImage = ImageLoader.load("/assets/jeune_pousse.png");
@@ -293,7 +307,9 @@ public class FieldPanel extends JPanel {
      * a l'intérieur du panneau.
      */
     public Rectangle getFieldBounds() {
-        return computeFieldBounds(getWidth(), getHeight());
+        Rectangle fieldBounds = computeFieldBounds(getWidth(), getHeight());
+        syncBarnTileSize(fieldBounds);
+        return fieldBounds;
     }
 
     /**
@@ -305,7 +321,7 @@ public class FieldPanel extends JPanel {
         Rectangle fieldBounds = getFieldBounds();
         int centerX = fieldBounds.x + (fieldBounds.width / 2);
         int centerY = fieldBounds.y + (fieldBounds.height / 2);
-        int drawX = centerX + Barn.X;
+        int drawX = centerX + Barn.getDrawX();
         int drawY = centerY + Barn.Y;
         return new Rectangle(drawX, drawY, Barn.WIDTH, Barn.HEIGHT);
     }
@@ -326,7 +342,9 @@ public class FieldPanel extends JPanel {
 
     private Rectangle getPreferredFieldBounds() {
         Dimension preferredSize = getPreferredSize();
-        return computeFieldBounds(preferredSize.width, preferredSize.height);
+        Rectangle fieldBounds = computeFieldBounds(preferredSize.width, preferredSize.height);
+        syncBarnTileSize(fieldBounds);
+        return fieldBounds;
     }
 
     private Rectangle computeFieldBounds(int panelWidth, int panelHeight) {
@@ -467,11 +485,84 @@ public class FieldPanel extends JPanel {
 
         return grilleCulture.hasRiver(gridX, gridY)
                 || treeManager.hasTreeAt(gridX, gridY)
+                || hasRightStoneExtensionAt(gridX, gridY)
                 || hasDecorativeBushAt(gridX, gridY);
     }
 
     public boolean hasDecorativeBushAt(int gridX, int gridY) {
-        return isBarnTopBushCell(gridX, gridY);
+        // Toute la végétation purement décorative liée à la boutique
+        // passe par ce point d'entrée unique pour le rendu et le gameplay.
+        return isBarnTopBushCell(gridX, gridY)
+                || isBarnEntranceLeftVerticalBushCell(gridX, gridY)
+                || isBarnLeftVerticalBushCell(gridX, gridY)
+                || isBarnEntranceRightVerticalBushCell(gridX, gridY)
+                || isBarnRightVerticalBushCell(gridX, gridY);
+    }
+
+    /**
+     * Expose uniquement la prolongation de pavés côté droit,
+     * car c'est cette zone qu'on veut réserver contre la pousse des arbres.
+     */
+    public boolean hasRightStoneExtensionAt(int gridX, int gridY) {
+        Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
+        return barnBlockedGridBounds != null
+                && gridX >= barnBlockedGridBounds.x + barnBlockedGridBounds.width
+                && gridX < getColumnCount()
+                && gridY >= barnBlockedGridBounds.y
+                && gridY < barnBlockedGridBounds.y + barnBlockedGridBounds.height;
+    }
+
+    /**
+     * À droite de la rivière, toute la bande décorative du haut
+     * (buissons, boutique, chemin de pierre et marge visuelle)
+     * est traitée comme une seule zone pour les lapins.
+     */
+    public Rectangle getRightRiverUpperDecorationLogicalBounds() {
+        refreshBarnDecorCache();
+        return cachedRightRiverUpperDecorationLogicalBounds == null
+                ? null
+                : new Rectangle(cachedRightRiverUpperDecorationLogicalBounds);
+    }
+
+    public boolean isRightRiverUpperDecorationCell(int gridX, int gridY) {
+        Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
+        int riverColumn = findDecorativeRiverColumn();
+        int lastBlockedRow = barnBlockedGridBounds == null
+                ? -1
+                : barnBlockedGridBounds.y + barnBlockedGridBounds.height - 1;
+
+        // Version "case par case" de la grande zone interdite aux lapins côté droit.
+        // On s'en sert surtout pour ignorer les petits buissons déjà couverts par cette zone globale.
+        return barnBlockedGridBounds != null
+                && riverColumn >= 0
+                && gridX > riverColumn
+                && gridX < getColumnCount()
+                && gridY >= 0
+                && gridY <= lastBlockedRow;
+    }
+
+    /**
+     * Réserve aussi une petite respiration sous la zone pierreuse de la boutique :
+     * côté droit de la rivière, les deux premières lignes juste après cette zone
+     * restent libres de toute pousse d'arbre.
+     */
+    public boolean blocksTreeSpawnInRightRiverPostBarnRows(int gridX, int gridY) {
+        Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
+        int riverColumn = findDecorativeRiverColumn();
+        if (barnBlockedGridBounds == null || riverColumn < 0) {
+            return false;
+        }
+
+        int firstReservedRow = barnBlockedGridBounds.y + barnBlockedGridBounds.height;
+        int lastReservedRow = Math.min(getRowCount() - 1, firstReservedRow + 1);
+        if (firstReservedRow > lastReservedRow) {
+            return false;
+        }
+
+        return gridX > riverColumn
+                && gridX < getColumnCount()
+                && gridY >= firstReservedRow
+                && gridY <= lastReservedRow;
     }
 
     /**
@@ -500,7 +591,9 @@ public class FieldPanel extends JPanel {
      * Cela sert aux règles visuelles de placement des arbres, plus strictes que la seule hitbox.
      */
     public Rectangle getBarnLogicalDrawBounds() {
-        return new Rectangle(Barn.X, Barn.Y, Barn.WIDTH, Barn.HEIGHT);
+        Rectangle fieldBounds = getFieldBounds();
+        syncBarnTileSize(fieldBounds);
+        return new Rectangle(Barn.getDrawX(), Barn.Y, Barn.WIDTH, Barn.HEIGHT);
     }
 
     /**
@@ -1147,6 +1240,8 @@ public class FieldPanel extends JPanel {
     private void drawCell(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
         drawGroundTile(g2, gridX, gridY, cellBounds);
         drawBarnTopBushDecoration(g2, gridX, gridY, cellBounds);
+        drawBarnLeftVerticalBushDecoration(g2, gridX, gridY, cellBounds);
+        drawBarnRightVerticalBushDecoration(g2, gridX, gridY, cellBounds);
 
         Culture culture = grilleCulture.getCulture(gridX, gridY);
         Image cultureImage = getCultureImage(culture);
@@ -1173,10 +1268,14 @@ public class FieldPanel extends JPanel {
 
     /**
      * Dessine uniquement la tuile de sol.
-     * On sépare ce travail pour éviter de mélanger le choix du fond avec le reste du rendu.
+     * On sépare volontairement ce travail pour éviter de mélanger le choix du fond avec le reste du rendu.
      */
     private void drawGroundTile(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
-        if (isBlockedByBarn(gridX, gridY) || grilleCulture.hasPath(gridX, gridY)) {
+        // Les zones pierreuses de la boutique sont prioritaires :
+        // elles doivent écraser le sol "naturel" quel que soit le contenu logique de la case.
+        if (isBlockedByBarn(gridX, gridY)
+                || grilleCulture.hasPath(gridX, gridY)
+                || isBarnStoneBandExtensionCell(gridX, gridY)) {
             drawLayeredStoneWithGrassGroundTile(g2, cellBounds);
             return;
         }
@@ -1225,8 +1324,7 @@ public class FieldPanel extends JPanel {
 
     /**
      * Ajoute une ligne de buissons au-dessus de la boutique :
-     * on prend la première rangée libre au-dessus de ses cases occupées,
-     * puis on n'utilise que la moitié centrale de cette largeur.
+     * côté gauche jusqu'à la rivière, puis tout le côté droit jusqu'au bord.
      */
     private void drawBarnTopBushDecoration(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
         if (bushTileImage == null || cellBounds == null) {
@@ -1239,6 +1337,22 @@ public class FieldPanel extends JPanel {
         drawDecorativeSprite(g2, bushTileImage, cellBounds);
     }
 
+    private void drawBarnLeftVerticalBushDecoration(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
+        if (verticalBushTileImage == null || cellBounds == null || !isBarnAnyLeftVerticalBushCell(gridX, gridY)) {
+            return;
+        }
+
+        drawLeftAnchoredDecorativeSprite(g2, verticalBushTileImage, cellBounds);
+    }
+
+    private void drawBarnRightVerticalBushDecoration(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
+        if (verticalBushRightTileImage == null || cellBounds == null || !isBarnAnyRightVerticalBushCell(gridX, gridY)) {
+            return;
+        }
+
+        drawRightAnchoredDecorativeSprite(g2, verticalBushRightTileImage, cellBounds);
+    }
+
     private boolean isBarnTopBushCell(int gridX, int gridY) {
         Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
         if (barnBlockedGridBounds == null || barnBlockedGridBounds.y <= 0) {
@@ -1246,22 +1360,16 @@ public class FieldPanel extends JPanel {
         }
 
         int bushRow = barnBlockedGridBounds.y - 1;
-        int occupiedWidth = barnBlockedGridBounds.width;
-        int bushWidth = Math.max(1, (occupiedWidth / 2) - 1);
-        int leftBushStartColumn = barnBlockedGridBounds.x
-                + ((occupiedWidth - bushWidth) / 2)
-                + BARN_BUSH_HORIZONTAL_SHIFT_COLUMNS;
-        int leftBushEndColumnExclusive = Math.min(getColumnCount(), leftBushStartColumn + bushWidth);
-
-        int stoneStartColumn = barnBlockedGridBounds.x
-                + Math.max(0, (barnBlockedGridBounds.width - BARN_TOP_STONE_COLUMN_WIDTH) / 2);
+        // L'entrée pavée coupe la ligne du haut en deux tronçons de buissons.
+        int stoneStartColumn = barnBlockedGridBounds.x + Math.max(0, (barnBlockedGridBounds.width - BARN_TOP_STONE_COLUMN_WIDTH) / 2);
         int stoneEndColumnExclusive = Math.min(getColumnCount(), stoneStartColumn + BARN_TOP_STONE_COLUMN_WIDTH);
-        int rightBushStartColumn = stoneEndColumnExclusive;
-        int rightBushEndColumnExclusive = Math.min(getColumnCount(), rightBushStartColumn + bushWidth);
+        int riverColumn = findDecorativeRiverColumn();
+        int leftBushStartColumn = Math.max(0, riverColumn + 1);
+        int rightBushEndColumnExclusive = getColumnCount();
 
         return gridY == bushRow
-                && ((gridX >= leftBushStartColumn && gridX < leftBushEndColumnExclusive)
-                || (gridX >= rightBushStartColumn && gridX < rightBushEndColumnExclusive));
+                && ((gridX >= leftBushStartColumn && gridX < stoneStartColumn)
+                || (gridX >= stoneEndColumnExclusive && gridX < rightBushEndColumnExclusive));
     }
 
     private boolean isBarnTopStoneColumnCell(int gridX, int gridY) {
@@ -1270,6 +1378,7 @@ public class FieldPanel extends JPanel {
             return false;
         }
 
+        // Cette "colonne" recrée l'axe d'entrée en pavés qui monte jusqu'en haut de l'écran.
         int stoneStartColumn = barnBlockedGridBounds.x
                 + Math.max(0, (barnBlockedGridBounds.width - BARN_TOP_STONE_COLUMN_WIDTH) / 2);
         int stoneEndColumnExclusive = Math.min(getColumnCount(), stoneStartColumn + BARN_TOP_STONE_COLUMN_WIDTH);
@@ -1279,12 +1388,151 @@ public class FieldPanel extends JPanel {
                 && gridX < stoneEndColumnExclusive;
     }
 
+    private boolean isBarnLeftVerticalBushCell(int gridX, int gridY) {
+        Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
+        int leftColumn = barnBlockedGridBounds == null ? -1 : barnBlockedGridBounds.x - 1;
+        return barnBlockedGridBounds != null
+                && leftColumn >= 0
+                && gridX == leftColumn
+                && gridY >= barnBlockedGridBounds.y
+                && gridY < barnBlockedGridBounds.y + barnBlockedGridBounds.height;
+    }
+
+    private boolean isBarnEntranceLeftVerticalBushCell(int gridX, int gridY) {
+        Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
+        if (barnBlockedGridBounds == null || barnBlockedGridBounds.y <= 0) {
+            return false;
+        }
+
+        // Variante spéciale : un bush vertical posé sur la case d'entrée en haut à gauche.
+        int stoneStartColumn = barnBlockedGridBounds.x
+                + Math.max(0, (barnBlockedGridBounds.width - BARN_TOP_STONE_COLUMN_WIDTH) / 2);
+        return gridX == stoneStartColumn && gridY == 0;
+    }
+
+    private boolean isBarnAnyLeftVerticalBushCell(int gridX, int gridY) {
+        return isBarnLeftVerticalBushCell(gridX, gridY)
+                || isBarnEntranceLeftVerticalBushCell(gridX, gridY);
+    }
+
+    private boolean isBarnRightVerticalBushCell(int gridX, int gridY) {
+        Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
+        int rightColumn = getColumnCount() - 1;
+        return barnBlockedGridBounds != null
+                && gridX == rightColumn
+                && gridY >= barnBlockedGridBounds.y
+                && gridY < barnBlockedGridBounds.y + barnBlockedGridBounds.height;
+    }
+
+    private boolean isBarnEntranceRightVerticalBushCell(int gridX, int gridY) {
+        Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
+        if (barnBlockedGridBounds == null || barnBlockedGridBounds.y <= 0) {
+            return false;
+        }
+
+        // Symétrique du cas précédent, mais pour la case d'entrée en haut à droite.
+        int stoneStartColumn = barnBlockedGridBounds.x
+                + Math.max(0, (barnBlockedGridBounds.width - BARN_TOP_STONE_COLUMN_WIDTH) / 2);
+        int stoneEndColumnExclusive = Math.min(getColumnCount(), stoneStartColumn + BARN_TOP_STONE_COLUMN_WIDTH);
+        return gridX == (stoneEndColumnExclusive - 1) && gridY == 0;
+    }
+
+    private boolean isBarnAnyRightVerticalBushCell(int gridX, int gridY) {
+        return isBarnRightVerticalBushCell(gridX, gridY)
+                || isBarnEntranceRightVerticalBushCell(gridX, gridY);
+    }
+
+    /**
+     * Prolonge les mêmes rangées de pierre sous la boutique :
+     * tout le reste vers la droite, et au plus une colonne côté gauche
+     * sans jamais mordre sur la rivière décorative.
+     */
+    private boolean isBarnStoneBandExtensionCell(int gridX, int gridY) {
+        Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
+        if (barnBlockedGridBounds == null) {
+            return false;
+        }
+
+        int leftExtensionColumn = barnBlockedGridBounds.x - 1;
+        boolean rightExtension = hasRightStoneExtensionAt(gridX, gridY);
+        boolean safeLeftExtension = gridX == leftExtensionColumn
+                && gridY >= barnBlockedGridBounds.y
+                && gridY < barnBlockedGridBounds.y + barnBlockedGridBounds.height;
+        // À gauche, on n'ajoute jamais la colonne si elle empiète sur la rivière décorative.
+        safeLeftExtension = safeLeftExtension
+                && leftExtensionColumn >= 0
+                && !grilleCulture.hasRiver(leftExtensionColumn, gridY)
+                && !PredefinedFieldLayout.isLeftOfDecorativeRiver(this, leftExtensionColumn);
+
+        return rightExtension || safeLeftExtension;
+    }
+
+    private void syncBarnTileSize(Rectangle fieldBounds) {
+        if (fieldBounds != null && fieldBounds.width > 0 && fieldBounds.height > 0) {
+            Barn.updateTileSize(getTileSize(fieldBounds));
+        }
+    }
+
+    private int findDecorativeRiverColumn() {
+        refreshBarnDecorCache();
+        return cachedDecorativeRiverColumn;
+    }
+
     private Rectangle getBarnBlockedGridBounds() {
+        refreshBarnDecorCache();
+        return cachedBarnBlockedGridBounds;
+    }
+
+    /**
+     * Les zones décoratives autour de la boutique ne dépendent que de la géométrie du champ.
+     * On les recalcule donc uniquement si la taille visible de la grille change.
+     */
+    private void refreshBarnDecorCache() {
+        Rectangle fieldBounds = getFieldBounds();
+        if (fieldBounds == null) {
+            cachedBarnDecorFieldBounds = null;
+            cachedBarnBlockedGridBounds = null;
+            cachedDecorativeRiverColumn = -1;
+            cachedRightRiverUpperDecorationLogicalBounds = null;
+            return;
+        }
+
+        if (cachedBarnDecorFieldBounds != null && cachedBarnDecorFieldBounds.equals(fieldBounds)) {
+            return;
+        }
+
+        // La géométrie décorative dépend uniquement de la taille visible de la grille.
+        // On la recalcule donc en bloc quand ce rectangle change.
+        cachedBarnDecorFieldBounds = new Rectangle(fieldBounds);
+        cachedBarnBlockedGridBounds = computeBarnBlockedGridBounds();
+        cachedDecorativeRiverColumn = computeDecorativeRiverColumn();
+        cachedRightRiverUpperDecorationLogicalBounds = computeRightRiverUpperDecorationLogicalBounds(
+                cachedBarnDecorFieldBounds,
+                cachedBarnBlockedGridBounds,
+                cachedDecorativeRiverColumn
+        );
+    }
+
+    private int computeDecorativeRiverColumn() {
+        // La rivière décorative est une colonne continue :
+        // il suffit donc de lire la première ligne pour retrouver son index.
+        for (int column = 0; column < getColumnCount(); column++) {
+            if (grilleCulture.hasRiver(column, 0)) {
+                return column;
+            }
+        }
+
+        return -1;
+    }
+
+    private Rectangle computeBarnBlockedGridBounds() {
         int minBlockedColumn = Integer.MAX_VALUE;
         int maxBlockedColumn = Integer.MIN_VALUE;
         int topBlockedRow = Integer.MAX_VALUE;
         int bottomBlockedRow = Integer.MIN_VALUE;
 
+        // On reconstruit ici une "boîte englobante grille" de la boutique
+        // à partir du vrai test de blocage, pour que décor et collisions restent alignés.
         for (int column = 0; column < getColumnCount(); column++) {
             for (int row = 0; row < getRowCount(); row++) {
                 if (!isBlockedByBarn(column, row)) {
@@ -1310,6 +1558,38 @@ public class FieldPanel extends JPanel {
         );
     }
 
+    private Rectangle computeRightRiverUpperDecorationLogicalBounds(
+            Rectangle fieldBounds,
+            Rectangle barnBlockedGridBounds,
+            int decorativeRiverColumn
+    ) {
+        if (fieldBounds == null || barnBlockedGridBounds == null || decorativeRiverColumn < 0) {
+            return null;
+        }
+
+        int startColumn = Math.max(0, decorativeRiverColumn + 1);
+        int endColumn = getColumnCount() - 1;
+        int endRow = Math.min(getRowCount() - 1, barnBlockedGridBounds.y + barnBlockedGridBounds.height - 1);
+        if (startColumn > endColumn || endRow < 0) {
+            return null;
+        }
+
+        // Cette emprise correspond à la zone haute décorative côté droit :
+        // les lapins n'y montent pas, ils restent limités à la zone de champ utile.
+        Rectangle topLeftBounds = buildLogicalCellBounds(startColumn, 0, fieldBounds);
+        Rectangle bottomRightBounds = buildLogicalCellBounds(endColumn, endRow, fieldBounds);
+        if (topLeftBounds == null || bottomRightBounds == null) {
+            return null;
+        }
+
+        return new Rectangle(
+                topLeftBounds.x,
+                topLeftBounds.y,
+                (bottomRightBounds.x + bottomRightBounds.width) - topLeftBounds.x,
+                (bottomRightBounds.y + bottomRightBounds.height) - topLeftBounds.y
+        );
+    }
+
     private void drawDecorativeSprite(
             Graphics2D g2,
             Image sprite,
@@ -1327,6 +1607,8 @@ public class FieldPanel extends JPanel {
 
         int availableWidth = scaleSize(cellBounds.width, BARN_BUSH_FILL_RATIO);
         int availableHeight = scaleSize(cellBounds.height, BARN_BUSH_FILL_RATIO);
+        // On conserve le ratio du sprite d'origine puis on l'aligne sur le bas de la case,
+        // ce qui donne une lecture plus naturelle pour des buissons ou éléments "plantés".
         double scale = Math.min(
                 (double) availableWidth / imageWidth,
                 (double) availableHeight / imageHeight
@@ -1337,6 +1619,66 @@ public class FieldPanel extends JPanel {
         int horizontalOffset = scaleOffset(cellBounds.width, BARN_BUSH_HORIZONTAL_OFFSET_RATIO);
         int drawX = cellBounds.x + ((cellBounds.width - drawWidth) / 2) + horizontalOffset;
         int upwardOffset = scalePositiveOffset(cellBounds.height);
+        int drawY = cellBounds.y + cellBounds.height - drawHeight - upwardOffset;
+
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g2.drawImage(sprite, drawX, drawY, drawWidth, drawHeight, this);
+    }
+
+    private void drawLeftAnchoredDecorativeSprite(Graphics2D g2, Image sprite, Rectangle cellBounds) {
+        if (sprite == null || cellBounds == null) {
+            return;
+        }
+
+        int imageWidth = sprite.getWidth(this);
+        int imageHeight = sprite.getHeight(this);
+        if (imageWidth <= 0 || imageHeight <= 0) {
+            return;
+        }
+
+        int availableWidth = scaleSize(cellBounds.width, VERTICAL_BUSH_WIDTH_RATIO);
+        int availableHeight = scaleSize(cellBounds.height, VERTICAL_BUSH_HEIGHT_RATIO);
+        // Variante ancrée à gauche pour "coller" le feuillage au bord de la case pavée.
+        double scale = Math.min(
+                (double) availableWidth / imageWidth,
+                (double) availableHeight / imageHeight
+        );
+
+        int drawWidth = scaleSize(imageWidth, scale);
+        int drawHeight = scaleSize(imageHeight, scale);
+        int leftInset = Math.max(0, scaleOffset(cellBounds.width, VERTICAL_BUSH_RIGHT_INSET_RATIO));
+        int drawX = cellBounds.x + leftInset - VERTICAL_BUSH_LEFT_PIXEL_SHIFT;
+        int upwardOffset = Math.max(0, scaleOffset(cellBounds.height, VERTICAL_BUSH_UPWARD_OFFSET_RATIO));
+        int drawY = cellBounds.y + cellBounds.height - drawHeight - upwardOffset;
+
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g2.drawImage(sprite, drawX, drawY, drawWidth, drawHeight, this);
+    }
+
+    private void drawRightAnchoredDecorativeSprite(Graphics2D g2, Image sprite, Rectangle cellBounds) {
+        if (sprite == null || cellBounds == null) {
+            return;
+        }
+
+        int imageWidth = sprite.getWidth(this);
+        int imageHeight = sprite.getHeight(this);
+        if (imageWidth <= 0 || imageHeight <= 0) {
+            return;
+        }
+
+        int availableWidth = scaleSize(cellBounds.width, VERTICAL_BUSH_WIDTH_RATIO);
+        int availableHeight = scaleSize(cellBounds.height, VERTICAL_BUSH_HEIGHT_RATIO);
+        // Même principe, mais ancré à droite pour les variantes symétriques.
+        double scale = Math.min(
+                (double) availableWidth / imageWidth,
+                (double) availableHeight / imageHeight
+        );
+
+        int drawWidth = scaleSize(imageWidth, scale);
+        int drawHeight = scaleSize(imageHeight, scale);
+        int rightInset = Math.max(0, scaleOffset(cellBounds.width, VERTICAL_BUSH_RIGHT_INSET_RATIO));
+        int drawX = cellBounds.x + cellBounds.width - drawWidth - rightInset + VERTICAL_BUSH_RIGHT_PIXEL_SHIFT;
+        int upwardOffset = Math.max(0, scaleOffset(cellBounds.height, VERTICAL_BUSH_UPWARD_OFFSET_RATIO));
         int drawY = cellBounds.y + cellBounds.height - drawHeight - upwardOffset;
 
         g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);

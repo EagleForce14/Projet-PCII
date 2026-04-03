@@ -1,6 +1,7 @@
 package model.environment;
 
 import model.culture.GrilleCulture;
+import model.movement.Barn;
 import view.FieldPanel;
 
 import java.awt.Rectangle;
@@ -125,7 +126,8 @@ public final class PredefinedFieldLayout {
 
     /**
      * Repère la première colonne touchée par l'image de la boutique/grange,
-     * puis se décale de deux cases vers la gauche.
+     * puis conserve la même largeur de terrain du côté gauche de la rivière
+     * même si la boutique a été décalée vers la gauche.
      */
     private static int resolveDecorativeRiverColumn(FieldPanel fieldPanel) {
         Rectangle barnBounds = fieldPanel.getBarnLogicalDrawBounds();
@@ -154,6 +156,11 @@ public final class PredefinedFieldLayout {
             return DECORATIVE_RIVER_FALLBACK_COLUMN;
         }
 
-        return Math.max(0, leftmostBarnColumn - DECORATIVE_RIVER_COLUMNS_LEFT_OF_BARN);
+        return Math.max(
+                0,
+                leftmostBarnColumn
+                        - DECORATIVE_RIVER_COLUMNS_LEFT_OF_BARN
+                        + Barn.getHorizontalTileShiftColumns()
+        );
     }
 }

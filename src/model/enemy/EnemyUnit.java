@@ -20,6 +20,10 @@ import java.util.Random;
  * attente de 5 secondes sur la culture avant de manger, ou retour/fuite vers l'extérieur.
  */
 public class EnemyUnit {
+    private static final int SPAWN_SIDE_TOP = 0;
+    private static final int SPAWN_SIDE_RIGHT = 1;
+    private static final int SPAWN_SIDE_BOTTOM = 2;
+    private static final int SPAWN_SIDE_LEFT = 3;
     // La taille de la zone de "sécurité" autour de la grange (on ne peut pas traverser cette zone i.e.
     // on ne peut pas traverser la grange)
     private static final int HITBOX_SIZE = 20;
@@ -114,9 +118,10 @@ public class EnemyUnit {
     // Gestionnaire d'objectifs pour mettre à jour les objectifs liés à la fuite.
     private final GestionnaireObjectifs gestionnaireObjectifs;
     private final FieldObstacleMap fieldObstacleMap;
+    private final int decorativeRiverColumn;
 
     // On construit ici une unité ennemie avec les dimensions connues au moment de son apparition.
-    public EnemyUnit(int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight,
+    public EnemyUnit(int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight, GrilleCulture grilleCulture,
                      GestionnaireObjectifs gestionnaireObjectifs, FieldObstacleMap fieldObstacleMap) {
         this.viewportWidth = viewportWidth;
         this.viewportHeight = viewportHeight;
@@ -124,6 +129,7 @@ public class EnemyUnit {
         this.fieldHeight = fieldHeight;
         this.gestionnaireObjectifs = gestionnaireObjectifs;
         this.fieldObstacleMap = fieldObstacleMap;
+        this.decorativeRiverColumn = resolveDecorativeRiverColumn(grilleCulture);
         // On fait apparaître le lapin hors écran.
         spawnOutside();
         // On initialise la dernière position connue sur X.
@@ -140,42 +146,66 @@ public class EnemyUnit {
         int halfWidth = viewportWidth / 2;
         int halfHeight = viewportHeight / 2;
 
-        // 0: Haut, 1: Droite, 2: Bas, 3: Gauche
         // Choix aléatoire du bord d'apparition.
         int side = random.nextInt(4);
         // On ajoute une petite distance pour garantir une apparition réellement hors écran.
         int offset = 50;
-        
-        // On place le lapin sur l'un des quatre côtés externes de la fenêtre.
-        switch (side) {
-            case 0:
-                // Apparition horizontale aléatoire au-dessus de l'écran.
-                x = random.nextInt(viewportWidth) - halfWidth;
-                // Position verticale au-dessus de la zone visible.
-                y = -halfHeight - offset;
-                break;
-            case 1:
-                // Position horizontale à droite de la zone visible.
-                x = halfWidth + offset;
-                // Apparition verticale aléatoire sur le bord droit.
-                y = random.nextInt(viewportHeight) - halfHeight;
-                break;
-            case 2:
-                // Apparition horizontale aléatoire sous l'écran.
-                x = random.nextInt(viewportWidth) - halfWidth;
-                // Position verticale sous la zone visible.
-                y = halfHeight + offset;
-                break;
-            case 3:
-                // Position horizontale à gauche de la zone visible.
-                x = -halfWidth - offset;
-                // Apparition verticale aléatoire sur le bord gauche.
-                y = random.nextInt(viewportHeight) - halfHeight;
-                break;
-        }
+
+        placeOutsideForSide(side, halfWidth, halfHeight, offset);
         
         // Dès l'apparition, on choisit un premier point d'entrée dans le champ.
         pickFieldEntryTarget();
+
+        if (side == SPAWN_SIDE_TOP && isRightOfDecorativeRiver(targetX)) {
+            int redirectedSide = SPAWN_SIDE_RIGHT + random.nextInt(3);
+            placeOutsideForSide(redirectedSide, halfWidth, halfHeight, offset);
+        }
+    }
+
+    private void placeOutsideForSide(int side, int halfWidth, int halfHeight, int offset) {
+        switch (side) {
+            case SPAWN_SIDE_TOP:
+                x = random.nextInt(viewportWidth) - halfWidth;
+                y = -halfHeight - offset;
+                break;
+            case SPAWN_SIDE_RIGHT:
+                x = halfWidth + offset;
+                y = random.nextInt(viewportHeight) - halfHeight;
+                break;
+            case SPAWN_SIDE_BOTTOM:
+                x = random.nextInt(viewportWidth) - halfWidth;
+                y = halfHeight + offset;
+                break;
+            case SPAWN_SIDE_LEFT:
+            default:
+                x = -halfWidth - offset;
+                y = random.nextInt(viewportHeight) - halfHeight;
+                break;
+        }
+    }
+
+    private boolean isRightOfDecorativeRiver(double logicalX) {
+        if (decorativeRiverColumn < 0) {
+            return false;
+        }
+
+        double tileWidth = (double) fieldWidth / GrilleCulture.LARGEUR_GRILLE;
+        double riverRightEdgeX = (-fieldWidth / 2.0) + ((decorativeRiverColumn + 1) * tileWidth);
+        return logicalX >= riverRightEdgeX;
+    }
+
+    private int resolveDecorativeRiverColumn(GrilleCulture grilleCulture) {
+        if (grilleCulture == null) {
+            return -1;
+        }
+
+        for (int column = 0; column < grilleCulture.getLargeur(); column++) {
+            if (grilleCulture.hasRiver(column, 0)) {
+                return column;
+            }
+        }
+
+        return -1;
     }
     
     /**
@@ -817,9 +847,10 @@ public class EnemyUnit {
             double candidateX = random.nextInt(Math.max(1, fieldWidth - 80)) - (halfFieldWidth - 40);
             double candidateY = random.nextInt(Math.max(1, fieldHeight - 80)) - (halfFieldHeight - 40);
 
-            if (!isInsideBarnAvoidanceZone(candidateX, candidateY, barnBounds, barnMargin)) {
-                targetX = candidateX;
-                targetY = candidateY;
+            if (isInsideBarnAvoidanceZone(candidateX, candidateY, barnBounds, barnMargin)) {
+                continue;
+            }
+            if (trySetNavigableGroundTarget(candidateX, candidateY)) {
                 return;
             }
         }
@@ -828,8 +859,14 @@ public class EnemyUnit {
         boolean goLeft = x <= (barnBounds.x + (barnBounds.width / 2.0));
         double fallbackX = goLeft ? barnBounds.x - barnMargin : barnBounds.x + barnBounds.width + barnMargin;
         double fallbackY = barnBounds.y + barnBounds.height + 35;
-        targetX = Math.max(-halfFieldWidth + 40, Math.min(halfFieldWidth - 40, fallbackX));
-        targetY = Math.max(-halfFieldHeight + 40, Math.min(halfFieldHeight - 40, fallbackY));
+        double clampedFallbackX = Math.max(-halfFieldWidth + 40, Math.min(halfFieldWidth - 40, fallbackX));
+        double clampedFallbackY = Math.max(-halfFieldHeight + 40, Math.min(halfFieldHeight - 40, fallbackY));
+        if (trySetNavigableGroundTarget(clampedFallbackX, clampedFallbackY)) {
+            return;
+        }
+
+        targetX = clampedFallbackX;
+        targetY = clampedFallbackY;
     }
 
     /**
@@ -914,34 +951,38 @@ public class EnemyUnit {
         int halfViewportWidth = viewportWidth / 2;
         // Moitié de la hauteur de la fenêtre.
         int halfViewportHeight = viewportHeight / 2;
-        // Angle aléatoire de déplacement.
-        double angle = random.nextDouble() * 2 * Math.PI;
-        // Distance aléatoire pour éviter une promenade trop régulière.
-        double distance = 40 + random.nextDouble() * 120;
-        // Cible locale sur X selon l'angle et la distance.
-        double localTargetX = x + Math.cos(angle) * distance;
-        // Cible locale sur Y selon l'angle et la distance.
-        double localTargetY = y + Math.sin(angle) * distance;
+        for (int attempt = 0; attempt < 12; attempt++) {
+            // Angle aléatoire de déplacement.
+            double angle = random.nextDouble() * 2 * Math.PI;
+            // Distance aléatoire pour éviter une promenade trop régulière.
+            double distance = 40 + random.nextDouble() * 120;
+            // Cible locale sur X selon l'angle et la distance.
+            double localTargetX = x + Math.cos(angle) * distance;
+            // Cible locale sur Y selon l'angle et la distance.
+            double localTargetY = y + Math.sin(angle) * distance;
 
-        // On garde un leger biais vers le coeur du champ sans faire foncer l'ennemi dessus.
-        // Biais horizontal vers une zone aléatoire interne du champ.
-        double fieldBiasX = (random.nextDouble() - 0.5) * fieldWidth * 0.55;
-        // Biais vertical vers une zone aléatoire interne du champ.
-        double fieldBiasY = (random.nextDouble() - 0.5) * fieldHeight * 0.55;
-        
-        // Mélange entre la cible locale et le biais global sur X.
-        double nextTargetX = (localTargetX * 0.75) + (fieldBiasX * 0.25);
-        // Mélange entre la cible locale et le biais global sur Y.
-        double nextTargetY = (localTargetY * 0.75) + (fieldBiasY * 0.25);
-        
-        // Le champ reste leur zone priviliégiée, mais ils peuvent aussi en sortir.
-        nextTargetX = Math.max(-halfViewportWidth + 20, Math.min(halfViewportWidth - 20, nextTargetX));
-        // Meme logique sur l'axe vertical.
-        nextTargetY = Math.max(-halfViewportHeight + 20, Math.min(halfViewportHeight - 20, nextTargetY));
+            // On garde un leger biais vers le coeur du champ sans faire foncer l'ennemi dessus.
+            // Biais horizontal vers une zone aléatoire interne du champ.
+            double fieldBiasX = (random.nextDouble() - 0.5) * fieldWidth * 0.55;
+            // Biais vertical vers une zone aléatoire interne du champ.
+            double fieldBiasY = (random.nextDouble() - 0.5) * fieldHeight * 0.55;
 
-        // On publie les nouvelles cibles une fois les calculs terminés.
-        targetX = nextTargetX;
-        targetY = nextTargetY;
+            // Mélange entre la cible locale et le biais global sur X.
+            double nextTargetX = (localTargetX * 0.75) + (fieldBiasX * 0.25);
+            // Mélange entre la cible locale et le biais global sur Y.
+            double nextTargetY = (localTargetY * 0.75) + (fieldBiasY * 0.25);
+
+            // Le champ reste leur zone priviliégiée, mais ils peuvent aussi en sortir.
+            nextTargetX = Math.max(-halfViewportWidth + 20, Math.min(halfViewportWidth - 20, nextTargetX));
+            // Meme logique sur l'axe vertical.
+            nextTargetY = Math.max(-halfViewportHeight + 20, Math.min(halfViewportHeight - 20, nextTargetY));
+
+            if (trySetNavigableGroundTarget(nextTargetX, nextTargetY)) {
+                return;
+            }
+        }
+
+        pickFieldEntryTarget();
     }
 
     /**
@@ -1070,8 +1111,13 @@ public class EnemyUnit {
         int halfViewportWidth = viewportWidth / 2;
         int halfViewportHeight = viewportHeight / 2;
 
-        targetX = Math.max(-halfViewportWidth + 20, Math.min(halfViewportWidth - 20, nextTargetX));
-        targetY = Math.max(-halfViewportHeight + 20, Math.min(halfViewportHeight - 20, nextTargetY));
+        double clampedTargetX = Math.max(-halfViewportWidth + 20, Math.min(halfViewportWidth - 20, nextTargetX));
+        double clampedTargetY = Math.max(-halfViewportHeight + 20, Math.min(halfViewportHeight - 20, nextTargetY));
+        if (trySetNavigableGroundTarget(clampedTargetX, clampedTargetY)) {
+            return;
+        }
+
+        pickFieldEntryTarget();
     }
 
     /**
@@ -1083,6 +1129,16 @@ public class EnemyUnit {
             && candidateX <= barnBounds.x + barnBounds.width + margin
             && candidateY >= barnBounds.y - margin
             && candidateY <= barnBounds.y + barnBounds.height + margin;
+    }
+
+    private boolean trySetNavigableGroundTarget(double candidateX, double candidateY) {
+        if (!canOccupy(candidateX, candidateY)) {
+            return false;
+        }
+
+        targetX = candidateX;
+        targetY = candidateY;
+        return true;
     }
     
     /**

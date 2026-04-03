@@ -22,10 +22,14 @@ import java.awt.image.BufferedImage;
 public class EnvironmentView extends JPanel {
     private static final Color TREE_GROUND_SHADOW_COLOR = new Color(7, 10, 4, 62);
     private static final Color TREE_GLOBAL_SHADOW_COLOR = new Color(6, 8, 4, 52);
+    private static final double WORKSHOP_HEIGHT_RATIO_TO_BARN = 1.08;
+    private static final double WORKSHOP_GAP_RATIO_TO_BARN_WIDTH = 0.08;
+    private static final int WORKSHOP_MIN_SCREEN_MARGIN = 18;
 
     private final FieldPanel fieldPanel;
     private final TreeManager treeManager;
     private final Image barnImage;
+    private final Image workshopImage;
     private final Image treeImage;
     private final Image alternateTreeImage;
     private final Image trunkImage;
@@ -41,6 +45,7 @@ public class EnvironmentView extends JPanel {
         this.fieldPanel = fieldPanel;
         this.treeManager = treeManager;
         this.barnImage = ImageLoader.load("/assets/barn.png");
+        this.workshopImage = ImageLoader.load("/assets/menuiserie.png");
         this.treeImage = ImageLoader.load("/assets/arbre.png");
         this.alternateTreeImage = ImageLoader.load("/assets/arbre2.png");
         this.trunkImage = ImageLoader.load("/assets/tronc_arbre.png");
@@ -65,13 +70,55 @@ public class EnvironmentView extends JPanel {
         Graphics2D g2 = (Graphics2D) g.create();
         drawTrees(g2);
 
-        if (barnImage != null) {
-            Rectangle barnBounds = fieldPanel.getBarnScreenBounds();
+        Rectangle barnBounds = fieldPanel.getBarnScreenBounds();
+        if (workshopImage != null) {
+            Rectangle workshopBounds = computeWorkshopBounds(barnBounds);
+            if (workshopBounds != null) {
+                g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+                g2.drawImage(
+                        workshopImage,
+                        workshopBounds.x,
+                        workshopBounds.y,
+                        workshopBounds.width,
+                        workshopBounds.height,
+                        null
+                );
+            }
+        }
+
+        if (barnImage != null && barnBounds != null) {
             g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
             g2.drawImage(barnImage, barnBounds.x, barnBounds.y, barnBounds.width, barnBounds.height, null);
         }
 
         g2.dispose();
+    }
+
+    /**
+     * Place la menuiserie à droite de la boutique en gardant sa base alignée sur le même sol.
+     */
+    private Rectangle computeWorkshopBounds(Rectangle barnBounds) {
+        if (workshopImage == null || barnBounds == null) {
+            return null;
+        }
+
+        int imageWidth = workshopImage.getWidth(this);
+        int imageHeight = workshopImage.getHeight(this);
+        if (imageWidth <= 0 || imageHeight <= 0) {
+            return null;
+        }
+
+        int targetHeight = Math.max(1, (int) Math.round(barnBounds.height * WORKSHOP_HEIGHT_RATIO_TO_BARN));
+        double scale = (double) targetHeight / imageHeight;
+        int drawWidth = Math.max(1, (int) Math.round(imageWidth * scale));
+        int drawHeight = Math.max(1, (int) Math.round(imageHeight * scale));
+        int gap = Math.max(18, (int) Math.round(barnBounds.width * WORKSHOP_GAP_RATIO_TO_BARN_WIDTH));
+        Rectangle fieldBounds = fieldPanel.getFieldBounds();
+        int maxX = fieldBounds.x + fieldBounds.width - WORKSHOP_MIN_SCREEN_MARGIN - drawWidth;
+        int drawX = Math.min(maxX, barnBounds.x + barnBounds.width + gap);
+        int drawY = barnBounds.y + barnBounds.height - drawHeight;
+
+        return new Rectangle(drawX, drawY, drawWidth, drawHeight);
     }
 
     // Pour dessiner plusieurs arbres

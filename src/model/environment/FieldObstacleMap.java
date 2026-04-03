@@ -51,6 +51,12 @@ public class FieldObstacleMap {
         if (fieldPanel.hasDecorativeBushAt(gridX, gridY)) {
             return false;
         }
+        if (fieldPanel.hasRightStoneExtensionAt(gridX, gridY)) {
+            return false;
+        }
+        if (fieldPanel.blocksTreeSpawnInRightRiverPostBarnRows(gridX, gridY)) {
+            return false;
+        }
         if (PredefinedFieldLayout.blocksTreeSpawnInLeftRiverSection(fieldPanel, gridX, gridY)) {
             return false;
         }
@@ -129,11 +135,15 @@ public class FieldObstacleMap {
         int top = (int) Math.round(centerY - (height / 2.0));
         Rectangle entityBounds = new Rectangle(left, top, width, height);
 
+        if (blockFences && intersectsRightRiverUpperDecoration(entityBounds)) {
+            return false;
+        }
+
         if (intersectsBarnCourtyard(entityBounds)) {
             return false;
         }
 
-        if (intersectsDecorativeBushCells(entityBounds)) {
+        if (intersectsDecorativeBushCells(entityBounds, blockFences)) {
             return false;
         }
 
@@ -201,6 +211,10 @@ public class FieldObstacleMap {
             return true;
         }
 
+        if (fieldPanel.hasRightStoneExtensionAt(gridX, gridY)) {
+            return true;
+        }
+
         if (fieldPanel.getGrilleCulture().hasRiver(gridX, gridY)) {
             return true;
         }
@@ -226,6 +240,11 @@ public class FieldObstacleMap {
         return barnCourtyardBounds != null && barnCourtyardBounds.intersects(entityBounds);
     }
 
+    private boolean intersectsRightRiverUpperDecoration(Rectangle entityBounds) {
+        Rectangle blockedBounds = fieldPanel.getRightRiverUpperDecorationLogicalBounds();
+        return blockedBounds != null && blockedBounds.intersects(entityBounds);
+    }
+
     private boolean intersectsPlacedRiver(Rectangle entityBounds) {
         /*
          * La grille reste petite.
@@ -249,10 +268,13 @@ public class FieldObstacleMap {
         return false;
     }
 
-    private boolean intersectsDecorativeBushCells(Rectangle entityBounds) {
+    private boolean intersectsDecorativeBushCells(Rectangle entityBounds, boolean ignoreRightRiverUpperDecoration) {
         for (int column = 0; column < fieldPanel.getColumnCount(); column++) {
             for (int row = 0; row < fieldPanel.getRowCount(); row++) {
                 if (!fieldPanel.hasDecorativeBushAt(column, row)) {
+                    continue;
+                }
+                if (ignoreRightRiverUpperDecoration && fieldPanel.isRightRiverUpperDecorationCell(column, row)) {
                     continue;
                 }
 

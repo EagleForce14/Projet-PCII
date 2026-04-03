@@ -90,6 +90,7 @@ public class EnemyModel {
                         currentViewportHeight,
                         currentFieldWidth,
                         currentFieldHeight,
+                        grilleCulture,
                         grilleCulture.getGestionnaireObjectifs(),
                         fieldObstacleMap
                 ));
