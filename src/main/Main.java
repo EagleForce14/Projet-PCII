@@ -63,7 +63,7 @@ public class Main {
         Jour jour = new Jour();
         GrilleCulture grilleCulture = new GrilleCulture(jour.getGestionnaireObjectifs());
         TreeManager treeManager = new TreeManager(grilleCulture);
-        Money playerMoney = new Money(3050);
+        Money playerMoney = new Money(150);
         Inventaire inventaire = new Inventaire();
         Shop shop = new Shop();
         // Enregistrer shop pour qu'il recoive les notifications de changement de jour
