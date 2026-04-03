@@ -2,6 +2,7 @@ package view;
 
 import model.culture.Culture;
 import model.culture.CellSide;
+import model.culture.FenceDestructionEffect;
 import model.culture.GrilleCulture;
 import model.culture.Stade;
 import model.environment.FieldObstacleMap;
@@ -10,7 +11,6 @@ import model.environment.TreeManager;
 import model.movement.Barn;
 
 import javax.swing.JPanel;
-import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -19,6 +19,7 @@ import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -37,6 +38,8 @@ public class FieldPanel extends JPanel {
     // Couleurs utilisées pour surligner la case actuellement occupée par le joueur.
     private static final Color HIGHLIGHT_FILL = new Color(255, 255, 120, 90);
     private static final Color HIGHLIGHT_BORDER = new Color(255, 215, 0, 210);
+    private static final Color LABOUR_WARNING_BADGE_FILL = new Color(204, 58, 48, 230);
+    private static final Color LABOUR_WARNING_BADGE_BORDER = new Color(255, 221, 214, 245);
 
     // Couleurs de l'effet visuel affiché après un arrosage réussi.
     private static final Color WATERED_FILL = new Color(70, 170, 255);
@@ -65,6 +68,16 @@ public class FieldPanel extends JPanel {
     private static final Color FENCE_SLAT_LIGHT = new Color(255, 170, 72);
     private static final Color FENCE_SLAT_DARK = new Color(174, 78, 18);
     private static final Color FENCE_WOOD_SHADOW = new Color(73, 46, 25, 95);
+    private static final Color FENCE_HEALTH_FRAME = new Color(31, 21, 18, 235);
+    private static final Color FENCE_HEALTH_BACKGROUND = new Color(78, 34, 30, 220);
+    private static final Color FENCE_HEALTH_STABLE = new Color(147, 219, 95, 235);
+    private static final Color FENCE_HEALTH_WARNING = new Color(255, 199, 80, 240);
+    private static final Color FENCE_HEALTH_DANGER = new Color(255, 118, 65, 242);
+    private static final Color FENCE_HEALTH_CRITICAL = new Color(224, 53, 39, 246);
+    private static final Color FENCE_HEALTH_HIGHLIGHT = new Color(255, 241, 210, 210);
+    private static final Color FENCE_EXPLOSION_OUTER = new Color(255, 173, 84, 180);
+    private static final Color FENCE_EXPLOSION_INNER = new Color(255, 234, 169, 220);
+    private static final Color FENCE_EXPLOSION_DEBRIS = new Color(121, 74, 43, 210);
     private static final int BARN_BUSH_HORIZONTAL_SHIFT_COLUMNS = -3;
     private static final int BARN_TOP_STONE_COLUMN_WIDTH = 2;
     private static final double BARN_BUSH_FILL_RATIO = 1.18;
@@ -106,15 +119,6 @@ public class FieldPanel extends JPanel {
 
     // Le preview mémorise à la fois la case survolée et le bord réellement visé.
     private FencePreview fencePreview;
-
-    /*
-     * La rivière se pose à la souris sur une case entière.
-     * On garde donc un petit état de preview séparé :
-     * - quelle case est visée,
-     * - et si cette pose est réellement valide.
-     */
-    private Point riverPreviewCell;
-    private boolean riverPreviewValid;
 
     // Cet indicateur dit seulement si la zone du compost doit être montrée ou non.
     // Les cases exactes sont relues directement depuis la grille au moment du dessin.
@@ -217,27 +221,6 @@ public class FieldPanel extends JPanel {
 
     public void clearFencePreview() {
         setFencePreview(null);
-    }
-
-    /**
-     * Le contrôleur prépare ici la preview de rivière.
-     * On stocke à la fois la case et sa validité
-     * pour pouvoir expliquer visuellement "ici oui" ou "ici non"
-     * sans recalculer la règle au moment du paint.
-     */
-    public void setRiverPreview(Point riverPreviewCell, boolean valid) {
-        Point nextCell = riverPreviewCell == null ? null : new Point(riverPreviewCell);
-        if (Objects.equals(this.riverPreviewCell, nextCell) && riverPreviewValid == valid) {
-            return;
-        }
-
-        this.riverPreviewCell = nextCell;
-        this.riverPreviewValid = riverPreviewCell != null && valid;
-        repaint();
-    }
-
-    public void clearRiverPreview() {
-        setRiverPreview(null, false);
     }
 
     /**
@@ -482,7 +465,13 @@ public class FieldPanel extends JPanel {
             return fieldObstacleMap.blocksCell(gridX, gridY);
         }
 
-        return grilleCulture.hasRiver(gridX, gridY) || treeManager.hasTreeAt(gridX, gridY);
+        return grilleCulture.hasRiver(gridX, gridY)
+                || treeManager.hasTreeAt(gridX, gridY)
+                || hasDecorativeBushAt(gridX, gridY);
+    }
+
+    public boolean hasDecorativeBushAt(int gridX, int gridY) {
+        return isBarnTopBushCell(gridX, gridY);
     }
 
     /**
@@ -496,6 +485,14 @@ public class FieldPanel extends JPanel {
         }
 
         return buildLogicalCellBounds(gridX, gridY, getFieldBounds());
+    }
+
+    /**
+     * Expose la vraie emprise logique d'un segment de clôture.
+     * Les collisions des lapins et le rendu doivent parler exactement de la même forme.
+     */
+    public Rectangle getLogicalFenceBounds(int gridX, int gridY, CellSide side) {
+        return getFenceBounds(gridX, gridY, side, true);
     }
 
     /**
@@ -685,6 +682,21 @@ public class FieldPanel extends JPanel {
      */
     private FenceMetrics createFenceMetrics(Rectangle cellBounds) {
         return new FenceMetrics(cellBounds.width);
+    }
+
+    /** Donne la même clôture, mais dans le repère écran. */
+    private Rectangle getScreenFenceBounds(int gridX, int gridY, CellSide side) {
+        return getFenceBounds(gridX, gridY, side, false);
+    }
+
+    /** Centralise le calcul de bounds pour éviter deux versions quasi identiques. */
+    private Rectangle getFenceBounds(int gridX, int gridY, CellSide side, boolean logical) {
+        Rectangle cellBounds = logical ? getLogicalCellBounds(gridX, gridY) : getCellBounds(gridX, gridY);
+        if (cellBounds == null || side == null) {
+            return null;
+        }
+
+        return getFenceBandBounds(cellBounds, side, createFenceMetrics(cellBounds));
     }
 
     /**
@@ -1153,6 +1165,10 @@ public class FieldPanel extends JPanel {
         if (isHighlightedFarmableCell(gridX, gridY)) {
             drawCellHighlight(g2, cellBounds);
         }
+
+        if (shouldShowLabourFenceWarning(gridX, gridY)) {
+            drawLabourFenceWarningBadge(g2, cellBounds);
+        }
     }
 
     /**
@@ -1372,6 +1388,35 @@ public class FieldPanel extends JPanel {
         drawFilledOverlayWithDoubleBorder(g2, cellBounds, HIGHLIGHT_FILL, HIGHLIGHT_BORDER);
     }
 
+    /** Dit si la case active doit montrer l'avertissement rouge de labourage. */
+    private boolean shouldShowLabourFenceWarning(int gridX, int gridY) {
+        return highlightedCell != null
+                && highlightedCell.x == gridX
+                && highlightedCell.y == gridY
+                && isFarmableCell(highlightedCell)
+                && !grilleCulture.isLabouree(gridX, gridY)
+                && !grilleCulture.hasPath(gridX, gridY)
+                && !grilleCulture.hasCompostAt(gridX, gridY)
+                && !grilleCulture.hasRiver(gridX, gridY)
+                && grilleCulture.isLabourBlockedByAdjacentFence(gridX, gridY);
+    }
+
+    /** Dessine un petit repère rouge directement dans la case du joueur. */
+    private void drawLabourFenceWarningBadge(Graphics2D g2, Rectangle cellBounds) {
+        int badgeSize = Math.max(10, cellBounds.width / 4);
+        int badgeX = cellBounds.x + cellBounds.width - badgeSize - 5;
+        int badgeY = cellBounds.y + 5;
+        int arc = Math.max(6, badgeSize / 2);
+
+        g2.setColor(LABOUR_WARNING_BADGE_FILL);
+        g2.fillRoundRect(badgeX, badgeY, badgeSize, badgeSize, arc, arc);
+
+        g2.setColor(LABOUR_WARNING_BADGE_BORDER);
+        g2.drawRoundRect(badgeX, badgeY, badgeSize - 1, badgeSize - 1, arc, arc);
+        g2.drawLine(badgeX + 3, badgeY + 3, badgeX + badgeSize - 4, badgeY + badgeSize - 4);
+        g2.drawLine(badgeX + badgeSize - 4, badgeY + 3, badgeX + 3, badgeY + badgeSize - 4);
+    }
+
     /**
      * Dessine l'objet compost posé sur une case d'herbe.
      * On garde un petit padding pour qu'il reste lisible sans toucher les bords de la tuile.
@@ -1415,12 +1460,8 @@ public class FieldPanel extends JPanel {
         }
     }
 
-    /**
-     * Les clôtures sont dessinées après les cases pour rester au premier plan.
-     * On parcourt donc la grille une deuxième fois, mais avec une responsabilité très claire:
-     * uniquement les segments de clôture déjà posés.
-     */
-    private void drawPlacedFences(Graphics2D g2) {
+    /** Parcourt les clôtures pour dessiner soit le bois, soit les barres de vie. */
+    private void drawPlacedFenceLayer(Graphics2D g2, boolean healthBarLayer) {
         for (int row = 0; row < getRowCount(); row++) {
             for (int column = 0; column < getColumnCount(); column++) {
                 Rectangle cellBounds = getCellBounds(column, row);
@@ -1430,11 +1471,175 @@ public class FieldPanel extends JPanel {
 
                 for (CellSide side : CellSide.values()) {
                     if (grilleCulture.hasFence(column, row, side)) {
-                        drawFence(g2, column, row, cellBounds, side);
+                        if (healthBarLayer) {
+                            drawFenceHealthBar(g2, column, row, side);
+                        } else {
+                            drawFence(g2, column, row, cellBounds, side);
+                        }
                     }
                 }
             }
         }
+    }
+
+    /**
+     * Les clôtures sont dessinées après les cases pour rester au premier plan.
+     * On parcourt donc la grille une deuxième fois, mais
+     * uniquement les segments de clôture déjà posés.
+     */
+    private void drawPlacedFences(Graphics2D g2) {
+        drawPlacedFenceLayer(g2, false);
+    }
+
+    /**
+     * La barre de vie ne doit apparaître que quand elle apporte vraiment une info.
+     */
+    private void drawFenceHealthBars(Graphics2D g2) {
+        drawPlacedFenceLayer(g2, true);
+    }
+
+    /** Dessine une petite barre au-dessus du segment touché. */
+    private void drawFenceHealthBar(Graphics2D g2, int cellX, int cellY, CellSide side) {
+        if (!grilleCulture.shouldShowFenceHealthBar(cellX, cellY, side)) {
+            return;
+        }
+
+        Rectangle fenceBounds = getScreenFenceBounds(cellX, cellY, side);
+        if (fenceBounds == null) {
+            return;
+        }
+
+        Rectangle fieldBounds = getFieldBounds();
+        int barWidth = Math.max(26, Math.max(fenceBounds.width, fenceBounds.height) + 10);
+        int barHeight = Math.max(6, Math.min(10, Math.max(fenceBounds.width, fenceBounds.height) / 5));
+        int barX = fenceBounds.x + ((fenceBounds.width - barWidth) / 2);
+        int barY = fenceBounds.y - barHeight - 7;
+        barX = clampInt(barX, fieldBounds.x + 2, fieldBounds.x + fieldBounds.width - barWidth - 2);
+        barY = Math.max(fieldBounds.y + 2, barY);
+
+        int frameArc = Math.max(6, barHeight + 2);
+        int innerPadding = 2;
+        int innerWidth = Math.max(1, barWidth - (innerPadding * 2));
+        int innerHeight = Math.max(1, barHeight - (innerPadding * 2));
+        double integrityRatio = grilleCulture.getFenceIntegrityRatio(cellX, cellY, side);
+        int fillWidth = (int) Math.round(innerWidth * integrityRatio);
+
+        g2.setColor(FENCE_HEALTH_FRAME);
+        g2.fillRoundRect(barX, barY, barWidth, barHeight, frameArc, frameArc);
+
+        g2.setColor(FENCE_HEALTH_BACKGROUND);
+        g2.fillRoundRect(
+                barX + innerPadding,
+                barY + innerPadding,
+                innerWidth,
+                innerHeight,
+                Math.max(4, frameArc - 2),
+                Math.max(4, frameArc - 2)
+        );
+
+        if (fillWidth > 0) {
+            g2.setColor(getFenceHealthColor(integrityRatio));
+            g2.fillRoundRect(
+                    barX + innerPadding,
+                    barY + innerPadding,
+                    fillWidth,
+                    innerHeight,
+                    Math.max(4, frameArc - 2),
+                    Math.max(4, frameArc - 2)
+            );
+
+            g2.setColor(FENCE_HEALTH_HIGHLIGHT);
+            g2.fillRect(barX + innerPadding + 1, barY + innerPadding + 1, Math.max(1, fillWidth - 2), 1);
+        }
+    }
+
+    /** Choisit une couleur simple selon l'état restant de la clôture. */
+    private Color getFenceHealthColor(double integrityRatio) {
+        if (integrityRatio <= 0.25) {
+            return FENCE_HEALTH_CRITICAL;
+        }
+        if (integrityRatio <= 0.50) {
+            return FENCE_HEALTH_DANGER;
+        }
+        if (integrityRatio <= 0.75) {
+            return FENCE_HEALTH_WARNING;
+        }
+        return FENCE_HEALTH_STABLE;
+    }
+
+    /**
+     * Quand un segment casse, on garde un petit "boum" :
+     * flash, cœur lumineux, puis quelques éclats.
+     */
+    private void drawFenceDestructionEffects(Graphics2D g2) {
+        long now = System.currentTimeMillis();
+        List<FenceDestructionEffect> effects = grilleCulture.getActiveFenceDestructionEffects();
+        for (FenceDestructionEffect effect : effects) {
+            drawFenceDestructionEffect(g2, effect, now);
+        }
+    }
+
+    /** Dessine le petit "boum" autour du segment détruit. */
+    private void drawFenceDestructionEffect(Graphics2D g2, FenceDestructionEffect effect, long now) {
+        Rectangle fenceBounds = getScreenFenceBounds(effect.getGridX(), effect.getGridY(), effect.getSide());
+        if (fenceBounds == null) {
+            return;
+        }
+
+        double progress = effect.getProgress(now);
+        if (progress >= 1.0) {
+            return;
+        }
+
+        Graphics2D explosionGraphics = (Graphics2D) g2.create();
+        int centerX = fenceBounds.x + (fenceBounds.width / 2);
+        int centerY = fenceBounds.y + (fenceBounds.height / 2);
+        int baseRadius = Math.max(8, Math.max(fenceBounds.width, fenceBounds.height));
+        int outerRadius = baseRadius + (int) Math.round(progress * 16);
+        int innerRadius = Math.max(4, (int) Math.round(baseRadius * (0.9 - (progress * 0.45))));
+        int outerAlpha = (int) Math.round(180 * (1.0 - progress));
+        int innerAlpha = (int) Math.round(235 * (1.0 - progress));
+        int debrisDistance = baseRadius + (int) Math.round(progress * 18);
+        int debrisSize = Math.max(3, baseRadius / 3);
+
+        explosionGraphics.setColor(withAlpha(FENCE_EXPLOSION_OUTER, outerAlpha));
+        explosionGraphics.fillOval(centerX - outerRadius, centerY - outerRadius, outerRadius * 2, outerRadius * 2);
+
+        explosionGraphics.setColor(withAlpha(FENCE_EXPLOSION_INNER, innerAlpha));
+        explosionGraphics.fillOval(centerX - innerRadius, centerY - innerRadius, innerRadius * 2, innerRadius * 2);
+
+        drawExplosionShard(explosionGraphics, centerX, centerY, -1, -1, debrisDistance, debrisSize, progress);
+        drawExplosionShard(explosionGraphics, centerX, centerY, 1, -1, debrisDistance, debrisSize, progress);
+        drawExplosionShard(explosionGraphics, centerX, centerY, -1, 1, debrisDistance, debrisSize, progress);
+        drawExplosionShard(explosionGraphics, centerX, centerY, 1, 1, debrisDistance, debrisSize, progress);
+        drawExplosionShard(explosionGraphics, centerX, centerY, 0, -1, debrisDistance + 4, debrisSize, progress);
+        drawExplosionShard(explosionGraphics, centerX, centerY, 0, 1, debrisDistance + 4, debrisSize, progress);
+        explosionGraphics.dispose();
+    }
+
+    /** Ajoute un éclat carré très simple autour de l'explosion. */
+    private void drawExplosionShard(Graphics2D g2, int centerX, int centerY, int directionX, int directionY, int distance, int size, double progress) {
+        int drawX = centerX + (directionX * distance) - (size / 2);
+        int drawY = centerY + (directionY * distance) - (size / 2);
+        int alpha = (int) Math.round(210 * (1.0 - progress));
+
+        g2.setColor(withAlpha(FENCE_EXPLOSION_DEBRIS, alpha));
+        g2.fillRect(drawX, drawY, size, size);
+    }
+
+    /** Reprend une couleur existante en changeant juste son alpha. */
+    private Color withAlpha(Color color, int alpha) {
+        int clampedAlpha = clampInt(alpha, 0, 255);
+        return new Color(color.getRed(), color.getGreen(), color.getBlue(), clampedAlpha);
+    }
+
+    /** Force une valeur à rester entre un min et un max. */
+    private int clampInt(int value, int min, int max) {
+        if (min > max) {
+            return min;
+        }
+
+        return Math.max(min, Math.min(max, value));
     }
 
     /**
@@ -1450,70 +1655,6 @@ public class FieldPanel extends JPanel {
         if (previewBounds != null) {
             drawFencePreview(g2, previewBounds, fencePreview.getSide());
         }
-    }
-
-    /**
-     * La pose de rivière doit être très lisible,
-     * justement parce qu'on ne passe pas par la case sous le joueur.
-     * On affiche donc le sprite réel avec une transparence,
-     * puis un code couleur très franc :
-     * bleu si la pose est autorisée, rouge chaud sinon.
-     */
-    private void drawRiverPreviewOverlay(Graphics2D g2) {
-        if (riverPreviewCell == null) {
-            return;
-        }
-
-        Rectangle previewBounds = getCellBounds(riverPreviewCell.x, riverPreviewCell.y);
-        if (previewBounds == null) {
-            return;
-        }
-
-        Image previewTile = (riverTileImages == null || riverTileImages.length == 0) ? null : riverTileImages[0];
-        Graphics2D previewGraphics = (Graphics2D) g2.create();
-        previewGraphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-
-        if (previewTile != null) {
-            float alpha = riverPreviewValid ? 0.72f : 0.38f;
-            previewGraphics.setComposite(AlphaComposite.SrcOver.derive(alpha));
-            previewGraphics.drawImage(
-                    previewTile,
-                    previewBounds.x,
-                    previewBounds.y,
-                    previewBounds.width,
-                    previewBounds.height,
-                    this
-            );
-            previewGraphics.setComposite(AlphaComposite.SrcOver);
-        }
-
-        Color fillColor = riverPreviewValid
-                ? new Color(87, 176, 255, 70)
-                : new Color(198, 93, 74, 88);
-        Color borderColor = riverPreviewValid
-                ? new Color(194, 237, 255, 230)
-                : new Color(255, 210, 178, 235);
-
-        drawFilledOverlayWithDoubleBorder(previewGraphics, previewBounds, fillColor, borderColor);
-
-        if (!riverPreviewValid) {
-            // Le petit X rend l'interdiction instantanément lisible,
-            // même si le joueur regarde le champ en mouvement.
-            previewGraphics.drawLine(
-                    previewBounds.x + 3,
-                    previewBounds.y + 3,
-                    previewBounds.x + previewBounds.width - 4,
-                    previewBounds.y + previewBounds.height - 4
-            );
-            previewGraphics.drawLine(
-                    previewBounds.x + previewBounds.width - 4,
-                    previewBounds.y + 3,
-                    previewBounds.x + 3,
-                    previewBounds.y + previewBounds.height - 4
-            );
-        }
-
-        previewGraphics.dispose();
     }
 
     private void drawFilledOverlayWithDoubleBorder(
@@ -1552,8 +1693,9 @@ public class FieldPanel extends JPanel {
 
         drawCompostInfluenceOverlay(g2);
         drawPlacedFences(g2);
+        drawFenceHealthBars(g2);
         drawFencePreviewOverlay(g2);
-        drawRiverPreviewOverlay(g2);
+        drawFenceDestructionEffects(g2);
 
         g2.dispose();
     }

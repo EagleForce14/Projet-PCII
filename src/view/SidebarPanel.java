@@ -51,6 +51,7 @@ public class SidebarPanel extends JPanel {
     private final JButton cleanButton;
     private final JButton pathButton;
     private final JButton compostButton;
+    private final JLabel labourWarningLabel;
     private final JPanel pathActionRow;
     private final JPanel compostActionRow;
 
@@ -66,6 +67,7 @@ public class SidebarPanel extends JPanel {
     private boolean currentCompostEnabledState;
     private boolean currentCompostVisibleState;
     private String currentCompostButtonLabel;
+    private boolean currentLabourWarningVisibleState;
 
     // Constructeur de la classe
     public SidebarPanel(MovementModel movementModel, GrilleCulture grilleCulture, FieldPanel fieldPanel,
@@ -142,12 +144,22 @@ public class SidebarPanel extends JPanel {
         compostActionRow = createSpecialActionRow(compostButton);
         compostActionRow.setVisible(false);
 
+        labourWarningLabel = new JLabel(
+                "<html>Le labourage n'est pas autorisé sur une case adjacente à une clôture.</html>"
+        );
+        labourWarningLabel.setOpaque(false);
+        labourWarningLabel.setForeground(new Color(255, 116, 96));
+        labourWarningLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 10.0f));
+        labourWarningLabel.setVisible(false);
+        labourWarningLabel.setBorder(BorderFactory.createEmptyBorder(8, 2, 0, 2));
+
         JPanel specialActionsPanel = new JPanel();
         specialActionsPanel.setOpaque(false);
         specialActionsPanel.setLayout(new BoxLayout(specialActionsPanel, BoxLayout.Y_AXIS));
         specialActionsPanel.setBorder(BorderFactory.createEmptyBorder(0, 16, 16, 16));
         specialActionsPanel.add(pathActionRow);
         specialActionsPanel.add(compostActionRow);
+        specialActionsPanel.add(labourWarningLabel);
 
         contentPanel.add(titleRow, BorderLayout.NORTH);
         contentPanel.add(buttonsGrid, BorderLayout.CENTER);
@@ -156,7 +168,7 @@ public class SidebarPanel extends JPanel {
 
         // Au démarrage, les boutons sont désactivés tant que l'unité déplaçable n'est pas
         // sur une case valide du champ.
-        applyButtonsEnabledState(false, false, false, false, false, false, false, false, false, "Poser compost");
+        applyButtonsEnabledState(false, false, false, false, false, false, false, false, false, "Poser compost", false);
     }
 
     /**
@@ -234,6 +246,7 @@ public class SidebarPanel extends JPanel {
         boolean shouldDisplayCompostAction = shouldShowCompostAction();
         boolean shouldEnableCompost = canUseCompostButtonOnActiveCell();
         String compostButtonLabel = shouldShowRemiserCompostAction() ? "Remiser compost" : "Poser compost";
+        boolean shouldShowLabourWarning = shouldShowAdjacentFenceLabourWarning();
         if (shouldEnableLabour != currentLabourEnabledState
                 || shouldEnablePlant != currentPlantEnabledState
                 || shouldEnableHarvest != currentHarvestEnabledState
@@ -243,7 +256,8 @@ public class SidebarPanel extends JPanel {
                 || shouldShowPathAction != currentPathVisibleState
                 || shouldEnableCompost != currentCompostEnabledState
                 || shouldDisplayCompostAction != currentCompostVisibleState
-                || !compostButtonLabel.equals(currentCompostButtonLabel)) {
+                || !compostButtonLabel.equals(currentCompostButtonLabel)
+                || shouldShowLabourWarning != currentLabourWarningVisibleState) {
             applyButtonsEnabledState(
                     shouldEnableLabour,
                     shouldEnablePlant,
@@ -254,7 +268,8 @@ public class SidebarPanel extends JPanel {
                     shouldShowPathAction,
                     shouldEnableCompost,
                     shouldDisplayCompostAction,
-                    compostButtonLabel
+                    compostButtonLabel,
+                    shouldShowLabourWarning
             );
         }
     }
@@ -266,7 +281,8 @@ public class SidebarPanel extends JPanel {
                                           boolean harvestEnabled, boolean cleanEnabled, boolean waterEnabled,
                                           boolean pathEnabled, boolean pathVisible,
                                           boolean compostEnabled, boolean compostVisible,
-                                          String compostButtonLabel) {
+                                          String compostButtonLabel,
+                                          boolean labourWarningVisible) {
         currentLabourEnabledState = labourEnabled;
         currentPlantEnabledState = plantEnabled;
         currentHarvestEnabledState = harvestEnabled;
@@ -277,6 +293,7 @@ public class SidebarPanel extends JPanel {
         currentCompostEnabledState = compostEnabled;
         currentCompostVisibleState = compostVisible;
         currentCompostButtonLabel = compostButtonLabel;
+        currentLabourWarningVisibleState = labourWarningVisible;
 
         labourButton.setEnabled(labourEnabled);
         plantButton.setEnabled(plantEnabled);
@@ -288,6 +305,7 @@ public class SidebarPanel extends JPanel {
         compostButton.setEnabled(compostEnabled);
         compostActionRow.setVisible(compostVisible);
         compostButton.setText(compostButtonLabel);
+        labourWarningLabel.setVisible(labourWarningVisible);
 
         repaint();
     }
@@ -302,9 +320,22 @@ public class SidebarPanel extends JPanel {
             return false;
         }
 
-        return !grilleCulture.isLabouree(activeFieldCell.x, activeFieldCell.y)
+        return grilleCulture.canLabourCell(activeFieldCell.x, activeFieldCell.y);
+    }
+
+    /**
+     * Le message rouge n'apparaît que pour cette nouvelle règle précise :
+     * une case encore "labourable" en apparence, mais collée à une clôture.
+     */
+    private boolean shouldShowAdjacentFenceLabourWarning() {
+        Point activeFieldCell = movementModel.getActiveFieldCell();
+        return activeFieldCell != null
+                && fieldPanel.isFarmableCell(activeFieldCell)
+                && !grilleCulture.isLabouree(activeFieldCell.x, activeFieldCell.y)
                 && !grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y)
-                && !grilleCulture.hasCompostAt(activeFieldCell.x, activeFieldCell.y);
+                && !grilleCulture.hasCompostAt(activeFieldCell.x, activeFieldCell.y)
+                && !grilleCulture.hasRiver(activeFieldCell.x, activeFieldCell.y)
+                && grilleCulture.isLabourBlockedByAdjacentFence(activeFieldCell.x, activeFieldCell.y);
     }
 
     /**

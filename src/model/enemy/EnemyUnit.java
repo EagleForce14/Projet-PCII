@@ -1,7 +1,9 @@
 package model.enemy;
 
 import model.culture.GrilleCulture;
+import model.culture.CellSide;
 import model.culture.Culture;
+import model.environment.FenceCollision;
 import model.culture.Stade;
 import model.environment.FieldObstacleMap;
 import model.movement.Barn;
@@ -25,6 +27,15 @@ public class EnemyUnit {
     private static final int CULTURE_DETECTION_RADIUS = 120;
     // Le délai de 5s avant de manger la culture une fois que l'on est positionné dessus.
     private static final long DELAI_AVANT_MANGER_MS = 5000L;
+    // Le délai entre deux coups donnés à une clôture.
+    private static final long DELAI_COUP_CLOTURE_MS = 900L;
+    // Mouvement "bélier" : le lapin recule un peu puis revient plus vite sur la clôture.
+    private static final double FENCE_ATTACK_APPROACH_SPEED = 1.5;
+    private static final double FENCE_ATTACK_BACKSTEP_SPEED = 1.15;
+    private static final double FENCE_ATTACK_CHARGE_SPEED = 3.1;
+    private static final double FENCE_ATTACK_BACKSTEP_DISTANCE = 18.0;
+    private static final double FENCE_ATTACK_CONTACT_TOLERANCE = 0.75;
+    private static final double FENCE_ATTACK_BACKSTEP_TOLERANCE = 1.0;
     // Le délai de retour au terrier si le lapin n'a rien trouvé. Correspond à 30s
     private static final long DELAI_RETOUR_TERRIER_MS = 30000L;
     // Ces listes décrivent les rotations possibles autour de la direction voulue afin de contourner la grange.
@@ -76,6 +87,11 @@ public class EnemyUnit {
     // Case de culture actuellement visée par le lapin.
     private int targetCultureGridX = -1;
     private int targetCultureGridY = -1;
+    // Si une clôture protège la culture ciblée, le lapin garde ce segment comme cible jusqu'à sa destruction.
+    private CellSide targetFenceSide = null;
+    private boolean isFenceAttackBackingOff = false;
+    private boolean isFenceAttackCharging = false;
+    private long lastFenceHitTime = -1L;
     // Instant où le lapin a atteint la case et commence son attente de 5 secondes avant de manger.
     private long cultureWaitStartTime = -1L;
     // Début de la période pendant laquelle le lapin ne trouve aucune culture à viser.
@@ -183,9 +199,9 @@ public class EnemyUnit {
         updateBurrowReturnState(enemyModel);
         ensureValidTarget(player);
         updateNavigationState();
-        moveTowardTarget();
+        moveTowardTarget(grilleCulture);
         updateCultureWaiting(enemyModel, grilleCulture);
-        updateStagnationAndRecover(player);
+        updateStagnationAndRecover(player, grilleCulture);
         updateFledStatus();
     }
 
@@ -213,6 +229,7 @@ public class EnemyUnit {
             isFleeing = true;
             isReturningToBurrow = false;
             noCultureFoundStartTime = -1L;
+            clearFenceAttackTarget();
             // Si le joueur fait fuir le lapin, la culture redevient immédiatement disponible
             // pour un autre lapin et le délai avant consommation est perdu.
             clearCultureTarget(enemyModel);
@@ -283,7 +300,11 @@ public class EnemyUnit {
      * Transforme la cible actuelle en un petit pas de déplacement concret.
      * C'est ici qu'on choisit aussi la vitesse normale ou la vitesse plus rapide de sortie.
      */
-    private void moveTowardTarget() {
+    private void moveTowardTarget(GrilleCulture grilleCulture) {
+        if (advanceFenceAttack(grilleCulture)) {
+            return;
+        }
+
         double dx = targetX - x;
         double dy = targetY - y;
         double distance = Math.sqrt(dx * dx + dy * dy);
@@ -293,7 +314,7 @@ public class EnemyUnit {
             double step = Math.min(currentSpeed, distance);
             double stepX = (dx / distance) * step;
             double stepY = (dy / distance) * step;
-            moveWithObstacleCollision(stepX, stepY, currentSpeed);
+            moveWithObstacleCollision(stepX, stepY, currentSpeed, grilleCulture);
             return;
         }
 
@@ -307,10 +328,172 @@ public class EnemyUnit {
     }
 
     /**
+     * Tant qu'un segment précis bloque la culture ciblée, le lapin reste dessus
+     * au lieu de contourner l'obstacle.
+     */
+    private boolean advanceFenceAttack(GrilleCulture grilleCulture) {
+        if (!hasFenceAttackTarget(grilleCulture) || fieldObstacleMap == null) {
+            clearFenceAttackTarget();
+            return false;
+        }
+
+        Rectangle fenceBounds = fieldObstacleMap.getFenceLogicalBounds(targetCultureGridX, targetCultureGridY, targetFenceSide);
+        if (fenceBounds == null) {
+            clearFenceAttackTarget();
+            return false;
+        }
+
+        double attackTargetX = getFenceContactTargetX(fenceBounds, targetFenceSide);
+        double attackTargetY = getFenceContactTargetY(fenceBounds, targetFenceSide);
+        if (isFenceAttackBackingOff) {
+            double backstepTargetX = getFenceBackstepTargetX(attackTargetX, targetFenceSide);
+            double backstepTargetY = getFenceBackstepTargetY(attackTargetY, targetFenceSide);
+            if (advanceTowardFenceAttackPoint(
+                    backstepTargetX,
+                    backstepTargetY,
+                    FENCE_ATTACK_BACKSTEP_SPEED,
+                    FENCE_ATTACK_BACKSTEP_TOLERANCE
+            )) {
+                return true;
+            }
+
+            isFenceAttackBackingOff = false;
+            isFenceAttackCharging = true;
+            return true;
+        }
+
+        double approachSpeed = isFenceAttackCharging ? FENCE_ATTACK_CHARGE_SPEED : FENCE_ATTACK_APPROACH_SPEED;
+        if (advanceTowardFenceAttackPoint(
+                attackTargetX,
+                attackTargetY,
+                approachSpeed,
+                FENCE_ATTACK_CONTACT_TOLERANCE
+        )) {
+            return true;
+        }
+
+        long now = System.currentTimeMillis();
+        if (lastFenceHitTime >= 0L && (now - lastFenceHitTime) < DELAI_COUP_CLOTURE_MS) {
+            return true;
+        }
+
+        lastFenceHitTime = now;
+        if (grilleCulture.damageFence(targetCultureGridX, targetCultureGridY, targetFenceSide)) {
+            clearFenceAttackTarget();
+            return true;
+        }
+
+        isFenceAttackBackingOff = true;
+        isFenceAttackCharging = false;
+        return true;
+    }
+
+    /**
+     * Même pendant l'attaque de clôture, on garde un seul helper de déplacement
+     * pour éviter de dupliquer la logique de pas, de collision et de petit détour.
+     */
+    private boolean advanceTowardFenceAttackPoint(
+            double destinationX,
+            double destinationY,
+            double speed,
+            double arrivalTolerance
+    ) {
+        double dx = destinationX - x;
+        double dy = destinationY - y;
+        double distance = Math.sqrt((dx * dx) + (dy * dy));
+        if (distance <= arrivalTolerance) {
+            return false;
+        }
+
+        double step = Math.min(speed, distance);
+        double stepX = (dx / distance) * step;
+        double stepY = (dy / distance) * step;
+        if (tryMove(stepX, stepY)) {
+            return true;
+        }
+
+        if (!isTargetFenceCollision(fieldObstacleMap.findBlockingFenceCollision(x + stepX, y + stepY, HITBOX_SIZE, HITBOX_SIZE))) {
+            redirectAroundObstacle(stepX, stepY, speed);
+            return true;
+        }
+
+        return false;
+    }
+
+    private double getFenceContactTargetX(Rectangle fenceBounds, CellSide side) {
+        switch (side) {
+            case LEFT:
+                return fenceBounds.x - (HITBOX_SIZE / 2.0) - 1;
+            case RIGHT:
+                return fenceBounds.x + fenceBounds.width + (HITBOX_SIZE / 2.0) + 1;
+            case TOP:
+            case BOTTOM:
+                return Math.max(
+                        fenceBounds.x + (HITBOX_SIZE / 2.0),
+                        Math.min(x, fenceBounds.x + fenceBounds.width - (HITBOX_SIZE / 2.0))
+                );
+            default:
+                return x;
+        }
+    }
+
+    private double getFenceContactTargetY(Rectangle fenceBounds, CellSide side) {
+        switch (side) {
+            case TOP:
+                return fenceBounds.y - (HITBOX_SIZE / 2.0) - 1;
+            case BOTTOM:
+                return fenceBounds.y + fenceBounds.height + (HITBOX_SIZE / 2.0) + 1;
+            case LEFT:
+            case RIGHT:
+                return Math.max(
+                        fenceBounds.y + (HITBOX_SIZE / 2.0),
+                        Math.min(y, fenceBounds.y + fenceBounds.height - (HITBOX_SIZE / 2.0))
+                );
+            default:
+                return y;
+        }
+    }
+
+    private double getFenceBackstepTargetX(double contactTargetX, CellSide side) {
+        switch (side) {
+            case LEFT:
+                return contactTargetX - FENCE_ATTACK_BACKSTEP_DISTANCE;
+            case RIGHT:
+                return contactTargetX + FENCE_ATTACK_BACKSTEP_DISTANCE;
+            case TOP:
+            case BOTTOM:
+                return contactTargetX;
+            default:
+                return x;
+        }
+    }
+
+    private double getFenceBackstepTargetY(double contactTargetY, CellSide side) {
+        switch (side) {
+            case TOP:
+                return contactTargetY - FENCE_ATTACK_BACKSTEP_DISTANCE;
+            case BOTTOM:
+                return contactTargetY + FENCE_ATTACK_BACKSTEP_DISTANCE;
+            case LEFT:
+            case RIGHT:
+                return contactTargetY;
+            default:
+                return y;
+        }
+    }
+
+    /**
      * Surveille les situations où le lapin semble coincé.
      * Si son mouvement devient quasi nul pendant plusieurs frames, on relance une cible adaptée pour le débloquer.
      */
-    private void updateStagnationAndRecover(Unit player) {
+    private void updateStagnationAndRecover(Unit player, GrilleCulture grilleCulture) {
+        if (hasFenceAttackTarget(grilleCulture)) {
+            stagnantFrames = 0;
+            lastX = x;
+            lastY = y;
+            return;
+        }
+
         if (hasCultureTarget() && cultureWaitStartTime >= 0L) {
             stagnantFrames = 0;
             lastX = x;
@@ -521,6 +704,49 @@ public class EnemyUnit {
         return culture == null || culture.getStadeCroissance() != Stade.MATURE;
     }
 
+    private boolean acquireTargetFence(double stepX, double stepY, GrilleCulture grilleCulture) {
+        if (!hasCultureTarget() || grilleCulture == null || fieldObstacleMap == null) {
+            return false;
+        }
+
+        FenceCollision collision =
+                fieldObstacleMap.findBlockingFenceCollision(x + stepX, y + stepY, HITBOX_SIZE, HITBOX_SIZE);
+        if (collision == null
+                || collision.getGridX() != targetCultureGridX
+                || collision.getGridY() != targetCultureGridY
+                || !grilleCulture.hasFence(targetCultureGridX, targetCultureGridY, collision.getSide())) {
+            return false;
+        }
+
+        targetFenceSide = collision.getSide();
+        isFenceAttackBackingOff = false;
+        isFenceAttackCharging = false;
+        lastFenceHitTime = -1L;
+        return true;
+    }
+
+    private boolean hasFenceAttackTarget(GrilleCulture grilleCulture) {
+        return targetFenceSide != null
+                && hasCultureTarget()
+                && grilleCulture != null
+                && grilleCulture.hasFence(targetCultureGridX, targetCultureGridY, targetFenceSide);
+    }
+
+    private boolean isTargetFenceCollision(FenceCollision collision) {
+        return collision != null
+                && targetFenceSide != null
+                && collision.getGridX() == targetCultureGridX
+                && collision.getGridY() == targetCultureGridY
+                && collision.getSide() == targetFenceSide;
+    }
+
+    private void clearFenceAttackTarget() {
+        targetFenceSide = null;
+        isFenceAttackBackingOff = false;
+        isFenceAttackCharging = false;
+        lastFenceHitTime = -1L;
+    }
+
     /**
      * Indique si le lapin est vraiment posé sur le centre de sa culture cible.
      * L'attente de 5 secondes ne doit démarrer qu'à ce moment précis.
@@ -572,6 +798,7 @@ public class EnemyUnit {
         targetCultureGridX = -1;
         targetCultureGridY = -1;
         cultureWaitStartTime = -1L;
+        clearFenceAttackTarget();
     }
     
     /**
@@ -718,10 +945,16 @@ public class EnemyUnit {
     }
 
     /**
-     * Tente d'appliquer le pas voulu. Si un obstacle bloque, on délègue à la logique de contournement.
+     * Tente d'appliquer le pas voulu.
+     * Si l'obstacle bloquant est précisément la clôture qui protège la culture ciblée,
+     * on verrouille ce segment comme cible d'attaque au lieu de contourner.
      */
-    private void moveWithObstacleCollision(double stepX, double stepY, double speed) {
+    private void moveWithObstacleCollision(double stepX, double stepY, double speed, GrilleCulture grilleCulture) {
         if (tryMove(stepX, stepY)) {
+            return;
+        }
+
+        if (acquireTargetFence(stepX, stepY, grilleCulture)) {
             return;
         }
 
@@ -804,11 +1037,11 @@ public class EnemyUnit {
     /**
      * Encapsule le test de collision avec tous les obstacles fixes
      * pour garder le reste du code lisible :
-     * grange, arbres et maintenant rivière.
+     * grange, arbres, rivière, et clôtures côté lapins.
      */
     private boolean canOccupy(double centerX, double centerY) {
         return Barn.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE)
-                && (fieldObstacleMap == null || fieldObstacleMap.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE));
+                && (fieldObstacleMap == null || fieldObstacleMap.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE, true));
     }
 
     /**

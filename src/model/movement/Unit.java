@@ -104,9 +104,9 @@ public class Unit {
     public void setFieldObstacleMap(FieldObstacleMap fieldObstacleMap) { this.fieldObstacleMap = fieldObstacleMap; }
 
     /**
-     * Le joueur partage exactement le même filtre d'occupation
-     * que les autres entités mobiles.
-     * Ainsi, une rivière ou un arbre bloquera toujours tout le monde de la même façon.
+     * Le joueur partage le même filtre d'occupation que les autres entités mobiles
+     * pour les obstacles de terrain classiques.
+     * Les clôtures restent volontairement exclues ici : elles ne bloquent que les lapins.
      */
     private boolean canOccupy(double centerX, double centerY) {
         return Barn.canOccupyCenteredBox(centerX, centerY, SIZE, SIZE)

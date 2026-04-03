@@ -11,6 +11,9 @@ import java.util.Map;
 
 /** Classe représentant la grille de culture */
 public class GrilleCulture {
+    public static final int FENCE_HIT_POINTS = 4;
+    private static final long FENCE_BAR_VISIBLE_MS = 1400L;
+
     /**
      * La grille n'est plus un petit carré central :
      * elle couvre désormais toute la zone de jeu visible.
@@ -64,10 +67,19 @@ public class GrilleCulture {
 
     // Chaque bit représente un segment de clôture posé sur un des 4 bords d'une case.
     private final int[][] fenceMasks;
+    // Chaque segment garde son propre nombre de coups encaissés.
+    private final int[][][] fenceHitCounts;
+    // La barre de vie n'est pas toujours affichée : elle apparaît après un impact.
+    // C'est un tableau 3D car on doit stocker la position de la case mais aussi le côté concerné de cette case.
+    // Même remarque pour les autres attrbuts avec des tableaux 3D de cette classe.
+    private final long[][][] fenceBarVisibleUntilMs;
+    // Les destructions gardent un effet visuel très court pour rendre l'ouverture du passage lisible.
+    private final List<FenceDestructionEffect> fenceDestructionEffects;
 
     /*
      * Les composts sont peu nombreux par design :
      * on en autorise au maximum deux sur la map.
+     *
      *
      * Une petite liste de positions reste donc plus simple et plus lisible
      * qu'une matrice dédiée supplémentaire.
@@ -130,6 +142,9 @@ public class GrilleCulture {
         this.gestionnaireObjectifs = gestionnaireObjectifs;
         this.grille = new ZoneCulture[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         this.fenceMasks = new int[LARGEUR_GRILLE][HAUTEUR_GRILLE];
+        this.fenceHitCounts = new int[LARGEUR_GRILLE][HAUTEUR_GRILLE][CellSide.values().length];
+        this.fenceBarVisibleUntilMs = new long[LARGEUR_GRILLE][HAUTEUR_GRILLE][CellSide.values().length];
+        this.fenceDestructionEffects = new ArrayList<>();
         this.compostCells = new ArrayList<>();
         this.pathCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         this.riverCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
@@ -167,6 +182,109 @@ public class GrilleCulture {
         }
 
         return (fenceMasks[x][y] & side.getMask()) != 0;
+    }
+
+    public int getFenceRemainingHitPoints(int x, int y, CellSide side) {
+        if (side == null || !estDansGrille(x, y) || !hasFence(x, y, side)) {
+            return 0;
+        }
+
+        return Math.max(0, FENCE_HIT_POINTS - fenceHitCounts[x][y][side.ordinal()]);
+    }
+
+    public double getFenceIntegrityRatio(int x, int y, CellSide side) {
+        int remainingHitPoints = getFenceRemainingHitPoints(x, y, side);
+        if (remainingHitPoints <= 0) {
+            return 0.0;
+        }
+
+        return remainingHitPoints / (double) FENCE_HIT_POINTS;
+    }
+
+    /**
+     * Dit si un segment de clôture touche ce bord précis de la case.
+     * On regarde donc à la fois le segment stocké sur la case elle-même
+     * et celui éventuellement stocké sur la voisine d'en face.
+     */
+    public boolean hasFenceTouchingCellSide(int x, int y, CellSide side) {
+        if (side == null || !estDansGrille(x, y)) {
+            return false;
+        }
+
+        if (hasFence(x, y, side)) {
+            return true;
+        }
+
+        int neighborX = x + side.getDeltaX();
+        int neighborY = y + side.getDeltaY();
+        CellSide oppositeSide = side.opposite();
+        return oppositeSide != null
+                && estDansGrille(neighborX, neighborY)
+                && hasFence(neighborX, neighborY, oppositeSide);
+    }
+
+    /** Dit si la case touche une clôture sur un de ses 4 côtés. */
+    public boolean isLabourBlockedByAdjacentFence(int x, int y) {
+        if (!estDansGrille(x, y)) {
+            return false;
+        }
+
+        for (CellSide side : CellSide.values()) {
+            if (hasFenceTouchingCellSide(x, y, side)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Centralise la règle de labourage pour le contrôleur et la sidebar. */
+    public boolean canLabourCell(int x, int y) {
+        return estDansGrille(x, y)
+                && !isLabouree(x, y)
+                && !hasPath(x, y)
+                && !hasRiver(x, y)
+                && !hasCompostAt(x, y)
+                && !isLabourBlockedByAdjacentFence(x, y);
+    }
+
+    /**
+     * La barre de vie ne doit pas encombrer le champ en permanence.
+     * On la montre donc juste après un coup, sauf en état critique :
+     * une clôture rouge reste visible tant qu'elle tient encore debout.
+     */
+    public boolean shouldShowFenceHealthBar(int x, int y, CellSide side) {
+        if (side == null || !estDansGrille(x, y) || !hasFence(x, y, side)) {
+            return false;
+        }
+
+        int sideIndex = side.ordinal();
+        int remainingHitPoints = getFenceRemainingHitPoints(x, y, side);
+        if (remainingHitPoints <= 1) {
+            return true;
+        }
+
+        return System.currentTimeMillis() <= fenceBarVisibleUntilMs[x][y][sideIndex];
+    }
+
+    /**
+     * Applique un coup de lapin sur un segment.
+     * Le segment saute seulement au quatrième impact frontal.
+     */
+    public synchronized boolean damageFence(int x, int y, CellSide side) {
+        if (side == null || !estDansGrille(x, y) || !hasFence(x, y, side)) {
+            return false;
+        }
+
+        int sideIndex = side.ordinal();
+        long now = System.currentTimeMillis();
+        fenceHitCounts[x][y][sideIndex] = Math.min(FENCE_HIT_POINTS, fenceHitCounts[x][y][sideIndex] + 1);
+        fenceBarVisibleUntilMs[x][y][sideIndex] = now + FENCE_BAR_VISIBLE_MS;
+        if (fenceHitCounts[x][y][sideIndex] < FENCE_HIT_POINTS) {
+            return false;
+        }
+
+        destroyFence(x, y, side, now);
+        return true;
     }
 
     /**
@@ -231,7 +349,26 @@ public class GrilleCulture {
         }
 
         fenceMasks[x][y] = fenceMasks[x][y] | side.getMask(); // Attention OU binaire
+        resetFenceState(x, y, side);
         inventaire.UseInstallation(FacilityType.CLOTURE);
+    }
+
+    public synchronized List<FenceDestructionEffect> getActiveFenceDestructionEffects() {
+        long now = System.currentTimeMillis();
+        fenceDestructionEffects.removeIf(effect -> effect.isExpired(now));
+        return new ArrayList<>(fenceDestructionEffects);
+    }
+
+    private void destroyFence(int x, int y, CellSide side, long destroyedAtMs) {
+        fenceMasks[x][y] = fenceMasks[x][y] & ~side.getMask();
+        resetFenceState(x, y, side);
+        fenceDestructionEffects.add(new FenceDestructionEffect(x, y, side, destroyedAtMs));
+    }
+
+    private void resetFenceState(int x, int y, CellSide side) {
+        int sideIndex = side.ordinal();
+        fenceHitCounts[x][y][sideIndex] = 0;
+        fenceBarVisibleUntilMs[x][y][sideIndex] = 0L;
     }
 
     /**
@@ -251,6 +388,9 @@ public class GrilleCulture {
         }
         if (hasCompostAt(x, y)) {
             throw new IllegalStateException("Impossible de labourer une case recouverte par un compost.");
+        }
+        if (isLabourBlockedByAdjacentFence(x, y)) {
+            throw new IllegalStateException("Impossible de labourer une case adjacente à une clôture.");
         }
 
         grille[x][y].labourer();

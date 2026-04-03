@@ -1,5 +1,6 @@
 package model.environment;
 
+import model.culture.CellSide;
 import view.FieldPanel;
 import view.InventoryStatusOverlay;
 
@@ -45,6 +46,9 @@ public class FieldObstacleMap {
             return false;
         }
         if (fieldPanel.isBlockedByBarn(gridX, gridY)) {
+            return false;
+        }
+        if (fieldPanel.hasDecorativeBushAt(gridX, gridY)) {
             return false;
         }
         if (PredefinedFieldLayout.blocksTreeSpawnInLeftRiverSection(fieldPanel, gridX, gridY)) {
@@ -113,6 +117,14 @@ public class FieldObstacleMap {
      * c'est ici qu'il devra être branché.
      */
     public boolean canOccupyCenteredBox(double centerX, double centerY, int width, int height) {
+        return canOccupyCenteredBox(centerX, centerY, width, height, false);
+    }
+
+    /**
+     * Certains obstacles sont spécifiques aux lapins :
+     * les clôtures doivent les arrêter, mais pas bloquer le joueur.
+     */
+    public boolean canOccupyCenteredBox(double centerX, double centerY, int width, int height, boolean blockFences) {
         int left = (int) Math.round(centerX - (width / 2.0));
         int top = (int) Math.round(centerY - (height / 2.0));
         Rectangle entityBounds = new Rectangle(left, top, width, height);
@@ -121,7 +133,15 @@ public class FieldObstacleMap {
             return false;
         }
 
+        if (intersectsDecorativeBushCells(entityBounds)) {
+            return false;
+        }
+
         if (intersectsPlacedRiver(entityBounds)) {
+            return false;
+        }
+
+        if (blockFences && findIntersectingFenceCollision(entityBounds) != null) {
             return false;
         }
 
@@ -133,6 +153,17 @@ public class FieldObstacleMap {
         }
 
         return true;
+    }
+
+    public FenceCollision findBlockingFenceCollision(double centerX, double centerY, int width, int height) {
+        int left = (int) Math.round(centerX - (width / 2.0));
+        int top = (int) Math.round(centerY - (height / 2.0));
+        Rectangle entityBounds = new Rectangle(left, top, width, height);
+        return findIntersectingFenceCollision(entityBounds);
+    }
+
+    public Rectangle getFenceLogicalBounds(int gridX, int gridY, CellSide side) {
+        return fieldPanel.getLogicalFenceBounds(gridX, gridY, side);
     }
 
     /**
@@ -163,6 +194,10 @@ public class FieldObstacleMap {
         }
 
         if (fieldPanel.isBlockedByBarn(gridX, gridY)) {
+            return true;
+        }
+
+        if (fieldPanel.hasDecorativeBushAt(gridX, gridY)) {
             return true;
         }
 
@@ -212,6 +247,42 @@ public class FieldObstacleMap {
         }
 
         return false;
+    }
+
+    private boolean intersectsDecorativeBushCells(Rectangle entityBounds) {
+        for (int column = 0; column < fieldPanel.getColumnCount(); column++) {
+            for (int row = 0; row < fieldPanel.getRowCount(); row++) {
+                if (!fieldPanel.hasDecorativeBushAt(column, row)) {
+                    continue;
+                }
+
+                Rectangle bushCellBounds = fieldPanel.getLogicalCellBounds(column, row);
+                if (bushCellBounds != null && bushCellBounds.intersects(entityBounds)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private FenceCollision findIntersectingFenceCollision(Rectangle entityBounds) {
+        for (int column = 0; column < fieldPanel.getColumnCount(); column++) {
+            for (int row = 0; row < fieldPanel.getRowCount(); row++) {
+                for (CellSide side : CellSide.values()) {
+                    if (!fieldPanel.getGrilleCulture().hasFence(column, row, side)) {
+                        continue;
+                    }
+
+                    Rectangle fenceBounds = fieldPanel.getLogicalFenceBounds(column, row, side);
+                    if (fenceBounds != null && fenceBounds.intersects(entityBounds)) {
+                        return new FenceCollision(column, row, side, fenceBounds);
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     private Rectangle getFutureMatureTreeBounds(int gridX, int gridY) {

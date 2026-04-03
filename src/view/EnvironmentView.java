@@ -36,7 +36,7 @@ public class EnvironmentView extends JPanel {
     private final BufferedImage alternateTreeShadowImage;
     private final BufferedImage trunkShadowImage;
 
-    // Le constructeur de la vue
+    // Le constructeur de la classe
     public EnvironmentView(FieldPanel fieldPanel, TreeManager treeManager) {
         this.fieldPanel = fieldPanel;
         this.treeManager = treeManager;

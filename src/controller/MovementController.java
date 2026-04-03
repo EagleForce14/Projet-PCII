@@ -103,9 +103,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         Point activeFieldCell = model.getActiveFieldCell();
         if (activeFieldCell == null
                 || !fieldPanel.isFarmableCell(activeFieldCell)
-                || grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y)
-                || grilleCulture.hasCompostAt(activeFieldCell.x, activeFieldCell.y)
-                || grilleCulture.isLabouree(activeFieldCell.x, activeFieldCell.y)) {
+                || !grilleCulture.canLabourCell(activeFieldCell.x, activeFieldCell.y)) {
             return;
         }
 
@@ -304,7 +302,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
 
         stopPlayerMovement();
         fieldPanel.clearFencePreview();
-        fieldPanel.clearRiverPreview();
         fieldPanel.clearCompostInfluenceHighlight();
         shopOverlay.openShop();
     }
@@ -427,7 +424,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             // Quel que soit le cas, un clic sur une graine doit faire sortir
             // du mode clôture, donc on retire le preview éventuel.
             fieldPanel.clearFencePreview();
-            fieldPanel.clearRiverPreview();
             fieldPanel.clearCompostInfluenceHighlight();
             // On redessine la barre pour refléter immédiatement le changement de sélection.
             inventoryStatusOverlay.repaint();
@@ -585,7 +581,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     @Override
     public void mouseExited(MouseEvent e) {
         fieldPanel.clearFencePreview();
-        fieldPanel.clearRiverPreview();
     }
 
     @Override
