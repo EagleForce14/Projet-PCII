@@ -9,14 +9,16 @@ package model.environment;
 public class TreeInstance {
     private final int gridX;
     private final int gridY;
+    private final boolean weepingWillow;
     private final boolean alternateMatureSprite;
     private boolean mature;
 
     // Le constructeur
-    public TreeInstance(int gridX, int gridY, boolean mature, boolean alternateMatureSprite) {
+    public TreeInstance(int gridX, int gridY, boolean mature, boolean weepingWillow, boolean alternateMatureSprite) {
         this.gridX = gridX;
         this.gridY = gridY;
         this.mature = mature;
+        this.weepingWillow = weepingWillow;
         this.alternateMatureSprite = alternateMatureSprite;
     }
 
@@ -32,6 +34,10 @@ public class TreeInstance {
         return mature;
     }
 
+    public boolean usesWeepingWillowSprite() {
+        return weepingWillow;
+    }
+
     public boolean usesAlternateMatureSprite() {
         return alternateMatureSprite;
     }
@@ -45,6 +51,6 @@ public class TreeInstance {
      * l'état interne modifiable du gestionnaire.
      */
     public TreeInstance copy() {
-        return new TreeInstance(gridX, gridY, mature, alternateMatureSprite);
+        return new TreeInstance(gridX, gridY, mature, weepingWillow, alternateMatureSprite);
     }
 }

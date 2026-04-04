@@ -16,6 +16,7 @@ public final class PredefinedFieldLayout {
     private static final int FIRST_TILLED_ROW = 4;
     private static final int TILLED_STRIP_COUNT = 4;
     private static final int TILLED_ROW_STEP = 2;
+    private static final int LEFT_TILLED_CLEARANCE_RADIUS = 1;
 
     private PredefinedFieldLayout() {
         // Classe utilitaire.
@@ -88,9 +89,8 @@ public final class PredefinedFieldLayout {
             return false;
         }
 
-        int firstReservedRow = FIRST_TILLED_ROW;
-        int lastReservedRow = FIRST_TILLED_ROW + ((TILLED_STRIP_COUNT - 1) * TILLED_ROW_STEP);
-        return gridY >= firstReservedRow && gridY <= lastReservedRow;
+        return isInsideReservedLeftRiverRows(gridY)
+                || isNearTilledCell(fieldPanel.getGrilleCulture(), gridX, gridY, LEFT_TILLED_CLEARANCE_RADIUS);
     }
 
     /**
@@ -122,6 +122,32 @@ public final class PredefinedFieldLayout {
      */
     public static boolean isLeftWindowEdgeColumn(FieldPanel fieldPanel, int gridX) {
         return fieldPanel != null && gridX == 0;
+    }
+
+    private static boolean isInsideReservedLeftRiverRows(int gridY) {
+        int firstReservedRow = FIRST_TILLED_ROW;
+        int lastReservedRow = FIRST_TILLED_ROW + ((TILLED_STRIP_COUNT - 1) * TILLED_ROW_STEP);
+        return gridY >= firstReservedRow && gridY <= lastReservedRow;
+    }
+
+    /**
+     * Même en dehors des lignes complètement réservées,
+     * on garde une respiration d'une case autour de toute terre déjà labourée.
+     */
+    private static boolean isNearTilledCell(GrilleCulture grilleCulture, int gridX, int gridY, int radius) {
+        if (grilleCulture == null) {
+            return false;
+        }
+
+        for (int offsetX = -radius; offsetX <= radius; offsetX++) {
+            for (int offsetY = -radius; offsetY <= radius; offsetY++) {
+                if (grilleCulture.isLabouree(gridX + offsetX, gridY + offsetY)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

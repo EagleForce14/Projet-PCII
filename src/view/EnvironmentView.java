@@ -22,9 +22,6 @@ import java.awt.image.BufferedImage;
 public class EnvironmentView extends JPanel {
     private static final Color TREE_GROUND_SHADOW_COLOR = new Color(7, 10, 4, 62);
     private static final Color TREE_GLOBAL_SHADOW_COLOR = new Color(6, 8, 4, 52);
-    private static final double WORKSHOP_HEIGHT_RATIO_TO_BARN = 1.08;
-    private static final double WORKSHOP_GAP_RATIO_TO_BARN_WIDTH = 0.08;
-    private static final int WORKSHOP_MIN_SCREEN_MARGIN = 18;
 
     private final FieldPanel fieldPanel;
     private final TreeManager treeManager;
@@ -32,13 +29,19 @@ public class EnvironmentView extends JPanel {
     private final Image workshopImage;
     private final Image treeImage;
     private final Image alternateTreeImage;
+    private final Image weepingWillowImage;
     private final Image trunkImage;
+    private final Image darkTrunkImage;
     private final BufferedImage treeGroundShadowImage;
     private final BufferedImage alternateTreeGroundShadowImage;
+    private final BufferedImage weepingWillowGroundShadowImage;
     private final BufferedImage trunkGroundShadowImage;
+    private final BufferedImage darkTrunkGroundShadowImage;
     private final BufferedImage treeShadowImage;
     private final BufferedImage alternateTreeShadowImage;
+    private final BufferedImage weepingWillowShadowImage;
     private final BufferedImage trunkShadowImage;
+    private final BufferedImage darkTrunkShadowImage;
 
     // Le constructeur de la classe
     public EnvironmentView(FieldPanel fieldPanel, TreeManager treeManager) {
@@ -48,13 +51,19 @@ public class EnvironmentView extends JPanel {
         this.workshopImage = ImageLoader.load("/assets/menuiserie.png");
         this.treeImage = ImageLoader.load("/assets/arbre.png");
         this.alternateTreeImage = ImageLoader.load("/assets/arbre2.png");
+        this.weepingWillowImage = ImageLoader.load("/assets/Saule pleureur.png");
         this.trunkImage = ImageLoader.load("/assets/tronc_arbre.png");
+        this.darkTrunkImage = ImageLoader.load("/assets/tronc_sombre.png");
         this.treeGroundShadowImage = createShadowImage(treeImage, TREE_GROUND_SHADOW_COLOR);
         this.alternateTreeGroundShadowImage = createShadowImage(alternateTreeImage, TREE_GROUND_SHADOW_COLOR);
+        this.weepingWillowGroundShadowImage = createShadowImage(weepingWillowImage, TREE_GROUND_SHADOW_COLOR);
         this.trunkGroundShadowImage = createShadowImage(trunkImage, TREE_GROUND_SHADOW_COLOR);
+        this.darkTrunkGroundShadowImage = createShadowImage(darkTrunkImage, TREE_GROUND_SHADOW_COLOR);
         this.treeShadowImage = createShadowImage(treeImage, TREE_GLOBAL_SHADOW_COLOR);
         this.alternateTreeShadowImage = createShadowImage(alternateTreeImage, TREE_GLOBAL_SHADOW_COLOR);
+        this.weepingWillowShadowImage = createShadowImage(weepingWillowImage, TREE_GLOBAL_SHADOW_COLOR);
         this.trunkShadowImage = createShadowImage(trunkImage, TREE_GLOBAL_SHADOW_COLOR);
+        this.darkTrunkShadowImage = createShadowImage(darkTrunkImage, TREE_GLOBAL_SHADOW_COLOR);
         this.setOpaque(false);
         this.setDoubleBuffered(true);
     }
@@ -72,7 +81,7 @@ public class EnvironmentView extends JPanel {
 
         Rectangle barnBounds = fieldPanel.getBarnScreenBounds();
         if (workshopImage != null) {
-            Rectangle workshopBounds = computeWorkshopBounds(barnBounds);
+            Rectangle workshopBounds = fieldPanel.getWorkshopScreenBounds();
             if (workshopBounds != null) {
                 g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
                 g2.drawImage(
@@ -94,33 +103,6 @@ public class EnvironmentView extends JPanel {
         g2.dispose();
     }
 
-    /**
-     * Place la menuiserie à droite de la boutique en gardant sa base alignée sur le même sol.
-     */
-    private Rectangle computeWorkshopBounds(Rectangle barnBounds) {
-        if (workshopImage == null || barnBounds == null) {
-            return null;
-        }
-
-        int imageWidth = workshopImage.getWidth(this);
-        int imageHeight = workshopImage.getHeight(this);
-        if (imageWidth <= 0 || imageHeight <= 0) {
-            return null;
-        }
-
-        int targetHeight = Math.max(1, (int) Math.round(barnBounds.height * WORKSHOP_HEIGHT_RATIO_TO_BARN));
-        double scale = (double) targetHeight / imageHeight;
-        int drawWidth = Math.max(1, (int) Math.round(imageWidth * scale));
-        int drawHeight = Math.max(1, (int) Math.round(imageHeight * scale));
-        int gap = Math.max(18, (int) Math.round(barnBounds.width * WORKSHOP_GAP_RATIO_TO_BARN_WIDTH));
-        Rectangle fieldBounds = fieldPanel.getFieldBounds();
-        int maxX = fieldBounds.x + fieldBounds.width - WORKSHOP_MIN_SCREEN_MARGIN - drawWidth;
-        int drawX = Math.min(maxX, barnBounds.x + barnBounds.width + gap);
-        int drawY = barnBounds.y + barnBounds.height - drawHeight;
-
-        return new Rectangle(drawX, drawY, drawWidth, drawHeight);
-    }
-
     // Pour dessiner plusieurs arbres
     private void drawTrees(Graphics2D g2) {
         for (TreeInstance tree : treeManager.getTreesSnapshot()) {
@@ -134,23 +116,34 @@ public class EnvironmentView extends JPanel {
                 Image matureTreeImage = getMatureTreeImage(tree);
                 BufferedImage matureTreeGroundShadowImage = getTreeGroundShadowImage(tree);
                 BufferedImage matureTreeShadowImage = getTreeShadowImage(tree);
-                drawBounds = computeTreeBounds(
+                drawBounds = computeMatureTreeBounds(
                         matureTreeImage,
                         cellBounds,
-                        TreeGeometry.MATURE_TREE_TILE_SCALE,
-                        TreeGeometry.MATURE_TREE_ANCHOR_X_RATIO,
-                        TreeGeometry.MATURE_TREE_ANCHOR_Y_RATIO
+                        tree.usesWeepingWillowSprite()
                 );
-                drawTreeShadow(g2, matureTreeGroundShadowImage, cellBounds, drawBounds, true);
+                drawTreeShadow(g2, matureTreeGroundShadowImage, cellBounds, drawBounds, true, tree.usesWeepingWillowSprite());
                 drawGlobalTreeShadow(g2, matureTreeShadowImage, drawBounds, true);
                 drawTree(g2, matureTreeImage, drawBounds);
             } else {
-                drawBounds = computeTreeBounds(trunkImage, cellBounds, TreeGeometry.TRUNK_TILE_SCALE, 0.50, 0.50);
-                drawTreeShadow(g2, trunkGroundShadowImage, cellBounds, drawBounds, false);
-                drawGlobalTreeShadow(g2, trunkShadowImage, drawBounds, false);
-                drawTree(g2, trunkImage, drawBounds);
+                Image trunkVariant = getTrunkImage(tree);
+                BufferedImage trunkGroundShadowVariant = getTrunkGroundShadowImage(tree);
+                BufferedImage trunkShadowVariant = getTrunkShadowImage(tree);
+                drawBounds = computeTreeBounds(trunkVariant, cellBounds, TreeGeometry.TRUNK_TILE_SCALE, 0.50, 0.50);
+                drawTreeShadow(g2, trunkGroundShadowVariant, cellBounds, drawBounds, false, tree.usesWeepingWillowSprite());
+                drawGlobalTreeShadow(g2, trunkShadowVariant, drawBounds, false);
+                drawTree(g2, trunkVariant, drawBounds);
             }
         }
+    }
+
+    private Rectangle computeMatureTreeBounds(Image image, Rectangle cellBounds, boolean weepingWillow) {
+        return computeTreeBounds(
+                image,
+                cellBounds,
+                TreeGeometry.getMatureTreeTileScale(weepingWillow),
+                TreeGeometry.getMatureTreeAnchorXRatio(weepingWillow),
+                TreeGeometry.getMatureTreeAnchorYRatio(weepingWillow)
+        );
     }
 
     /**
@@ -211,7 +204,14 @@ public class EnvironmentView extends JPanel {
      * Ombre au sol basée sur la silhouette de l'arbre, fortement aplatie.
      * Cela garde une forme proche du sprite tout en restant visiblement posée au sol.
      */
-    private void drawTreeShadow(Graphics2D g2, Image shadowImage, Rectangle cellBounds, Rectangle drawBounds, boolean mature) {
+    private void drawTreeShadow(
+            Graphics2D g2,
+            Image shadowImage,
+            Rectangle cellBounds,
+            Rectangle drawBounds,
+            boolean mature,
+            boolean weepingWillow
+    ) {
         if (shadowImage == null || cellBounds == null || drawBounds == null) {
             return;
         }
@@ -227,10 +227,10 @@ public class EnvironmentView extends JPanel {
         );
 
         int trunkCenterX = drawBounds.x + (int) Math.round(
-                drawBounds.width * (mature ? TreeGeometry.MATURE_TREE_ANCHOR_X_RATIO : 0.50)
+                drawBounds.width * (mature ? TreeGeometry.getMatureTreeAnchorXRatio(weepingWillow) : 0.50)
         );
         int trunkCenterY = drawBounds.y + (int) Math.round(
-                drawBounds.height * (mature ? TreeGeometry.MATURE_TREE_ANCHOR_Y_RATIO : 0.50)
+                drawBounds.height * (mature ? TreeGeometry.getMatureTreeAnchorYRatio(weepingWillow) : 0.50)
         );
 
         shadowGraphics.drawImage(
@@ -268,6 +268,10 @@ public class EnvironmentView extends JPanel {
     }
 
     private Image getMatureTreeImage(TreeInstance tree) {
+        if (tree.usesWeepingWillowSprite() && weepingWillowImage != null) {
+            return weepingWillowImage;
+        }
+
         if (tree.usesAlternateMatureSprite() && alternateTreeImage != null) {
             return alternateTreeImage;
         }
@@ -276,6 +280,10 @@ public class EnvironmentView extends JPanel {
     }
 
     private BufferedImage getTreeGroundShadowImage(TreeInstance tree) {
+        if (tree.usesWeepingWillowSprite() && weepingWillowGroundShadowImage != null) {
+            return weepingWillowGroundShadowImage;
+        }
+
         if (tree.usesAlternateMatureSprite() && alternateTreeGroundShadowImage != null) {
             return alternateTreeGroundShadowImage;
         }
@@ -284,11 +292,39 @@ public class EnvironmentView extends JPanel {
     }
 
     private BufferedImage getTreeShadowImage(TreeInstance tree) {
+        if (tree.usesWeepingWillowSprite() && weepingWillowShadowImage != null) {
+            return weepingWillowShadowImage;
+        }
+
         if (tree.usesAlternateMatureSprite() && alternateTreeShadowImage != null) {
             return alternateTreeShadowImage;
         }
 
         return treeShadowImage;
+    }
+
+    private Image getTrunkImage(TreeInstance tree) {
+        if (tree.usesWeepingWillowSprite() && darkTrunkImage != null) {
+            return darkTrunkImage;
+        }
+
+        return trunkImage;
+    }
+
+    private BufferedImage getTrunkGroundShadowImage(TreeInstance tree) {
+        if (tree.usesWeepingWillowSprite() && darkTrunkGroundShadowImage != null) {
+            return darkTrunkGroundShadowImage;
+        }
+
+        return trunkGroundShadowImage;
+    }
+
+    private BufferedImage getTrunkShadowImage(TreeInstance tree) {
+        if (tree.usesWeepingWillowSprite() && darkTrunkShadowImage != null) {
+            return darkTrunkShadowImage;
+        }
+
+        return trunkShadowImage;
     }
 
     private BufferedImage createShadowImage(Image image, Color shadowColor) {

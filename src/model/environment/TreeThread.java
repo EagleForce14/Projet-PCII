@@ -50,12 +50,12 @@ public class TreeThread extends Thread {
      */
     public void installerArbresInitiaux() {
         for (int index = 0; index < INITIAL_TREE_COUNT; index++) {
-            Point cell = pickRandomAvailableGrassCell();
+            Point cell = pickRandomAvailableGrassCell(false);
             if (cell == null) {
                 return;
             }
 
-            treeManager.placeTree(cell.x, cell.y, true);
+            treeManager.placeTree(cell.x, cell.y, true, fieldObstacleMap.shouldUseWeepingWillowAt(cell.x));
         }
     }
 
@@ -72,12 +72,17 @@ public class TreeThread extends Thread {
                 // voie la pousse d'un nouvel arbre au lieu d'un remplissage brutal.
                 pauseController.sleep(TREE_SPAWN_DELAY_MS);
 
-                Point cell = pickRandomAvailableGrassCell();
+                Point cell = pickRandomAvailableGrassCell(true);
                 if (cell == null) {
                     continue;
                 }
 
-                if (!treeManager.placeTree(cell.x, cell.y, false)) {
+                if (!treeManager.placeTree(
+                        cell.x,
+                        cell.y,
+                        false,
+                        fieldObstacleMap.shouldUseWeepingWillowAt(cell.x)
+                )) {
                     continue;
                 }
 
@@ -97,13 +102,18 @@ public class TreeThread extends Thread {
      * espacement entre arbres, marge avec la grange,
      * et exclusion des zones trop proches du bord visible.
      */
-    private Point pickRandomAvailableGrassCell() {
+    private Point pickRandomAvailableGrassCell(boolean spawningTrunk) {
         List<Point> availableCells = new ArrayList<>();
         for (int column = 0; column < treeManager.getColumnCount(); column++) {
             for (int row = 0; row < treeManager.getRowCount(); row++) {
-                if (fieldObstacleMap.canPlaceTreeAt(column, row)) {
-                    availableCells.add(new Point(column, row));
+                if (!fieldObstacleMap.canPlaceTreeAt(column, row)) {
+                    continue;
                 }
+                if (spawningTrunk && isTrunkSpawnAreaOccupied(column, row)) {
+                    continue;
+                }
+
+                availableCells.add(new Point(column, row));
             }
         }
 
@@ -112,6 +122,39 @@ public class TreeThread extends Thread {
         }
 
         return availableCells.get(random.nextInt(availableCells.size()));
+    }
+
+    private boolean isTrunkSpawnAreaOccupied(int gridX, int gridY) {
+        if (playerUnit != null
+                && fieldObstacleMap.trunkWouldOverlapCenteredBox(
+                        gridX,
+                        gridY,
+                        playerUnit.getX(),
+                        playerUnit.getY(),
+                        Unit.SIZE,
+                        Unit.SIZE
+                )) {
+            return true;
+        }
+
+        if (enemyModel == null) {
+            return false;
+        }
+
+        for (EnemyUnit enemy : enemyModel.getEnemyUnits()) {
+            if (fieldObstacleMap.trunkWouldOverlapCenteredBox(
+                    gridX,
+                    gridY,
+                    enemy.getX(),
+                    enemy.getY(),
+                    EnemyUnit.getCollisionSize(),
+                    EnemyUnit.getCollisionSize()
+            )) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

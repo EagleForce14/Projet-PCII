@@ -9,6 +9,7 @@ import model.environment.FieldObstacleMap;
 import model.environment.PredefinedFieldLayout;
 import model.environment.TreeManager;
 import model.movement.Barn;
+import model.movement.Workshop;
 
 import javax.swing.JPanel;
 import java.awt.Color;
@@ -327,6 +328,27 @@ public class FieldPanel extends JPanel {
     }
 
     /**
+     * La menuiserie est calculée dans le même repère logique que la grange,
+     * puis simplement décalée vers l'écran comme le reste du décor fixe.
+     */
+    public Rectangle getWorkshopScreenBounds() {
+        Rectangle fieldBounds = getFieldBounds();
+        Rectangle workshopBounds = getWorkshopLogicalDrawBounds();
+        if (workshopBounds == null) {
+            return null;
+        }
+
+        int centerX = fieldBounds.x + (fieldBounds.width / 2);
+        int centerY = fieldBounds.y + (fieldBounds.height / 2);
+        return new Rectangle(
+                centerX + workshopBounds.x,
+                centerY + workshopBounds.y,
+                workshopBounds.width,
+                workshopBounds.height
+        );
+    }
+
+    /**
      * Expose le repère logique complet du champ.
      * Les obstacles fixes et les entités mobiles y partagent la même origine.
      */
@@ -467,9 +489,28 @@ public class FieldPanel extends JPanel {
         return true;
     }
 
+    public boolean isBlockedByWorkshop(Point cell) {
+        return cell != null && isBlockedByWorkshop(cell.x, cell.y);
+    }
+
+    /**
+     * La menuiserie bloque seulement sa hitbox basse :
+     * on garde ainsi un comportement cohérent avec ce que le joueur peut réellement heurter.
+     */
+    public boolean isBlockedByWorkshop(int gridX, int gridY) {
+        Rectangle logicalCellBounds = getLogicalCellBounds(gridX, gridY);
+        if (logicalCellBounds == null) {
+            return false;
+        }
+
+        Rectangle workshopCollisionBounds = getWorkshopLogicalCollisionBounds();
+        return workshopCollisionBounds != null && workshopCollisionBounds.intersects(logicalCellBounds);
+    }
+
     public boolean isFarmableCell(Point cell) {
         return cell != null
                 && !isBlockedByBarn(cell)
+                && !isBlockedByWorkshop(cell)
                 && !isBlockedByStaticObstacle(cell.x, cell.y);
     }
 
@@ -485,6 +526,7 @@ public class FieldPanel extends JPanel {
 
         return grilleCulture.hasRiver(gridX, gridY)
                 || treeManager.hasTreeAt(gridX, gridY)
+                || isBlockedByWorkshop(gridX, gridY)
                 || hasRightStoneExtensionAt(gridX, gridY)
                 || hasDecorativeBushAt(gridX, gridY);
     }
@@ -594,6 +636,14 @@ public class FieldPanel extends JPanel {
         Rectangle fieldBounds = getFieldBounds();
         syncBarnTileSize(fieldBounds);
         return new Rectangle(Barn.getDrawX(), Barn.Y, Barn.WIDTH, Barn.HEIGHT);
+    }
+
+    public Rectangle getWorkshopLogicalDrawBounds() {
+        return Workshop.getDrawBounds(getFieldLogicalBounds());
+    }
+
+    public Rectangle getWorkshopLogicalCollisionBounds() {
+        return Workshop.getCollisionBounds(getFieldLogicalBounds());
     }
 
     /**

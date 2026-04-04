@@ -57,12 +57,18 @@ public class TreeManager {
     }
 
     // Pour placer l'arbre
-    public synchronized boolean placeTree(int gridX, int gridY, boolean mature) {
+    public synchronized boolean placeTree(int gridX, int gridY, boolean mature, boolean weepingWillow) {
         if (canPlaceTreeAt(gridX, gridY)) {
             return false;
         }
 
-        trees[gridX][gridY] = new TreeInstance(gridX, gridY, mature, shouldUseAlternateMatureSprite());
+        trees[gridX][gridY] = new TreeInstance(
+                gridX,
+                gridY,
+                mature,
+                weepingWillow,
+                shouldUseAlternateMatureSprite(weepingWillow)
+        );
         return true;
     }
 
@@ -98,15 +104,19 @@ public class TreeManager {
 
     /**
      * Le tirage reste aléatoire tant qu'il ne ferait pas passer `arbre2`
-     * en majorité sur le total des arbres déjà posés.
+     * en majorité sur le total des arbres classiques déjà posés.
      */
-    private boolean shouldUseAlternateMatureSprite() {
+    private boolean shouldUseAlternateMatureSprite(boolean weepingWillow) {
+        if (weepingWillow) {
+            return false;
+        }
+
         int defaultSpriteCount = 0;
         int alternateSpriteCount = 0;
 
         for (TreeInstance[] treeColumn : trees) {
             for (TreeInstance tree : treeColumn) {
-                if (tree == null) {
+                if (tree == null || tree.usesWeepingWillowSprite()) {
                     continue;
                 }
 

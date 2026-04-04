@@ -2,12 +2,6 @@ package model.movement;
 
 import java.awt.Dimension;
 import java.awt.Rectangle;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-
-import javax.imageio.ImageIO;
 
 /**
  * Représente la grange, un obstacle fixe situé en haut du champ.
@@ -22,7 +16,11 @@ public class Barn {
     private static final int HORIZONTAL_SHIFT_RIGHT = 108;
     private static final int DEFAULT_TILE_SIZE = 54;
     private static final int LEFT_SHIFT_COLUMNS = 0;
-    private static final Dimension SPRITE_SIZE = loadSpriteSize();
+    private static final Dimension SPRITE_SIZE = BuildingGeometry.loadSpriteSize(
+            Barn.class,
+            ASSET_PATH,
+            new Dimension(967, 967)
+    );
     private static volatile int currentTileSize = DEFAULT_TILE_SIZE;
 
     // La taille affichée suit désormais les dimensions réelles du PNG
@@ -58,12 +56,12 @@ public class Barn {
      * @return Rectangle représentant les limites infranchissables de la grange
      */
     public static Rectangle getCollisionBounds() {
-        int hitboxWidth = Math.max(1, (int) Math.round(WIDTH * HITBOX_WIDTH_RATIO));
-        int hitboxHeight = Math.max(1, (int) Math.round(HEIGHT * HITBOX_HEIGHT_RATIO));
-        int hitboxX = getDrawX() + ((WIDTH - hitboxWidth) / 2);
-        int hitboxY = Y + HEIGHT - hitboxHeight - Math.max(1, (int) Math.round(HEIGHT * HITBOX_BOTTOM_INSET_RATIO));
-        
-        return new Rectangle(hitboxX, hitboxY, hitboxWidth, hitboxHeight);
+        return BuildingGeometry.buildCollisionBounds(
+                new Rectangle(getDrawX(), Y, WIDTH, HEIGHT),
+                HITBOX_WIDTH_RATIO,
+                HITBOX_HEIGHT_RATIO,
+                HITBOX_BOTTOM_INSET_RATIO
+        );
     }
 
     /**
@@ -71,10 +69,7 @@ public class Barn {
      * Les coordonnées reçues sont dans le repère logique partagé par le joueur et les lapins.
      */
     public static boolean collidesWithCenteredBox(double centerX, double centerY, int width, int height) {
-        int left = (int) Math.round(centerX - (width / 2.0));
-        int top = (int) Math.round(centerY - (height / 2.0));
-        Rectangle entityBounds = new Rectangle(left, top, width, height);
-        return getCollisionBounds().intersects(entityBounds);
+        return BuildingGeometry.collidesWithCenteredBox(getCollisionBounds(), centerX, centerY, width, height);
     }
 
     /**
@@ -82,31 +77,5 @@ public class Barn {
      */
     public static boolean canOccupyCenteredBox(double centerX, double centerY, int width, int height) {
         return !collidesWithCenteredBox(centerX, centerY, width, height);
-    }
-
-    private static Dimension loadSpriteSize() {
-        BufferedImage image = null;
-
-        try {
-            URL imageUrl = Barn.class.getResource(ASSET_PATH);
-            if (imageUrl != null) {
-                image = ImageIO.read(imageUrl);
-            } else {
-                File file = new File("src" + ASSET_PATH);
-                if (file.exists()) {
-                    image = ImageIO.read(file);
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("Impossible de lire les dimensions de la grange : " + ASSET_PATH);
-            e.printStackTrace();
-        }
-
-        if (image != null) {
-            return new Dimension(image.getWidth(), image.getHeight());
-        }
-
-        // Fallback historique : on retombe sur l'équivalent visuel d'environ 290x290.
-        return new Dimension(967, 967);
     }
 }

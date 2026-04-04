@@ -1,6 +1,7 @@
 package model.environment;
 
 import model.culture.CellSide;
+import model.movement.BuildingGeometry;
 import view.FieldPanel;
 import view.InventoryStatusOverlay;
 
@@ -12,6 +13,7 @@ import java.awt.Rectangle;
  * Aujourd'hui cela couvre :
  * - les arbres,
  * - la rivière,
+ * - la menuiserie,
  * - et toutes les validations géométriques nécessaires autour d'eux.
  *
  * Le but est simple :
@@ -62,12 +64,8 @@ public class FieldObstacleMap {
         }
 
         Rectangle cellBounds = fieldPanel.getLogicalCellBounds(gridX, gridY);
-        Rectangle candidateBounds = TreeGeometry.buildAnchoredScaledBounds(
-                cellBounds,
-                TreeGeometry.MATURE_TREE_TILE_SCALE,
-                TreeGeometry.MATURE_TREE_ANCHOR_X_RATIO,
-                TreeGeometry.MATURE_TREE_ANCHOR_Y_RATIO
-        );
+        boolean weepingWillow = shouldUseWeepingWillowAt(gridX);
+        Rectangle candidateBounds = TreeGeometry.buildMatureTreeBounds(cellBounds, weepingWillow);
         if (cellBounds == null) {
             return false;
         }
@@ -82,11 +80,9 @@ public class FieldObstacleMap {
             return false;
         }
 
-        Rectangle candidateScreenBounds = TreeGeometry.buildAnchoredScaledBounds(
+        Rectangle candidateScreenBounds = TreeGeometry.buildMatureTreeBounds(
                 fieldPanel.getCellBounds(gridX, gridY),
-                TreeGeometry.MATURE_TREE_TILE_SCALE,
-                TreeGeometry.MATURE_TREE_ANCHOR_X_RATIO,
-                TreeGeometry.MATURE_TREE_ANCHOR_Y_RATIO
+                weepingWillow
         );
         Rectangle inventoryBarBounds = InventoryStatusOverlay.computeInventoryBarBounds(
                 fieldPanel.getFieldBounds(),
@@ -105,10 +101,18 @@ public class FieldObstacleMap {
             return false;
         }
 
+        Rectangle workshopClearanceBounds = expand(
+                fieldPanel.getWorkshopLogicalDrawBounds(),
+                Math.max(8, (int) Math.round(tileSize * TREE_TO_BARN_MARGIN_RATIO))
+        );
+        if (workshopClearanceBounds != null && workshopClearanceBounds.intersects(candidateBounds)) {
+            return false;
+        }
+
         int treeMargin = Math.max(6, (int) Math.round(tileSize * TREE_TO_TREE_MARGIN_RATIO));
         Rectangle protectedCandidateBounds = expand(candidateBounds, treeMargin);
         for (TreeInstance tree : treeManager.getTreesSnapshot()) {
-            Rectangle existingBounds = getFutureMatureTreeBounds(tree.getGridX(), tree.getGridY());
+            Rectangle existingBounds = getFutureMatureTreeBounds(tree);
             if (existingBounds != null && protectedCandidateBounds.intersects(expand(existingBounds, treeMargin))) {
                 return false;
             }
@@ -131,15 +135,17 @@ public class FieldObstacleMap {
      * les clôtures doivent les arrêter, mais pas bloquer le joueur.
      */
     public boolean canOccupyCenteredBox(double centerX, double centerY, int width, int height, boolean blockFences) {
-        int left = (int) Math.round(centerX - (width / 2.0));
-        int top = (int) Math.round(centerY - (height / 2.0));
-        Rectangle entityBounds = new Rectangle(left, top, width, height);
+        Rectangle entityBounds = BuildingGeometry.buildCenteredBounds(centerX, centerY, width, height);
 
         if (blockFences && intersectsRightRiverUpperDecoration(entityBounds)) {
             return false;
         }
 
         if (intersectsBarnCourtyard(entityBounds)) {
+            return false;
+        }
+
+        if (intersectsWorkshop(entityBounds)) {
             return false;
         }
 
@@ -156,7 +162,7 @@ public class FieldObstacleMap {
         }
 
         for (TreeInstance tree : treeManager.getTreesSnapshot()) {
-            Rectangle treeHitbox = getTreeHitbox(tree.getGridX(), tree.getGridY());
+            Rectangle treeHitbox = getTreeHitbox(tree);
             if (treeHitbox != null && treeHitbox.intersects(entityBounds)) {
                 return false;
             }
@@ -166,9 +172,7 @@ public class FieldObstacleMap {
     }
 
     public FenceCollision findBlockingFenceCollision(double centerX, double centerY, int width, int height) {
-        int left = (int) Math.round(centerX - (width / 2.0));
-        int top = (int) Math.round(centerY - (height / 2.0));
-        Rectangle entityBounds = new Rectangle(left, top, width, height);
+        Rectangle entityBounds = BuildingGeometry.buildCenteredBounds(centerX, centerY, width, height);
         return findIntersectingFenceCollision(entityBounds);
     }
 
@@ -176,20 +180,23 @@ public class FieldObstacleMap {
         return fieldPanel.getLogicalFenceBounds(gridX, gridY, side);
     }
 
+    public boolean shouldUseWeepingWillowAt(int gridX) {
+        return PredefinedFieldLayout.isLeftOfDecorativeRiver(fieldPanel, gridX);
+    }
+
     /**
      * Sert uniquement avant la maturation d'un tronc :
      * on vérifie si la future hitbox de l'arbre complet recouvrirait déjà une entité.
      */
     public boolean matureTreeWouldOverlapCenteredBox(int gridX, int gridY, double centerX, double centerY, int width, int height) {
-        Rectangle matureTreeHitbox = getFutureMatureTreeHitbox(gridX, gridY);
-        if (matureTreeHitbox == null) {
-            return false;
-        }
+        return treeWouldOverlapCenteredBox(gridX, gridY, true, centerX, centerY, width, height);
+    }
 
-        int left = (int) Math.round(centerX - (width / 2.0));
-        int top = (int) Math.round(centerY - (height / 2.0));
-        Rectangle entityBounds = new Rectangle(left, top, width, height);
-        return matureTreeHitbox.intersects(entityBounds);
+    /**
+     * Empêche la naissance d'un tronc directement sur le joueur ou un lapin pour éviter un blocage.
+     */
+    public boolean trunkWouldOverlapCenteredBox(int gridX, int gridY, double centerX, double centerY, int width, int height) {
+        return treeWouldOverlapCenteredBox(gridX, gridY, false, centerX, centerY, width, height);
     }
 
     /**
@@ -204,6 +211,10 @@ public class FieldObstacleMap {
         }
 
         if (fieldPanel.isBlockedByBarn(gridX, gridY)) {
+            return true;
+        }
+
+        if (fieldPanel.isBlockedByWorkshop(gridX, gridY)) {
             return true;
         }
 
@@ -238,6 +249,11 @@ public class FieldObstacleMap {
     private boolean intersectsBarnCourtyard(Rectangle entityBounds) {
         Rectangle barnCourtyardBounds = fieldPanel.getBarnCourtyardLogicalBounds();
         return barnCourtyardBounds != null && barnCourtyardBounds.intersects(entityBounds);
+    }
+
+    private boolean intersectsWorkshop(Rectangle entityBounds) {
+        Rectangle workshopBounds = fieldPanel.getWorkshopLogicalCollisionBounds();
+        return workshopBounds != null && workshopBounds.intersects(entityBounds);
     }
 
     private boolean intersectsRightRiverUpperDecoration(Rectangle entityBounds) {
@@ -307,25 +323,49 @@ public class FieldObstacleMap {
         return null;
     }
 
-    private Rectangle getFutureMatureTreeBounds(int gridX, int gridY) {
-        Rectangle cellBounds = fieldPanel.getLogicalCellBounds(gridX, gridY);
-        return TreeGeometry.buildAnchoredScaledBounds(
+    private Rectangle getFutureMatureTreeBounds(TreeInstance tree) {
+        if (tree == null) {
+            return null;
+        }
+
+        Rectangle cellBounds = fieldPanel.getLogicalCellBounds(tree.getGridX(), tree.getGridY());
+        return TreeGeometry.buildMatureTreeBounds(cellBounds, tree.usesWeepingWillowSprite());
+    }
+
+    private Rectangle getTreeHitbox(TreeInstance tree) {
+        if (tree == null) {
+            return null;
+        }
+
+        Rectangle cellBounds = fieldPanel.getLogicalCellBounds(tree.getGridX(), tree.getGridY());
+        return TreeGeometry.buildTreeHitbox(
                 cellBounds,
-                TreeGeometry.MATURE_TREE_TILE_SCALE,
-                TreeGeometry.MATURE_TREE_ANCHOR_X_RATIO,
-                TreeGeometry.MATURE_TREE_ANCHOR_Y_RATIO
+                tree.isMature(),
+                tree.usesWeepingWillowSprite()
         );
     }
 
-    private Rectangle getTreeHitbox(int gridX, int gridY) {
-        Rectangle cellBounds = fieldPanel.getLogicalCellBounds(gridX, gridY);
-        TreeInstance tree = treeManager.getTreeAt(gridX, gridY);
-        return TreeGeometry.buildTreeHitbox(cellBounds, tree != null && tree.isMature());
+    private boolean treeWouldOverlapCenteredBox(
+            int gridX,
+            int gridY,
+            boolean mature,
+            double centerX,
+            double centerY,
+            int width,
+            int height
+    ) {
+        Rectangle treeHitbox = getProjectedTreeHitbox(gridX, gridY, mature);
+        if (treeHitbox == null) {
+            return false;
+        }
+
+        Rectangle entityBounds = BuildingGeometry.buildCenteredBounds(centerX, centerY, width, height);
+        return treeHitbox.intersects(entityBounds);
     }
 
-    private Rectangle getFutureMatureTreeHitbox(int gridX, int gridY) {
+    private Rectangle getProjectedTreeHitbox(int gridX, int gridY, boolean mature) {
         Rectangle cellBounds = fieldPanel.getLogicalCellBounds(gridX, gridY);
-        return TreeGeometry.buildTreeHitbox(cellBounds, true);
+        return TreeGeometry.buildTreeHitbox(cellBounds, mature, shouldUseWeepingWillowAt(gridX));
     }
 
     private boolean isInsideMatureFootprint(TreeInstance tree, int gridX, int gridY) {
