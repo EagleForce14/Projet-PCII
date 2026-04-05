@@ -55,10 +55,13 @@ public class SidebarPanel extends JPanel {
     private final JButton pathButton;
     private final JButton compostButton;
     private final JButton cutTreeButton;
+    private final JButton bridgeButton;
     private final JLabel labourWarningLabel;
+    private final JLabel bridgePlacementHintLabel;
     private final JPanel pathActionRow;
     private final JPanel compostActionRow;
     private final JPanel cutTreeActionRow;
+    private final JPanel bridgeActionRow;
 
 
     // Petit cache local pour éviter d'appliquer setEnabled en boucle inutilement.
@@ -73,6 +76,9 @@ public class SidebarPanel extends JPanel {
     private boolean currentCompostVisibleState;
     private boolean currentCutTreeEnabledState;
     private boolean currentCutTreeVisibleState;
+    private boolean currentBridgeEnabledState;
+    private boolean currentBridgeVisibleState;
+    private boolean currentBridgeHintVisibleState;
     private String currentCompostButtonLabel;
     private boolean currentLabourWarningVisibleState;
 
@@ -160,6 +166,15 @@ public class SidebarPanel extends JPanel {
         cutTreeActionRow = createSpecialActionRow(cutTreeButton);
         cutTreeActionRow.setVisible(false);
 
+        /*
+         * Le pont fonctionne comme le chemin :
+         * on l'équipe d'abord dans l'inventaire,
+         * puis on l'active via un bouton dédié uniquement quand cet outil est sélectionné.
+         */
+        bridgeButton = createStyledButton("Poser pont", new Color(73, 105, 136, 255), 12.0f);
+        bridgeActionRow = createSpecialActionRow(bridgeButton);
+        bridgeActionRow.setVisible(false);
+
         labourWarningLabel = new JLabel(
                 "<html>Le labourage n'est pas autorisé sur une case adjacente à une clôture.</html>"
         );
@@ -169,13 +184,24 @@ public class SidebarPanel extends JPanel {
         labourWarningLabel.setVisible(false);
         labourWarningLabel.setBorder(BorderFactory.createEmptyBorder(8, 2, 0, 2));
 
+        bridgePlacementHintLabel = new JLabel(
+                "<html>Déplacez-vous sur une case surlignée collée à la rivière pour poser le pont.</html>"
+        );
+        bridgePlacementHintLabel.setOpaque(false);
+        bridgePlacementHintLabel.setForeground(new Color(199, 235, 255));
+        bridgePlacementHintLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 9.5f));
+        bridgePlacementHintLabel.setVisible(false);
+        bridgePlacementHintLabel.setBorder(BorderFactory.createEmptyBorder(8, 2, 0, 2));
+
         JPanel specialActionsPanel = new JPanel();
         specialActionsPanel.setOpaque(false);
         specialActionsPanel.setLayout(new BoxLayout(specialActionsPanel, BoxLayout.Y_AXIS));
         specialActionsPanel.setBorder(BorderFactory.createEmptyBorder(0, 16, 16, 16));
         specialActionsPanel.add(pathActionRow);
         specialActionsPanel.add(compostActionRow);
+        specialActionsPanel.add(bridgeActionRow);
         specialActionsPanel.add(cutTreeActionRow);
+        specialActionsPanel.add(bridgePlacementHintLabel);
         specialActionsPanel.add(labourWarningLabel);
 
         contentPanel.add(titleRow, BorderLayout.NORTH);
@@ -185,7 +211,24 @@ public class SidebarPanel extends JPanel {
 
         // Au démarrage, les boutons sont désactivés tant que l'unité déplaçable n'est pas
         // sur une case valide du champ.
-        applyButtonsEnabledState(false, false, false, false, false, false, false, false, false, false, false, "Poser compost", false);
+        applyButtonsEnabledState(
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                "Poser compost",
+                false
+        );
     }
 
     /**
@@ -262,8 +305,11 @@ public class SidebarPanel extends JPanel {
         boolean shouldEnablePath = shouldShowPathAction && canPlacePathActiveCell();
         boolean shouldDisplayCompostAction = shouldShowCompostAction();
         boolean shouldEnableCompost = canUseCompostButtonOnActiveCell();
+        boolean shouldShowBridgeAction = movementModel.getSelectedFacilityType() == FacilityType.PONT;
+        boolean shouldEnableBridge = shouldShowBridgeAction && canPlaceBridgeActiveCell();
         boolean shouldShowCutTreeAction = shouldShowCutTreeAction();
         boolean shouldEnableCutTree = shouldShowCutTreeAction;
+        boolean shouldShowBridgeHint = shouldShowBridgeAction;
         String compostButtonLabel = shouldShowRemiserCompostAction() ? "Remiser compost" : "Poser compost";
         boolean shouldShowLabourWarning = shouldShowAdjacentFenceLabourWarning();
         if (shouldEnableLabour != currentLabourEnabledState
@@ -277,6 +323,9 @@ public class SidebarPanel extends JPanel {
                 || shouldDisplayCompostAction != currentCompostVisibleState
                 || shouldEnableCutTree != currentCutTreeEnabledState
                 || shouldShowCutTreeAction != currentCutTreeVisibleState
+                || shouldEnableBridge != currentBridgeEnabledState
+                || shouldShowBridgeAction != currentBridgeVisibleState
+                || shouldShowBridgeHint != currentBridgeHintVisibleState
                 || !compostButtonLabel.equals(currentCompostButtonLabel)
                 || shouldShowLabourWarning != currentLabourWarningVisibleState) {
             applyButtonsEnabledState(
@@ -291,6 +340,9 @@ public class SidebarPanel extends JPanel {
                     shouldDisplayCompostAction,
                     shouldEnableCutTree,
                     shouldShowCutTreeAction,
+                    shouldEnableBridge,
+                    shouldShowBridgeAction,
+                    shouldShowBridgeHint,
                     compostButtonLabel,
                     shouldShowLabourWarning
             );
@@ -305,6 +357,7 @@ public class SidebarPanel extends JPanel {
                                           boolean pathEnabled, boolean pathVisible,
                                           boolean compostEnabled, boolean compostVisible,
                                           boolean cutTreeEnabled, boolean cutTreeVisible,
+                                          boolean bridgeEnabled, boolean bridgeVisible, boolean bridgeHintVisible,
                                           String compostButtonLabel,
                                           boolean labourWarningVisible) {
         currentLabourEnabledState = labourEnabled;
@@ -318,6 +371,9 @@ public class SidebarPanel extends JPanel {
         currentCompostVisibleState = compostVisible;
         currentCutTreeEnabledState = cutTreeEnabled;
         currentCutTreeVisibleState = cutTreeVisible;
+        currentBridgeEnabledState = bridgeEnabled;
+        currentBridgeVisibleState = bridgeVisible;
+        currentBridgeHintVisibleState = bridgeHintVisible;
         currentCompostButtonLabel = compostButtonLabel;
         currentLabourWarningVisibleState = labourWarningVisible;
 
@@ -332,6 +388,9 @@ public class SidebarPanel extends JPanel {
         compostActionRow.setVisible(compostVisible);
         cutTreeButton.setEnabled(cutTreeEnabled);
         cutTreeActionRow.setVisible(cutTreeVisible);
+        bridgeButton.setEnabled(bridgeEnabled);
+        bridgeActionRow.setVisible(bridgeVisible);
+        bridgePlacementHintLabel.setVisible(bridgeHintVisible);
         compostButton.setText(compostButtonLabel);
         labourWarningLabel.setVisible(labourWarningVisible);
 
@@ -361,6 +420,7 @@ public class SidebarPanel extends JPanel {
                 && fieldPanel.isFarmableCell(activeFieldCell)
                 && !grilleCulture.isLabouree(activeFieldCell.x, activeFieldCell.y)
                 && !grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y)
+                && !grilleCulture.hasBridgeAnchorAt(activeFieldCell.x, activeFieldCell.y)
                 && !grilleCulture.hasCompostAt(activeFieldCell.x, activeFieldCell.y)
                 && !grilleCulture.hasRiver(activeFieldCell.x, activeFieldCell.y)
                 && grilleCulture.isLabourBlockedByAdjacentFence(activeFieldCell.x, activeFieldCell.y);
@@ -410,6 +470,16 @@ public class SidebarPanel extends JPanel {
         return activeFieldCell != null
                 && fieldPanel.isFarmableCell(activeFieldCell)
                 && grilleCulture.canPlaceCompost(activeFieldCell.x, activeFieldCell.y);
+    }
+
+    /**
+     * Le pont ne peut être posé que sur la colonne de berge droite
+     * collée à la rivière. La validation visuelle et métier passe donc
+     * par un helper unique porté par le FieldPanel.
+     */
+    private boolean canPlaceBridgeActiveCell() {
+        Point activeFieldCell = movementModel.getActiveFieldCell();
+        return activeFieldCell != null && fieldPanel.isBridgePlacementCandidateCell(activeFieldCell);
     }
 
     /**
@@ -544,6 +614,10 @@ public class SidebarPanel extends JPanel {
 
     public JButton getCutTreeButton() {
         return cutTreeButton;
+    }
+
+    public JButton getBridgeButton() {
+        return bridgeButton;
     }
 
 

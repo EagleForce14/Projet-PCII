@@ -49,6 +49,8 @@ public class FieldPanel extends JPanel {
     // Couleurs utilisées pour visualiser la zone influencée par le compost.
     private static final Color COMPOST_RANGE_FILL = new Color(145, 214, 98, 70);
     private static final Color COMPOST_RANGE_BORDER = new Color(228, 255, 177, 170);
+    private static final Color BRIDGE_PLACEMENT_FILL = new Color(109, 201, 255, 74);
+    private static final Color BRIDGE_PLACEMENT_BORDER = new Color(214, 247, 255, 210);
 
     // Couleurs du survol dédié au placement des clôtures.
     private static final Color FENCE_PREVIEW_FILL = new Color(255, 232, 151, 130);
@@ -121,6 +123,7 @@ public class FieldPanel extends JPanel {
     private final Image maturiteImage;
     private final Image fletrieImage;
     private final Image compostImage;
+    private final Image bridgeImage;
 
     // Coordonnées de la case actuellement surlignée.
     // Cette valeur vaut null quand aucune case n'est activable.
@@ -132,6 +135,7 @@ public class FieldPanel extends JPanel {
     // Cet indicateur dit seulement si la zone du compost doit être montrée ou non.
     // Les cases exactes sont relues directement depuis la grille au moment du dessin.
     private boolean compostInfluenceVisible;
+    private boolean bridgePlacementHighlightVisible;
     private Rectangle cachedBarnDecorFieldBounds;
     private Rectangle cachedBarnBlockedGridBounds;
     private int cachedDecorativeRiverColumn = Integer.MIN_VALUE;
@@ -161,7 +165,9 @@ public class FieldPanel extends JPanel {
         this.maturiteImage = ImageLoader.load("/assets/maturite.png");
         this.fletrieImage = ImageLoader.load("/assets/fletrie.png");
         this.compostImage = ImageLoader.load("/assets/Compost.png");
+        this.bridgeImage = ImageLoader.load("/assets/bridge.png");
         this.compostInfluenceVisible = false;
+        this.bridgePlacementHighlightVisible = false;
         setPreferredSize(new Dimension(PREF_WIDTH, PREF_HEIGHT));
         // Le panneau reste transparent hors de la grille pour laisser voir le fond global.
         setOpaque(false);
@@ -263,6 +269,58 @@ public class FieldPanel extends JPanel {
         }
         compostInfluenceVisible = false;
         repaint();
+    }
+
+    /**
+     * Le pont utilise un highlight persistant sur toutes ses cases candidates.
+     * Contrairement à la clôture, ce n'est pas un preview de souris :
+     * on montre toute la colonne utile tant que l'objet est sélectionné.
+     */
+    public void setBridgePlacementHighlightVisible(boolean visible) {
+        if (bridgePlacementHighlightVisible == visible) {
+            return;
+        }
+
+        bridgePlacementHighlightVisible = visible;
+        repaint();
+    }
+
+    public void clearBridgePlacementHighlight() {
+        setBridgePlacementHighlightVisible(false);
+    }
+
+    /**
+     * Une case candidate au pont doit être une berge droite libre,
+     * donc collée à une case de rivière sur sa gauche et encore exploitable
+     * du point de vue des obstacles fixes du décor.
+     */
+    public boolean isBridgePlacementCandidateCell(Point cell) {
+        return cell != null && isBridgePlacementCandidateCell(cell.x, cell.y);
+    }
+
+    public boolean isBridgePlacementCandidateCell(int gridX, int gridY) {
+        return grilleCulture.canPlaceBridge(gridX, gridY)
+                && !isBlockedByBarn(gridX, gridY)
+                && !isBlockedByWorkshop(gridX, gridY)
+                && !isBlockedByStaticObstacle(gridX, gridY);
+    }
+
+    /**
+     * Le pont posé est dessiné à partir de sa case d'ancrage côté droit.
+     * On expose ses bornes écran pour que l'environnement et les collisions
+     * puissent réutiliser exactement la même géométrie visible.
+     */
+    public Rectangle getBridgeScreenBounds(int bridgeAnchorX, int bridgeAnchorY) {
+        return buildBridgeBounds(bridgeAnchorX, bridgeAnchorY, false);
+    }
+
+    /**
+     * Variante logique de la méthode précédente :
+     * elle sert au gameplay, notamment pour autoriser la traversée
+     * uniquement à l'intérieur du sprite du pont.
+     */
+    public Rectangle getBridgeLogicalBounds(int bridgeAnchorX, int bridgeAnchorY) {
+        return buildBridgeBounds(bridgeAnchorX, bridgeAnchorY, true);
     }
 
     /**
@@ -627,6 +685,50 @@ public class FieldPanel extends JPanel {
         }
 
         return buildLogicalCellBounds(gridX, gridY, getFieldBounds());
+    }
+
+    /**
+     * Construit les bornes complètes du sprite du pont à partir de sa case d'ancrage.
+     *
+     * Le pont recouvre la berge gauche, la rivière et la berge droite.
+     * Toute la géométrie reste donc dérivée des mêmes cases de grille,
+     * ce qui garantit que le rendu et les collisions restent alignés.
+     */
+    private Rectangle buildBridgeBounds(int bridgeAnchorX, int bridgeAnchorY, boolean logical) {
+        Rectangle anchorCellBounds = logical
+                ? getLogicalCellBounds(bridgeAnchorX, bridgeAnchorY)
+                : getCellBounds(bridgeAnchorX, bridgeAnchorY);
+        Rectangle riverCellBounds = logical
+                ? getLogicalCellBounds(bridgeAnchorX - 1, bridgeAnchorY)
+                : getCellBounds(bridgeAnchorX - 1, bridgeAnchorY);
+        Rectangle leftBankCellBounds = logical
+                ? getLogicalCellBounds(bridgeAnchorX - 2, bridgeAnchorY)
+                : getCellBounds(bridgeAnchorX - 2, bridgeAnchorY);
+        if (anchorCellBounds == null || riverCellBounds == null || leftBankCellBounds == null) {
+            return null;
+        }
+
+        int fullSpanX = leftBankCellBounds.x;
+        int fullSpanWidth = (anchorCellBounds.x + anchorCellBounds.width) - fullSpanX;
+        int horizontalInset = Math.max(4, anchorCellBounds.width / 8);
+        int drawWidth = Math.max(anchorCellBounds.width, fullSpanWidth - (horizontalInset * 2));
+        Dimension scaledSize = getBridgeScaledSize(drawWidth);
+        int drawX = fullSpanX + horizontalInset;
+        int drawY = riverCellBounds.y
+                + ((riverCellBounds.height - scaledSize.height) / 2)
+                - Math.max(2, riverCellBounds.height / 16);
+
+        return new Rectangle(drawX, drawY, scaledSize.width, scaledSize.height);
+    }
+
+    private Dimension getBridgeScaledSize(int targetWidth) {
+        int imageWidth = bridgeImage == null ? -1 : bridgeImage.getWidth(this);
+        int imageHeight = bridgeImage == null ? -1 : bridgeImage.getHeight(this);
+        if (imageWidth <= 0 || imageHeight <= 0) {
+            return new Dimension(targetWidth, Math.max(1, (targetWidth * 416) / 1175));
+        }
+
+        return new Dimension(targetWidth, Math.max(1, (targetWidth * imageHeight) / imageWidth));
     }
 
     /**
@@ -1316,6 +1418,10 @@ public class FieldPanel extends JPanel {
             drawCompostDecoration(g2, cellBounds);
         }
 
+        if (shouldHighlightBridgePlacementCell(gridX, gridY)) {
+            drawBridgePlacementHighlight(g2, cellBounds);
+        }
+
         if (isHighlightedFarmableCell(gridX, gridY)) {
             drawCellHighlight(g2, cellBounds);
         }
@@ -1789,6 +1895,15 @@ public class FieldPanel extends JPanel {
         drawFilledOverlayWithDoubleBorder(g2, cellBounds, HIGHLIGHT_FILL, HIGHLIGHT_BORDER);
     }
 
+    /**
+     * Les cases de pose du pont doivent rester visibles sans écraser complètement le sol.
+     * On reprend donc le même langage visuel que les autres overlays du champ,
+     * mais avec une palette bleutée liée à l'idée de franchissement de rivière.
+     */
+    private void drawBridgePlacementHighlight(Graphics2D g2, Rectangle cellBounds) {
+        drawFilledOverlayWithDoubleBorder(g2, cellBounds, BRIDGE_PLACEMENT_FILL, BRIDGE_PLACEMENT_BORDER);
+    }
+
     /** Dit si la case active doit montrer l'avertissement rouge de labourage. */
     private boolean shouldShowLabourFenceWarning(int gridX, int gridY) {
         return highlightedCell != null
@@ -1859,6 +1974,10 @@ public class FieldPanel extends JPanel {
 
             drawFilledOverlayWithDoubleBorder(g2, cellBounds, COMPOST_RANGE_FILL, COMPOST_RANGE_BORDER);
         }
+    }
+
+    private boolean shouldHighlightBridgePlacementCell(int gridX, int gridY) {
+        return bridgePlacementHighlightVisible && isBridgePlacementCandidateCell(gridX, gridY);
     }
 
     /** Parcourt les clôtures pour dessiner soit le bois, soit les barres de vie. */

@@ -85,6 +85,7 @@ public class GrilleCulture {
      * qu'une matrice dédiée supplémentaire.
      */
     private final List<Point> compostCells;
+    private final List<Point> bridgeAnchorCells;
 
     /*
      * Les chemins occupent la surface complete d'une case.
@@ -146,6 +147,7 @@ public class GrilleCulture {
         this.fenceBarVisibleUntilMs = new long[LARGEUR_GRILLE][HAUTEUR_GRILLE][CellSide.values().length];
         this.fenceDestructionEffects = new ArrayList<>();
         this.compostCells = new ArrayList<>();
+        this.bridgeAnchorCells = new ArrayList<>();
         this.pathCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         this.riverCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         this.decorativeRiverCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
@@ -243,6 +245,7 @@ public class GrilleCulture {
                 && !isLabouree(x, y)
                 && !hasPath(x, y)
                 && !hasRiver(x, y)
+                && !hasBridgeAnchorAt(x, y)
                 && !hasCompostAt(x, y)
                 && !isLabourBlockedByAdjacentFence(x, y);
     }
@@ -386,6 +389,9 @@ public class GrilleCulture {
         if (hasRiver(x, y)) {
             throw new IllegalStateException("Impossible de labourer une case occupée par une rivière.");
         }
+        if (hasBridgeAnchorAt(x, y)) {
+            throw new IllegalStateException("Impossible de labourer une case occupée par un pont.");
+        }
         if (hasCompostAt(x, y)) {
             throw new IllegalStateException("Impossible de labourer une case recouverte par un compost.");
         }
@@ -439,11 +445,19 @@ public class GrilleCulture {
     }
 
     /**
-     * Expose les positions des composts en les recopiant,
-     * pour éviter qu'un appelant modifie l'état interne de la grille.
+     * Le pont est mémorisé par sa case d'ancrage côté droit de la rivière.
+     * Cette case reste marchable, mais elle n'est plus libre pour d'autres placements.
      */
-    public List<Point> getCompostCells() {
-        return new ArrayList<>(compostCells);
+    public boolean hasBridgeAnchorAt(int x, int y) {
+        return findBridgeAnchorIndexAt(x, y) >= 0;
+    }
+
+    /**
+     * Expose les ponts posés sous forme de copies pour que les vues puissent
+     * les dessiner sans toucher à l'état interne de la grille.
+     */
+    public List<Point> getBridgeAnchorCells() {
+        return new ArrayList<>(bridgeAnchorCells);
     }
 
     /**
@@ -475,6 +489,7 @@ public class GrilleCulture {
         return estDansGrille(x, y)
                 && !hasPath(x, y)
                 && !hasRiver(x, y)
+                && !hasBridgeAnchorAt(x, y)
                 && !hasCompostAt(x, y)
                 && !isLabouree(x, y)
                 && getCulture(x, y) == null;
@@ -525,6 +540,41 @@ public class GrilleCulture {
     }
 
     /**
+     * Un pont se pose uniquement sur la berge droite de la rivière décorative.
+     *
+     * La case ciblée reste une case de berge normale côté sol,
+     * mais elle devient l'ancre métier et visuelle du pont posé.
+     */
+    public boolean canPlaceBridge(int x, int y) {
+        return estDansGrille(x, y)
+                && estDansGrille(x - 1, y)
+                && hasRiver(x - 1, y)
+                && !hasRiver(x, y)
+                && !hasPath(x, y)
+                && !hasBridgeAnchorAt(x, y)
+                && !hasCompostAt(x, y)
+                && !isLabouree(x, y)
+                && getCulture(x, y) == null;
+    }
+
+    /**
+     * Pose le pont sur sa case d'ancrage côté droit puis consomme un exemplaire
+     * dans l'inventaire. Le rendu couvrira ensuite la rivière et la berge opposée,
+     * mais l'état minimal à stocker ici reste seulement cette case d'ancrage.
+     */
+    public void placeBridge(int x, int y, Inventaire inventaire) {
+        if (inventaire == null || inventaire.possedeInstallation(FacilityType.PONT)) {
+            throw new IllegalStateException("Aucun pont n'est disponible dans l'inventaire.");
+        }
+        if (!canPlaceBridge(x, y)) {
+            throw new IllegalStateException("Le pont doit être posé sur une case libre collée à droite de la rivière.");
+        }
+
+        bridgeAnchorCells.add(new Point(x, y));
+        inventaire.UseInstallation(FacilityType.PONT);
+    }
+
+    /**
      * Le compost se pose seulement sur de l'herbe libre.
      *
      * Les règles :
@@ -539,6 +589,7 @@ public class GrilleCulture {
                 && !hasCompostAt(x, y)
                 && !hasPath(x, y)
                 && !hasRiver(x, y)
+                && !hasBridgeAnchorAt(x, y)
                 && !isLabouree(x, y)
                 && getCulture(x, y) == null;
     }
@@ -633,6 +684,16 @@ public class GrilleCulture {
         return -1;
     }
 
+    private int findBridgeAnchorIndexAt(int x, int y) {
+        for (int index = 0; index < bridgeAnchorCells.size(); index++) {
+            Point bridgeAnchorCell = bridgeAnchorCells.get(index);
+            if (bridgeAnchorCell.x == x && bridgeAnchorCell.y == y) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
     /**
      * Dit si une case de terre est assez proche d'une rivière pour recevoir son bonus.
      *
@@ -675,6 +736,9 @@ public class GrilleCulture {
         }
         if (hasRiver(x, y)) {
             throw new IllegalStateException("Impossible de planter sur une case occupée par une rivière.");
+        }
+        if (hasBridgeAnchorAt(x, y)) {
+            throw new IllegalStateException("Impossible de planter sur une case occupée par un pont.");
         }
 
         if (grille[x][y].planterCulture(type, () -> isCellBoostedByRiver(x, y))) {

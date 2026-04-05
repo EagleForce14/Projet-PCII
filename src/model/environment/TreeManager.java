@@ -59,6 +59,7 @@ public class TreeManager {
                 || grilleCulture.isLabouree(gridX, gridY)
                 || grilleCulture.hasPath(gridX, gridY)
                 || grilleCulture.hasRiver(gridX, gridY)
+                || grilleCulture.hasBridgeAnchorAt(gridX, gridY)
                 || grilleCulture.hasCompostAt(gridX, gridY)
                 || grilleCulture.getCulture(gridX, gridY) != null;
     }

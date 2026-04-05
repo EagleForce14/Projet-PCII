@@ -154,7 +154,17 @@ public class FieldObstacleMap {
             return false;
         }
 
-        if (intersectsPlacedRiver(entityBounds)) {
+        /*
+         * Le pont doit être traversable par toutes les entités mobiles
+         * qui s'appuient sur cette méthode commune, pas seulement par le joueur.
+         *
+         * On garde donc une seule règle :
+         * si le rectangle de collision reste entièrement dans l'image logique du pont,
+         * la rivière ne bloque plus le passage.
+         *
+         * Les clôtures, elles, restent propres aux lapins via `blockFences`.
+         */
+        if (intersectsPlacedRiver(entityBounds, true)) {
             return false;
         }
 
@@ -291,7 +301,15 @@ public class FieldObstacleMap {
         return blockedBounds != null && blockedBounds.intersects(entityBounds);
     }
 
-    private boolean intersectsPlacedRiver(Rectangle entityBounds) {
+    /**
+     * La rivière est bloquante par défaut.
+     *
+     * Seule exception : pour le joueur, un pont posé ouvre un couloir étroit
+     * au milieu de la rivière. On vérifie alors que tout le corps de l'entité
+     * reste bien contenu dans ce passage central, afin d'interdire la marche
+     * sur les bords du sprite.
+     */
+    private boolean intersectsPlacedRiver(Rectangle entityBounds, boolean allowBridgeCrossing) {
         /*
          * La grille reste petite.
          * On choisit donc ici une boucle toute simple et très lisible :
@@ -305,13 +323,40 @@ public class FieldObstacleMap {
                 }
 
                 Rectangle riverCellBounds = fieldPanel.getLogicalCellBounds(column, row);
-                if (riverCellBounds != null && riverCellBounds.intersects(entityBounds)) {
+                if (riverCellBounds == null || !riverCellBounds.intersects(entityBounds)) {
+                    continue;
+                }
+
+                if (allowBridgeCrossing && isBridgePassageCrossable(column, row, entityBounds)) {
+                    continue;
+                }
+
+                if (riverCellBounds.intersects(entityBounds)) {
                     return true;
                 }
             }
         }
 
         return false;
+    }
+
+    /**
+     * Le pont est ancré sur la case de berge droite.
+     * Si cette ancre existe pour la ligne courante, on considère désormais
+     * toute l'image logique du pont comme zone traversable.
+     *
+     * Cela adoucit la règle précédente :
+     * tant que le corps du joueur reste dans le sprite du pont,
+     * la rivière ne doit plus le bloquer.
+     */
+    private boolean isBridgePassageCrossable(int riverGridX, int riverGridY, Rectangle entityBounds) {
+        int bridgeAnchorX = riverGridX + 1;
+        if (!fieldPanel.getGrilleCulture().hasBridgeAnchorAt(bridgeAnchorX, riverGridY)) {
+            return false;
+        }
+
+        Rectangle bridgeBounds = fieldPanel.getBridgeLogicalBounds(bridgeAnchorX, riverGridY);
+        return bridgeBounds != null && bridgeBounds.contains(entityBounds);
     }
 
     private boolean intersectsDecorativeBushCells(Rectangle entityBounds, boolean ignoreRightRiverUpperDecoration) {

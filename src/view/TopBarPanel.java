@@ -10,6 +10,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
@@ -21,10 +22,12 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -36,6 +39,14 @@ import java.util.Map;
  */
 public class TopBarPanel extends JPanel {
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
+    private static final int DAY_PROGRESS_BAR_WIDTH = 156;
+    private static final int DAY_PROGRESS_BAR_HEIGHT = 18;
+    private static final Color DAY_PROGRESS_FRAME = new Color(244, 215, 125, 245);
+    private static final Color DAY_PROGRESS_BACKGROUND = new Color(46, 30, 14, 235);
+    private static final Color DAY_PROGRESS_FILL = new Color(238, 191, 62, 250);
+    private static final Color DAY_PROGRESS_HIGHLIGHT = new Color(255, 244, 194, 240);
+    private static final Color DAY_PROGRESS_TEXT = new Color(255, 248, 220);
+    private static final Color DAY_PROGRESS_TEXT_SHADOW = new Color(73, 48, 22, 220);
 
     private final Money playerMoney;
     private final JLabel dayLabel;
@@ -43,6 +54,8 @@ public class TopBarPanel extends JPanel {
     private final JButton objectiveButton;
     private final ImageIcon completedObjectiveIcon;
     private final ImageIcon pendingObjectiveIcon;
+    private final Font dayProgressTextFont;
+    private final JComponent dayProgressBar;
     private JPopupMenu objectivesPopup;
     private JPanel objectivesListPanel;
     private final Jour jour;
@@ -59,11 +72,13 @@ public class TopBarPanel extends JPanel {
 
         dayLabel = createLabel(14.0f);
         moneyLabel = createLabel(18.0f);
+        dayProgressTextFont = CustomFontLoader.loadFont(FONT_PATH, 8.0f);
+        dayProgressBar = createDayProgressBar();
         objectiveButton = createObjectiveButton();
         completedObjectiveIcon = createObjectiveStateIcon(true);
         pendingObjectiveIcon = createObjectiveStateIcon(false);
 
-        add(dayLabel);
+        add(createDayInfoRow());
         add(moneyLabel);
         add(objectiveButton);
 
@@ -80,6 +95,97 @@ public class TopBarPanel extends JPanel {
         label.setFont(CustomFontLoader.loadFont(FONT_PATH, fontSize));
         label.setAlignmentX(LEFT_ALIGNMENT);
         return label;
+    }
+
+    /**
+     * Regroupe le libellé du jour et sa jauge temporelle sur la même ligne.
+     * Le joueur lit ainsi immédiatement "où on en est" dans le jour en cours.
+     */
+    private JPanel createDayInfoRow() {
+        JPanel row = new JPanel();
+        row.setOpaque(false);
+        row.setAlignmentX(LEFT_ALIGNMENT);
+        row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
+
+        dayLabel.setAlignmentY(Component.CENTER_ALIGNMENT);
+        dayProgressBar.setAlignmentY(Component.CENTER_ALIGNMENT);
+
+        row.add(dayLabel);
+        row.add(Box.createHorizontalStrut(12));
+        row.add(dayProgressBar);
+        return row;
+    }
+
+    /**
+     * Petite jauge dédiée au chrono du jour.
+     * Elle avance avec le temps réellement joué, pas avec les objectifs atteints :
+     * le but est de montrer quand le jeu évaluera la validation du jour courant.
+     */
+    private JComponent createDayProgressBar() {
+        JComponent progressBar = new JComponent() {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                super.paintComponent(graphics);
+
+                Graphics2D g2 = (Graphics2D) graphics.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                double progressRatio = jour.getProgressionVersJourSuivant();
+
+                /*
+                 * On pose d'abord une ombre portée sous la jauge pour qu'elle reste visible
+                 * même quand le décor du jeu est très contrasté derrière le HUD.
+                 */
+                g2.setColor(new Color(0, 0, 0, 95));
+                g2.fillRoundRect(2, 2, Math.max(1, getWidth() - 2), Math.max(1, getHeight() - 1), getHeight() + 2, getHeight() + 2);
+
+                HudProgressBarPainter.paint(
+                        g2,
+                        0,
+                        0,
+                        getWidth(),
+                        getHeight(),
+                        progressRatio,
+                        DAY_PROGRESS_FRAME,
+                        DAY_PROGRESS_BACKGROUND,
+                        DAY_PROGRESS_FILL,
+                        DAY_PROGRESS_HIGHLIGHT
+                );
+
+                /*
+                 * On affiche le temps restant directement dans la barre.
+                 * Le joueur n'a donc pas besoin d'interpréter uniquement la jauge visuelle :
+                 * l'information "combien de secondes avant le prochain jour ?" est explicite.
+                 */
+                long remainingMs = jour.getTempsRestantAvantProchainJourMs();
+                int remainingSeconds = (int) Math.max(0L, Math.ceil(remainingMs / 1000.0));
+                String remainingText = remainingSeconds + "s";
+                g2.setFont(dayProgressTextFont);
+                int textWidth = g2.getFontMetrics().stringWidth(remainingText);
+                int textX = (getWidth() - textWidth) / 2;
+                int textY = ((getHeight() - g2.getFontMetrics().getHeight()) / 2) + g2.getFontMetrics().getAscent() - 1;
+
+                g2.setColor(DAY_PROGRESS_TEXT_SHADOW);
+                g2.drawString(remainingText, textX + 1, textY + 1);
+                g2.setColor(DAY_PROGRESS_TEXT);
+                g2.drawString(remainingText, textX, textY);
+                g2.dispose();
+            }
+
+            @Override
+            public String getToolTipText(MouseEvent event) {
+                long remainingMs = jour.getTempsRestantAvantProchainJourMs();
+                int remainingSeconds = (int) Math.max(0L, Math.ceil(remainingMs / 1000.0));
+                return "Prochain jour dans " + remainingSeconds + " s";
+            }
+        };
+
+        progressBar.setOpaque(false);
+        progressBar.setToolTipText("");
+        progressBar.setPreferredSize(new Dimension(DAY_PROGRESS_BAR_WIDTH, DAY_PROGRESS_BAR_HEIGHT));
+        progressBar.setMinimumSize(new Dimension(DAY_PROGRESS_BAR_WIDTH, DAY_PROGRESS_BAR_HEIGHT));
+        progressBar.setMaximumSize(new Dimension(DAY_PROGRESS_BAR_WIDTH, DAY_PROGRESS_BAR_HEIGHT));
+        return progressBar;
     }
 
     /**

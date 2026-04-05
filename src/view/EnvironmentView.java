@@ -123,6 +123,7 @@ public class EnvironmentView extends JPanel {
 
         Graphics2D g2 = (Graphics2D) g.create();
         drawTrees(g2);
+        drawPlacedBridges(g2);
 
         Rectangle barnBounds = fieldPanel.getBarnScreenBounds();
         if (workshopImage != null) {
@@ -151,6 +152,34 @@ public class EnvironmentView extends JPanel {
         drawWoodRewardEffects(g2);
         drawMoneyRewardEffects(g2);
         g2.dispose();
+    }
+
+    /**
+     * Les ponts posés deviennent des éléments fixes du décor.
+     * On les dessine donc ici, dans la même couche que les autres éléments
+     * environnementaux, tout en laissant le joueur passer visuellement au-dessus.
+     */
+    private void drawPlacedBridges(Graphics2D g2) {
+        if (bridgeImage == null || fieldPanel == null) {
+            return;
+        }
+
+        for (Point bridgeAnchorCell : fieldPanel.getGrilleCulture().getBridgeAnchorCells()) {
+            Rectangle bridgeBounds = fieldPanel.getBridgeScreenBounds(bridgeAnchorCell.x, bridgeAnchorCell.y);
+            if (bridgeBounds == null) {
+                continue;
+            }
+
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+            g2.drawImage(
+                    bridgeImage,
+                    bridgeBounds.x,
+                    bridgeBounds.y,
+                    bridgeBounds.width,
+                    bridgeBounds.height,
+                    this
+            );
+        }
     }
 
     /**
@@ -203,7 +232,7 @@ public class EnvironmentView extends JPanel {
 
         drawShadowedText(g2, timeText, textX, textY, WORKSHOP_PROGRESS_TEXT, WORKSHOP_PROGRESS_TEXT_SHADOW);
 
-        drawProgressBar(
+        HudProgressBarPainter.paint(
                 g2,
                 barX,
                 barY,
@@ -250,7 +279,7 @@ public class EnvironmentView extends JPanel {
             g2.setFont(progressFont);
             drawShadowedText(g2, progressText, textX, textY, TREE_PROGRESS_TEXT, TREE_PROGRESS_TEXT_SHADOW);
 
-            drawProgressBar(
+            HudProgressBarPainter.paint(
                     g2,
                     barX,
                     barY,
@@ -689,41 +718,6 @@ public class EnvironmentView extends JPanel {
         drawCenteredGlow(rewardGraphics, current.x, current.y, 36, MONEY_REWARD_GLOW, (int) Math.round(105 * (1.0 - (progress * 0.35))));
         ProductPixelArt.drawCoinResource(rewardGraphics, iconX, iconY, pixelSize);
         rewardGraphics.dispose();
-    }
-
-    private void drawProgressBar(
-            Graphics2D g2,
-            int x,
-            int y,
-            int width,
-            int height,
-            double progressRatio,
-            Color frameColor,
-            Color backgroundColor,
-            Color fillColor,
-            Color highlightColor
-    ) {
-        int frameArc = height + 2;
-        int innerPadding = 2;
-        int innerWidth = Math.max(1, width - (innerPadding * 2));
-        int innerHeight = Math.max(1, height - (innerPadding * 2));
-        int innerArc = Math.max(4, frameArc - 2);
-        int fillWidth = (int) Math.round(innerWidth * Math.max(0.0, Math.min(1.0, progressRatio)));
-
-        g2.setColor(frameColor);
-        g2.fillRoundRect(x, y, width, height, frameArc, frameArc);
-        drawRoundedBarLayer(g2, x + innerPadding, y + innerPadding, innerWidth, innerHeight, innerArc, backgroundColor);
-
-        if (fillWidth > 0) {
-            drawRoundedBarLayer(g2, x + innerPadding, y + innerPadding, fillWidth, innerHeight, innerArc, fillColor);
-            g2.setColor(highlightColor);
-            g2.fillRect(x + innerPadding + 1, y + innerPadding + 1, Math.max(1, fillWidth - 2), 1);
-        }
-    }
-
-    private void drawRoundedBarLayer(Graphics2D g2, int x, int y, int width, int height, int arc, Color fillColor) {
-        g2.setColor(fillColor);
-        g2.fillRoundRect(x, y, width, height, arc, arc);
     }
 
     private void drawTreeShard(Graphics2D g2, int centerX, int centerY, int directionX, int directionY, int distance, int size, double progress) {

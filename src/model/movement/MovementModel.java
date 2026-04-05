@@ -120,6 +120,10 @@ public class MovementModel {
         return isSelectedFacility(FacilityType.COMPOST);
     }
 
+    public boolean isBridgePlacementSelected() {
+        return isSelectedFacility(FacilityType.PONT);
+    }
+
     // Accesseur pour la vue (qui a besoin d'afficher TOUTES les unités)
     public List<Unit> getUnits() {
         return units;

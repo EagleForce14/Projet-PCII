@@ -100,6 +100,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         JButton cutTreeButton = sidebarPanel.getCutTreeButton();
         cutTreeButton.addActionListener(this::couperArbreProche);
 
+        JButton bridgeButton = sidebarPanel.getBridgeButton();
+        bridgeButton.addActionListener(this::poserPontCaseActive);
+
         JButton replayButton = gameOverOverlay.getReplayButton();
         replayButton.addActionListener(event -> relancerPartie(restartGameAction));
     }
@@ -271,6 +274,35 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             model.clearSelectedInventoryItem();
         }
         inventoryStatusOverlay.repaint();
+    }
+
+    /**
+     * La pose du pont reprend le même flux que les autres installations :
+     * validation dans le contrôleur, mutation dans la grille, puis resynchronisation
+     * des vues. La case utilisée est la berge droite actuellement occupée par le joueur.
+     */
+    private void poserPontCaseActive(ActionEvent event) {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
+        Point activeFieldCell = model.getActiveFieldCell();
+        if (activeFieldCell == null
+                || model.getSelectedFacilityType() != FacilityType.PONT
+                || !fieldPanel.isBridgePlacementCandidateCell(activeFieldCell)
+                || inventaire.possedeInstallation(FacilityType.PONT)) {
+            return;
+        }
+
+        grilleCulture.placeBridge(activeFieldCell.x, activeFieldCell.y, inventaire);
+        if (inventaire.possedeInstallation(FacilityType.PONT)) {
+            model.clearSelectedInventoryItem();
+        }
+
+        syncPlacementVisuals();
+        inventoryStatusOverlay.repaint();
+        fieldPanel.repaint();
+        movementView.requestFocusInWindow();
     }
 
     /**
@@ -489,6 +521,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             // du mode clôture, donc on retire le preview éventuel.
             fieldPanel.clearFencePreview();
             fieldPanel.clearCompostInfluenceHighlight();
+            syncPlacementVisuals();
             // On redessine la barre pour refléter immédiatement le changement de sélection.
             inventoryStatusOverlay.repaint();
             // Enfin, on rend le focus au panneau principal pour que le clavier
@@ -523,11 +556,13 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             // le nouvel état, et le focus doit retourner au jeu.
             fieldPanel.clearFencePreview();
             fieldPanel.clearCompostInfluenceHighlight();
+            syncPlacementVisuals();
             inventoryStatusOverlay.repaint();
             movementView.requestFocusInWindow();
             return true;
         }
 
+        syncPlacementVisuals();
         movementView.requestFocusInWindow();
         return true;
     }
@@ -630,7 +665,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
 
         // Quand le chemin est selectionne, on ne veut plus de pose a la souris.
         // Le clic ne doit donc pas declencher d'action "cachee" sur le terrain.
-        if (model.isPathPlacementSelected() || model.isCompostPlacementSelected()) {
+        if (model.isPathPlacementSelected() || model.isCompostPlacementSelected() || model.isBridgePlacementSelected()) {
             movementView.requestFocusInWindow();
             return;
         }
@@ -784,6 +819,16 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     private boolean isSelectableFacilityType(FacilityType facilityType) {
         return facilityType == FacilityType.CLOTURE
                 || facilityType == FacilityType.CHEMIN
-                || facilityType == FacilityType.COMPOST;
+                || facilityType == FacilityType.COMPOST
+                || facilityType == FacilityType.PONT;
+    }
+
+    /**
+     * Tous les objets de placement n'utilisent pas le même feedback visuel.
+     * On centralise donc ici la remise en cohérence des aides de pose
+     * après chaque changement de sélection ou après une pose réussie.
+     */
+    private void syncPlacementVisuals() {
+        fieldPanel.setBridgePlacementHighlightVisible(model.isBridgePlacementSelected());
     }
 }
