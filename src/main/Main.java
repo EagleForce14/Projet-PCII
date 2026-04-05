@@ -19,8 +19,10 @@ import model.management.Inventaire;
 import model.management.Money;
 import model.runtime.GameSession;
 import model.shop.Shop;
+import model.workshop.WorkshopConstructionManager;
 import view.*;
 import view.shop.ShopOverlay;
+import view.workshop.WorkshopOverlay;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -66,6 +68,7 @@ public class Main {
         Money playerMoney = new Money(150);
         Inventaire inventaire = new Inventaire();
         Shop shop = new Shop();
+        WorkshopConstructionManager workshopConstructionManager = new WorkshopConstructionManager(inventaire);
         // Enregistrer shop pour qu'il recoive les notifications de changement de jour
         jour.addDayChangeListener(shop);
         FieldPanel fieldPanel = new FieldPanel(grilleCulture, treeManager);
@@ -98,8 +101,16 @@ public class Main {
         inventoryStatusOverlay.setAlignmentX(0.5f);
         inventoryStatusOverlay.setAlignmentY(0.5f);
 
+        TopBarPanel topBarPanel = new TopBarPanel(playerMoney, jour);
+
         // Cette vue couvre toute la fenêtre et affiche les éléments de décor fixes
-        EnvironmentView environmentView = new EnvironmentView(fieldPanel, treeManager);
+        EnvironmentView environmentView = new EnvironmentView(
+                fieldPanel,
+                treeManager,
+                workshopConstructionManager,
+                playerMoney,
+                topBarPanel
+        );
         environmentView.setAlignmentX(0.5f);
         environmentView.setAlignmentY(0.5f);
 
@@ -122,7 +133,7 @@ public class Main {
         hudPanel.setOpaque(false);
         hudPanel.setAlignmentX(0.5f);
         hudPanel.setAlignmentY(0.5f);
-        hudPanel.add(new TopBarPanel(playerMoney, jour), BorderLayout.NORTH);
+        hudPanel.add(topBarPanel, BorderLayout.NORTH);
         gamePanel.add(hudPanel);
 
         JPanel contentPanel = new JPanel(new BorderLayout());
@@ -131,13 +142,22 @@ public class Main {
         frame.setContentPane(contentPanel);
 
         ShopOverlay shopOverlay = new ShopOverlay(shop, playerMoney, inventaire, movementView);
+        WorkshopOverlay workshopOverlay = new WorkshopOverlay(inventaire, workshopConstructionManager, movementView);
         frame.setGlassPane(shopOverlay);
 
         PhysicsThread physicsThread = new PhysicsThread(model);
         EnemyPhysicsThread enemyPhysicsThread = new EnemyPhysicsThread(enemyModel);
         RenderThread renderThread = new RenderThread(contentPanel);
         TreeThread treeThread = new TreeThread(treeManager, fieldObstacleMap, playerUnit, enemyModel);
-        GameSession session = new GameSession(jour, grilleCulture, physicsThread, enemyPhysicsThread, renderThread, treeThread);
+        GameSession session = new GameSession(
+                jour,
+                grilleCulture,
+                physicsThread,
+                enemyPhysicsThread,
+                renderThread,
+                treeThread,
+                workshopConstructionManager
+        );
 
         GameOverOverlay gameOverOverlay = new GameOverOverlay(jour);
         gamePanel.add(gameOverOverlay);
@@ -154,9 +174,11 @@ public class Main {
                 grilleCulture,
                 playerMoney,
                 inventaire,
+                treeManager,
                 fieldPanel,
                 inventoryStatusOverlay,
                 shopOverlay,
+                workshopOverlay,
                 gameOverOverlay,
                 () -> restartCurrentGame(frame, session)
         );

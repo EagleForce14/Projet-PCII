@@ -4,7 +4,10 @@ import model.culture.Culture;
 import model.culture.GrilleCulture;
 import model.culture.Stade;
 import model.culture.Type;
+import model.environment.FieldObstacleMap;
+import model.environment.TreeInstance;
 import model.movement.MovementModel;
+import model.movement.Unit;
 import model.management.Inventaire;
 import model.shop.FacilityType;
 
@@ -51,9 +54,11 @@ public class SidebarPanel extends JPanel {
     private final JButton cleanButton;
     private final JButton pathButton;
     private final JButton compostButton;
+    private final JButton cutTreeButton;
     private final JLabel labourWarningLabel;
     private final JPanel pathActionRow;
     private final JPanel compostActionRow;
+    private final JPanel cutTreeActionRow;
 
 
     // Petit cache local pour éviter d'appliquer setEnabled en boucle inutilement.
@@ -66,6 +71,8 @@ public class SidebarPanel extends JPanel {
     private boolean currentPathVisibleState;
     private boolean currentCompostEnabledState;
     private boolean currentCompostVisibleState;
+    private boolean currentCutTreeEnabledState;
+    private boolean currentCutTreeVisibleState;
     private String currentCompostButtonLabel;
     private boolean currentLabourWarningVisibleState;
 
@@ -144,6 +151,15 @@ public class SidebarPanel extends JPanel {
         compostActionRow = createSpecialActionRow(compostButton);
         compostActionRow.setVisible(false);
 
+        /*
+         * La coupe de bois est une action contextuelle pure :
+         * on ne veut surtout pas l'afficher en permanence,
+         * seulement quand le joueur est réellement au contact d'un arbre.
+         */
+        cutTreeButton = createStyledButton("Couper l'arbre", new Color(120, 84, 45, 255), 11.5f);
+        cutTreeActionRow = createSpecialActionRow(cutTreeButton);
+        cutTreeActionRow.setVisible(false);
+
         labourWarningLabel = new JLabel(
                 "<html>Le labourage n'est pas autorisé sur une case adjacente à une clôture.</html>"
         );
@@ -159,6 +175,7 @@ public class SidebarPanel extends JPanel {
         specialActionsPanel.setBorder(BorderFactory.createEmptyBorder(0, 16, 16, 16));
         specialActionsPanel.add(pathActionRow);
         specialActionsPanel.add(compostActionRow);
+        specialActionsPanel.add(cutTreeActionRow);
         specialActionsPanel.add(labourWarningLabel);
 
         contentPanel.add(titleRow, BorderLayout.NORTH);
@@ -168,7 +185,7 @@ public class SidebarPanel extends JPanel {
 
         // Au démarrage, les boutons sont désactivés tant que l'unité déplaçable n'est pas
         // sur une case valide du champ.
-        applyButtonsEnabledState(false, false, false, false, false, false, false, false, false, "Poser compost", false);
+        applyButtonsEnabledState(false, false, false, false, false, false, false, false, false, false, false, "Poser compost", false);
     }
 
     /**
@@ -245,6 +262,8 @@ public class SidebarPanel extends JPanel {
         boolean shouldEnablePath = shouldShowPathAction && canPlacePathActiveCell();
         boolean shouldDisplayCompostAction = shouldShowCompostAction();
         boolean shouldEnableCompost = canUseCompostButtonOnActiveCell();
+        boolean shouldShowCutTreeAction = shouldShowCutTreeAction();
+        boolean shouldEnableCutTree = shouldShowCutTreeAction;
         String compostButtonLabel = shouldShowRemiserCompostAction() ? "Remiser compost" : "Poser compost";
         boolean shouldShowLabourWarning = shouldShowAdjacentFenceLabourWarning();
         if (shouldEnableLabour != currentLabourEnabledState
@@ -256,6 +275,8 @@ public class SidebarPanel extends JPanel {
                 || shouldShowPathAction != currentPathVisibleState
                 || shouldEnableCompost != currentCompostEnabledState
                 || shouldDisplayCompostAction != currentCompostVisibleState
+                || shouldEnableCutTree != currentCutTreeEnabledState
+                || shouldShowCutTreeAction != currentCutTreeVisibleState
                 || !compostButtonLabel.equals(currentCompostButtonLabel)
                 || shouldShowLabourWarning != currentLabourWarningVisibleState) {
             applyButtonsEnabledState(
@@ -268,6 +289,8 @@ public class SidebarPanel extends JPanel {
                     shouldShowPathAction,
                     shouldEnableCompost,
                     shouldDisplayCompostAction,
+                    shouldEnableCutTree,
+                    shouldShowCutTreeAction,
                     compostButtonLabel,
                     shouldShowLabourWarning
             );
@@ -281,6 +304,7 @@ public class SidebarPanel extends JPanel {
                                           boolean harvestEnabled, boolean cleanEnabled, boolean waterEnabled,
                                           boolean pathEnabled, boolean pathVisible,
                                           boolean compostEnabled, boolean compostVisible,
+                                          boolean cutTreeEnabled, boolean cutTreeVisible,
                                           String compostButtonLabel,
                                           boolean labourWarningVisible) {
         currentLabourEnabledState = labourEnabled;
@@ -292,6 +316,8 @@ public class SidebarPanel extends JPanel {
         currentPathVisibleState = pathVisible;
         currentCompostEnabledState = compostEnabled;
         currentCompostVisibleState = compostVisible;
+        currentCutTreeEnabledState = cutTreeEnabled;
+        currentCutTreeVisibleState = cutTreeVisible;
         currentCompostButtonLabel = compostButtonLabel;
         currentLabourWarningVisibleState = labourWarningVisible;
 
@@ -304,6 +330,8 @@ public class SidebarPanel extends JPanel {
         pathActionRow.setVisible(pathVisible);
         compostButton.setEnabled(compostEnabled);
         compostActionRow.setVisible(compostVisible);
+        cutTreeButton.setEnabled(cutTreeEnabled);
+        cutTreeActionRow.setVisible(cutTreeVisible);
         compostButton.setText(compostButtonLabel);
         labourWarningLabel.setVisible(labourWarningVisible);
 
@@ -424,6 +452,33 @@ public class SidebarPanel extends JPanel {
     }
 
     /**
+     * La coupe se base sur la vraie géométrie de collision des arbres,
+     * pas sur la simple case active du champ.
+     *
+     * C'est important car, près d'un arbre mature, plusieurs cases peuvent être
+     * visuellement recouvertes ou désactivées sans que le joueur soit exactement
+     * "sur" la case racine de cet arbre.
+     */
+    private boolean shouldShowCutTreeAction() {
+        return getInteractableTreeNearPlayer() != null;
+    }
+
+    private TreeInstance getInteractableTreeNearPlayer() {
+        Unit playerUnit = movementModel.getPlayerUnit();
+        FieldObstacleMap obstacleMap = fieldPanel.getFieldObstacleMap();
+        if (playerUnit == null || obstacleMap == null) {
+            return null;
+        }
+
+        return obstacleMap.findInteractableTree(
+                playerUnit.getX(),
+                playerUnit.getY(),
+                Unit.SIZE,
+                Unit.SIZE
+        );
+    }
+
+    /**
      * La récolte n'est disponible que sur une case occupée par une culture mature.
      */
     private boolean canHarvestActiveCell() {
@@ -485,6 +540,10 @@ public class SidebarPanel extends JPanel {
 
     public JButton getCompostButton() {
         return compostButton;
+    }
+
+    public JButton getCutTreeButton() {
+        return cutTreeButton;
     }
 
 

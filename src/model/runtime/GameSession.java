@@ -4,6 +4,7 @@ import model.culture.GrilleCulture;
 import model.enemy.EnemyPhysicsThread;
 import model.environment.TreeThread;
 import model.movement.PhysicsThread;
+import model.workshop.WorkshopConstructionManager;
 import view.RenderThread;
 
 /**
@@ -18,15 +19,18 @@ public final class GameSession {
     private final EnemyPhysicsThread enemyPhysicsThread;
     private final RenderThread renderThread;
     private final TreeThread treeThread;
+    private final WorkshopConstructionManager workshopConstructionManager;
 
     public GameSession(Jour jour, GrilleCulture grilleCulture, PhysicsThread physicsThread,
-                       EnemyPhysicsThread enemyPhysicsThread, RenderThread renderThread, TreeThread treeThread) {
+                       EnemyPhysicsThread enemyPhysicsThread, RenderThread renderThread, TreeThread treeThread,
+                       WorkshopConstructionManager workshopConstructionManager) {
         this.jour = jour;
         this.grilleCulture = grilleCulture;
         this.physicsThread = physicsThread;
         this.enemyPhysicsThread = enemyPhysicsThread;
         this.renderThread = renderThread;
         this.treeThread = treeThread;
+        this.workshopConstructionManager = workshopConstructionManager;
     }
 
     public void shutdown() {
@@ -46,5 +50,8 @@ public final class GameSession {
         enemyPhysicsThread.interrupt();
         renderThread.arreter();
         treeThread.arreter();
+        if (workshopConstructionManager != null) {
+            workshopConstructionManager.shutdown();
+        }
     }
 }

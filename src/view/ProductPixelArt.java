@@ -24,8 +24,14 @@ public final class ProductPixelArt {
     private static final int FENCE_ART_ROWS = 7;
     private static final int PATH_ART_MAX_SIDE = 7;
     private static final int COMPOST_ART_MAX_SIDE = 6;
+    private static final int BRIDGE_ART_MAX_SIDE = 8;
+    private static final int WOOD_ART_MAX_SIDE = 8;
+    private static final int COIN_ART_COLUMNS = 5;
+    private static final int COIN_ART_ROWS = 5;
     private static final Image PATH_IMAGE = ImageLoader.load("/assets/stone_with_grass.png");
     private static final Image COMPOST_IMAGE = ImageLoader.load("/assets/Compost.png");
+    private static final Image BRIDGE_IMAGE = ImageLoader.load("/assets/bridge.png");
+    private static final Image WOOD_IMAGE = ImageLoader.load("/assets/wood.png");
 
     // Le constructeur de la classe
     private ProductPixelArt() {}
@@ -54,6 +60,9 @@ public final class ProductPixelArt {
         if (type == FacilityType.COMPOST) {
             return getScaledImageSize(COMPOST_IMAGE, COMPOST_ART_MAX_SIDE * pixelSize).width;
         }
+        if (type == FacilityType.PONT) {
+            return getScaledImageSize(BRIDGE_IMAGE, BRIDGE_ART_MAX_SIDE * pixelSize).width;
+        }
         return DEFAULT_ART_COLUMNS * pixelSize;
     }
 
@@ -67,7 +76,26 @@ public final class ProductPixelArt {
         if (type == FacilityType.COMPOST) {
             return getScaledImageSize(COMPOST_IMAGE, COMPOST_ART_MAX_SIDE * pixelSize).height;
         }
+        if (type == FacilityType.PONT) {
+            return getScaledImageSize(BRIDGE_IMAGE, BRIDGE_ART_MAX_SIDE * pixelSize).height;
+        }
         return DEFAULT_ART_ROWS * pixelSize;
+    }
+
+    public static int getWoodArtWidth(int pixelSize) {
+        return getScaledImageSize(WOOD_IMAGE, WOOD_ART_MAX_SIDE * pixelSize).width;
+    }
+
+    public static int getWoodArtHeight(int pixelSize) {
+        return getScaledImageSize(WOOD_IMAGE, WOOD_ART_MAX_SIDE * pixelSize).height;
+    }
+
+    public static int getCoinArtWidth(int pixelSize) {
+        return COIN_ART_COLUMNS * pixelSize;
+    }
+
+    public static int getCoinArtHeight(int pixelSize) {
+        return COIN_ART_ROWS * pixelSize;
     }
 
     public static void drawProduct(Graphics2D g2d, Product product, int x, int y, int pixelSize) {
@@ -120,12 +148,45 @@ public final class ProductPixelArt {
             case COMPOST:
                 drawScaledImage(g2d, COMPOST_IMAGE, x, y, COMPOST_ART_MAX_SIDE * pixelSize);
                 break;
+            case PONT:
+                drawScaledImage(g2d, BRIDGE_IMAGE, x, y, BRIDGE_ART_MAX_SIDE * pixelSize);
+                break;
             case JARDINIER:
                 drawGardener(g2d, x, y, pixelSize);
                 break;
             default:
                 break;
         }
+    }
+
+    public static void drawWoodResource(Graphics2D g2d, int x, int y, int pixelSize) {
+        drawScaledImage(g2d, WOOD_IMAGE, x, y, WOOD_ART_MAX_SIDE * pixelSize);
+    }
+
+    /**
+     * Petit pictogramme de pièce utilisé par les animations de gain d'argent.
+     * On le garde local ici pour que toutes les vues utilisent exactement
+     * la même pièce si d'autres écrans en ont besoin plus tard.
+     */
+    public static void drawCoinResource(Graphics2D g2d, int x, int y, int pixelSize) {
+        Color outline = new Color(136, 75, 18);
+        Color shadow = new Color(193, 118, 22);
+        Color fill = new Color(244, 182, 58);
+        Color highlight = new Color(255, 235, 143);
+
+        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, outline);
+        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, outline);
+        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, fill);
+        fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, outline);
+        fillPixel(g2d, x, y + (2 * pixelSize), pixelSize, outline);
+        fillPixel(g2d, x + pixelSize, y + (2 * pixelSize), pixelSize, fill);
+        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, highlight);
+        fillPixel(g2d, x + (3 * pixelSize), y + (2 * pixelSize), pixelSize, fill);
+        fillPixel(g2d, x + (4 * pixelSize), y + (2 * pixelSize), pixelSize, outline);
+        fillPixel(g2d, x + pixelSize, y + (3 * pixelSize), pixelSize, outline);
+        fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, shadow);
+        fillPixel(g2d, x + (3 * pixelSize), y + (3 * pixelSize), pixelSize, outline);
+        fillPixel(g2d, x + (2 * pixelSize), y + (4 * pixelSize), pixelSize, outline);
     }
 
     private static void drawTulip(Graphics2D g2d, int x, int y, int pixelSize) {

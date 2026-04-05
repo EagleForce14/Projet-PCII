@@ -18,10 +18,12 @@ import javax.swing.SwingConstants;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -351,6 +353,22 @@ public class TopBarPanel extends JPanel {
         if (!nextText.equals(dayLabel.getText())) {
             dayLabel.setText(nextText);
         }
+    }
+
+    /**
+     * Donne aux overlays un point d'arrivée exact vers la zone d'argent du HUD.
+     * On évite ainsi de recalculer à la main un ancrage fragile dans plusieurs vues.
+     */
+    public Rectangle getMoneyLabelBoundsIn(Component target) {
+        if (target == null || moneyLabel == null || moneyLabel.getParent() == null) {
+            return null;
+        }
+
+        return javax.swing.SwingUtilities.convertRectangle(
+                moneyLabel.getParent(),
+                moneyLabel.getBounds(),
+                target
+        );
     }
 
     @Override

@@ -1,5 +1,8 @@
 package model.management;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Money {
     /**
      * Classe réprésentant le système d'argent du jeu. 
@@ -8,6 +11,7 @@ public class Money {
     
     // attribut 
     private int amount;
+    private final List<MoneyRewardEffect> rewardEffects;
 
     // constructeur
     /**
@@ -17,6 +21,7 @@ public class Money {
     */
     public Money(int amount) {
         this.amount = amount;
+        this.rewardEffects = new ArrayList<>();
     }
 
     // getter et setter
@@ -25,7 +30,7 @@ public class Money {
      * @return int
      * Retourne la quantité d'argent.
     **/
-    public int getAmount() {
+    public synchronized int getAmount() {
         return amount;
     }
 
@@ -34,10 +39,41 @@ public class Money {
      * Utile quand une action de jeu rapporte directement un gain.
      */
     public void credit(int amount) {
+        creditInternal(amount, 0, 0, false);
+    }
+
+    /**
+     * Variante utilisée quand le gameplay connaît la position d'origine du gain.
+     * C'est le cas idéal pour animer une pièce qui part réellement du monde
+     * jusqu'au HUD d'argent.
+     */
+    public void creditFromWorld(int amount, int sourceWorldX, int sourceWorldY) {
+        creditInternal(amount, sourceWorldX, sourceWorldY, true);
+    }
+
+    /**
+     * Expose les gains récents sous forme d'instantané.
+     * La vue consomme cette liste en lecture seule pour dessiner les animations.
+     */
+    public synchronized List<MoneyRewardEffect> getActiveRewardEffects() {
+        long now = System.currentTimeMillis();
+        rewardEffects.removeIf(effect -> effect == null || effect.isExpired(now));
+        return new ArrayList<>(rewardEffects);
+    }
+
+    private synchronized void creditInternal(int amount, int sourceWorldX, int sourceWorldY, boolean explicitSource) {
         if (amount < 0) {
             throw new IllegalArgumentException("Un gain d'argent ne peut pas être négatif.");
         }
+        if (amount == 0) {
+            return;
+        }
+
         this.amount += amount;
+        long now = System.currentTimeMillis();
+        rewardEffects.add(explicitSource
+                ? new MoneyRewardEffect(amount, sourceWorldX, sourceWorldY, true, now)
+                : new MoneyRewardEffect(amount, now));
     }
 
     /**

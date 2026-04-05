@@ -42,7 +42,8 @@ public class InventoryStatusOverlay extends JPanel {
     private static final FacilityType[] INVENTORY_FACILITY_ORDER = {
             FacilityType.CLOTURE,
             FacilityType.CHEMIN,
-            FacilityType.COMPOST
+            FacilityType.COMPOST,
+            FacilityType.PONT
     };
 
     // Le FieldPanel nous sert uniquement de point d'ancrage géométrique:
@@ -129,6 +130,25 @@ public class InventoryStatusOverlay extends JPanel {
         int barY = Math.max(desiredY, minimumClearY);
         barY = Math.min(barY, viewHeight - barHeight - 10);
         return new Rectangle(barX, barY, barWidth, barHeight);
+    }
+
+    /**
+     * Expose la géométrie d'un slot précis pour les animations
+     * qui doivent converger visuellement vers l'inventaire.
+     */
+    public static Rectangle computeSlotBounds(int slotIndex, Rectangle fieldBounds, int viewWidth, int viewHeight) {
+        if (slotIndex < 0 || slotIndex >= getInventorySlotCount()) {
+            return null;
+        }
+
+        Rectangle barBounds = computeInventoryBarBounds(fieldBounds, viewWidth, viewHeight);
+        int slotX = barBounds.x + OUTER_PADDING + (slotIndex * (SLOT_SIZE + SLOT_GAP));
+        int slotY = barBounds.y + OUTER_PADDING;
+        return new Rectangle(slotX, slotY, SLOT_SIZE, SLOT_SIZE);
+    }
+
+    public static int getWoodSlotIndex() {
+        return INVENTORY_SEED_ORDER.length;
     }
 
     private Rectangle getInventoryBarBounds(Rectangle fieldBounds, int viewWidth, int viewHeight) {
@@ -221,14 +241,20 @@ public class InventoryStatusOverlay extends JPanel {
         FacilityType facilityType = getFacilityTypeForSlot(slotIndex);
         int iconArtWidth = slotIndex < INVENTORY_SEED_ORDER.length
                 ? 5 * iconPixelSize
+                : isWoodSlot(slotIndex)
+                ? ProductPixelArt.getWoodArtWidth(iconPixelSize)
                 : ProductPixelArt.getFacilityArtWidth(facilityType, iconPixelSize);
         int iconArtHeight = slotIndex < INVENTORY_SEED_ORDER.length
                 ? 5 * iconPixelSize
+                : isWoodSlot(slotIndex)
+                ? ProductPixelArt.getWoodArtHeight(iconPixelSize)
                 : ProductPixelArt.getFacilityArtHeight(facilityType, iconPixelSize);
         int iconX = x + ((size - iconArtWidth) / 2);
         int iconY = y + ((size - iconArtHeight) / 2) + 1;
         if (slotIndex < INVENTORY_SEED_ORDER.length) {
             ProductPixelArt.drawSeed(g2d, INVENTORY_SEED_ORDER[slotIndex], iconX, iconY, iconPixelSize);
+        } else if (isWoodSlot(slotIndex)) {
+            ProductPixelArt.drawWoodResource(g2d, iconX, iconY, iconPixelSize);
         } else {
             ProductPixelArt.drawFacility(g2d, facilityType, iconX, iconY, iconPixelSize);
         }
@@ -253,11 +279,15 @@ public class InventoryStatusOverlay extends JPanel {
     }
 
     private static int getInventorySlotCount() {
-        return INVENTORY_SEED_ORDER.length + INVENTORY_FACILITY_ORDER.length;
+        return INVENTORY_SEED_ORDER.length + 1 + INVENTORY_FACILITY_ORDER.length;
     }
 
     private boolean isSeedSlot(int slotIndex) {
         return slotIndex >= 0 && slotIndex < INVENTORY_SEED_ORDER.length;
+    }
+
+    private boolean isWoodSlot(int slotIndex) {
+        return slotIndex == INVENTORY_SEED_ORDER.length;
     }
 
     public Type getSeedTypeForSlot(int slotIndex) {
@@ -265,7 +295,7 @@ public class InventoryStatusOverlay extends JPanel {
     }
 
     public FacilityType getFacilityTypeForSlot(int slotIndex) {
-        int facilityIndex = slotIndex - INVENTORY_SEED_ORDER.length;
+        int facilityIndex = slotIndex - INVENTORY_SEED_ORDER.length - 1;
         if (facilityIndex < 0 || facilityIndex >= INVENTORY_FACILITY_ORDER.length) {
             return null;
         }
@@ -279,6 +309,9 @@ public class InventoryStatusOverlay extends JPanel {
         if (isSeedSlot(slotIndex)) {
             return getSeedTypeForSlot(slotIndex) == movementModel.getSelectedSeedType();
         }
+        if (isWoodSlot(slotIndex)) {
+            return false;
+        }
         return getFacilityTypeForSlot(slotIndex) == movementModel.getSelectedFacilityType();
     }
 
@@ -288,6 +321,9 @@ public class InventoryStatusOverlay extends JPanel {
     private int getQuantityForSlot(int slotIndex) {
         if (slotIndex < INVENTORY_SEED_ORDER.length) {
             return inventaire.getQuantiteGraine(INVENTORY_SEED_ORDER[slotIndex]);
+        }
+        if (isWoodSlot(slotIndex)) {
+            return inventaire.getQuantiteBois();
         }
         FacilityType facilityType = getFacilityTypeForSlot(slotIndex);
         return facilityType == null ? 0 : inventaire.getQuantiteInstallation(facilityType);

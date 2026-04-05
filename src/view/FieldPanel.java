@@ -171,6 +171,15 @@ public class FieldPanel extends JPanel {
         this.fieldObstacleMap = fieldObstacleMap;
     }
 
+    /**
+     * Certains composants UI ont besoin d'interroger les règles d'obstacle
+     * sans rebrancher toute la chaîne de dépendances du démarrage.
+     * On expose donc ce helper en lecture seule.
+     */
+    public FieldObstacleMap getFieldObstacleMap() {
+        return fieldObstacleMap;
+    }
+
     // Les getters pour l'attribut grilleCulture, et pour la largeur et la hauteur de la grille
     public GrilleCulture getGrilleCulture() {
         return grilleCulture;

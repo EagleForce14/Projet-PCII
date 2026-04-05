@@ -10,14 +10,21 @@ import java.util.Random;
  * Centralise uniquement l'état des arbres du champ.
  */
 public class TreeManager {
+    private static final int TREE_CUT_REQUIRED_IMPACTS = 4;
+    private static final int TREE_WOOD_REWARD = 2;
+
     private final GrilleCulture grilleCulture;
     private final TreeInstance[][] trees;
+    private final List<TreeFellingEffect> fellingEffects;
+    private final List<WoodRewardEffect> woodRewardEffects;
     private final Random random;
 
     // le constructeur
     public TreeManager(GrilleCulture grilleCulture) {
         this.grilleCulture = grilleCulture;
         this.trees = new TreeInstance[grilleCulture.getLargeur()][grilleCulture.getHauteur()];
+        this.fellingEffects = new ArrayList<>();
+        this.woodRewardEffects = new ArrayList<>();
         this.random = new Random();
     }
 
@@ -98,8 +105,60 @@ public class TreeManager {
         return snapshot;
     }
 
+    /**
+     * Enregistre un clic de coupe sur un arbre précis.
+     *
+     * Tant que le nombre d'impacts requis n'est pas atteint,
+     * on ne fait qu'augmenter la progression.
+     * Au dernier impact, l'arbre disparaît, sa hitbox aussi,
+     * et on lance les deux animations associées :
+     * l'abattage puis la récompense bois.
+     */
+    public synchronized boolean cutTree(int gridX, int gridY) {
+        if (!isInsideGrid(gridX, gridY) || trees[gridX][gridY] == null) {
+            return false;
+        }
+
+        TreeInstance tree = trees[gridX][gridY];
+        boolean treeFelled = tree.registerCutImpact(TREE_CUT_REQUIRED_IMPACTS);
+        if (!treeFelled) {
+            return false;
+        }
+
+        trees[gridX][gridY] = null;
+        long now = System.currentTimeMillis();
+        fellingEffects.add(new TreeFellingEffect(gridX, gridY, now));
+        woodRewardEffects.add(new WoodRewardEffect(gridX, gridY, now));
+        return true;
+    }
+
+    public synchronized List<TreeFellingEffect> getActiveFellingEffects() {
+        long now = System.currentTimeMillis();
+        cleanupExpiredEffects(now);
+        return new ArrayList<>(fellingEffects);
+    }
+
+    public synchronized List<WoodRewardEffect> getActiveWoodRewardEffects() {
+        long now = System.currentTimeMillis();
+        cleanupExpiredEffects(now);
+        return new ArrayList<>(woodRewardEffects);
+    }
+
+    public int getRequiredCutImpactCount() {
+        return TREE_CUT_REQUIRED_IMPACTS;
+    }
+
+    public int getWoodRewardQuantity() {
+        return TREE_WOOD_REWARD;
+    }
+
     private boolean isInsideGrid(int gridX, int gridY) {
         return gridX >= 0 && gridX < trees.length && gridY >= 0 && gridY < trees[gridX].length;
+    }
+
+    private void cleanupExpiredEffects(long now) {
+        fellingEffects.removeIf(effect -> effect == null || effect.isExpired(now));
+        woodRewardEffects.removeIf(effect -> effect == null || effect.isExpired(now));
     }
 
     /**

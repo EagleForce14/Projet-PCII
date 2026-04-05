@@ -15,12 +15,13 @@ public class Inventaire {
     // On garde deux rangements séparés, mais avec le type unique du projet.
     private final HashMap<Type, Integer> graines;
     private final HashMap<FacilityType, Integer> installations;
+    private int woodQuantity;
     
     // constructeur
     public Inventaire() {
         graines = new HashMap<>();
         installations = new HashMap<>();
-    
+        woodQuantity = 0;
     }
     // Méthodes
     
@@ -118,7 +119,7 @@ public class Inventaire {
          * @return boolean : true si l'inventaire est vide, false sinon
      * **/
     public boolean estVide() {
-        return graines.isEmpty() && installations.isEmpty();
+        return graines.isEmpty() && installations.isEmpty() && woodQuantity <= 0;
     }
 
     /** Méthode qui vérifie si le joueur possède une graine donnée
@@ -153,5 +154,37 @@ public class Inventaire {
     public int getQuantiteInstallation(FacilityType type) {
         Integer quantite = installations.get(type);
         return quantite == null ? 0 : quantite;
+    }
+
+    /**
+     * Le bois alimente les constructions de la menuiserie.
+     * On le garde hors des installations pour bien marquer qu'il s'agit
+     * d'une ressource brute et non d'un objet à poser dans le monde.
+     */
+    public int getQuantiteBois() {
+        return Math.max(0, woodQuantity);
+    }
+
+    public boolean possedeBois(int quantiteDemandee) {
+        return quantiteDemandee > 0 && getQuantiteBois() >= quantiteDemandee;
+    }
+
+    public void ajoutBois(int quantite) {
+        if (quantite <= 0) {
+            return;
+        }
+
+        woodQuantity += quantite;
+    }
+
+    public void retirerBois(int quantite) {
+        if (quantite <= 0) {
+            return;
+        }
+        if (quantite > getQuantiteBois()) {
+            throw new IllegalStateException("Quantité de bois insuffisante dans l'inventaire.");
+        }
+
+        woodQuantity -= quantite;
     }
 }

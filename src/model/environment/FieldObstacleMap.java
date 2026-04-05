@@ -24,6 +24,7 @@ public class FieldObstacleMap {
     private static final double TREE_EDGE_MARGIN_RATIO = 0.25;
     private static final double TREE_TO_TREE_MARGIN_RATIO = 0.12;
     private static final double TREE_TO_BARN_MARGIN_RATIO = 0.18;
+    private static final int TREE_INTERACTION_PADDING = 10;
     private static final int[][] MATURE_TREE_BLOCKED_OFFSETS = {
             {-1, -2}, {0, -2}, {1, -2},
             {-1, -1}, {0, -1}, {1, -1},
@@ -182,6 +183,35 @@ public class FieldObstacleMap {
 
     public boolean shouldUseWeepingWillowAt(int gridX) {
         return PredefinedFieldLayout.isLeftOfDecorativeRiver(fieldPanel, gridX);
+    }
+
+    /**
+     * Renvoie l'arbre qu'une entité est en train de "pousser".
+     *
+     * En pratique, le joueur ne pénètre jamais réellement la hitbox de l'arbre,
+     * puisqu'elle bloque le déplacement.
+     * On dilate donc légèrement cette hitbox pour que le bouton de coupe
+     * apparaisse dès que le personnage se colle visuellement au tronc.
+     */
+    public TreeInstance findInteractableTree(double centerX, double centerY, int width, int height) {
+        Rectangle entityBounds = BuildingGeometry.buildCenteredBounds(centerX, centerY, width, height);
+        TreeInstance bestTree = null;
+        long bestDistanceSquared = Long.MAX_VALUE;
+
+        for (TreeInstance tree : treeManager.getTreesSnapshot()) {
+            Rectangle treeHitbox = getTreeHitbox(tree);
+            if (treeHitbox == null || !expand(treeHitbox, TREE_INTERACTION_PADDING).intersects(entityBounds)) {
+                continue;
+            }
+
+            long distanceSquared = squaredDistance(entityBounds, treeHitbox);
+            if (distanceSquared < bestDistanceSquared) {
+                bestDistanceSquared = distanceSquared;
+                bestTree = tree;
+            }
+        }
+
+        return bestTree;
     }
 
     /**
@@ -408,5 +438,11 @@ public class FieldObstacleMap {
                 width,
                 height
         );
+    }
+
+    private long squaredDistance(Rectangle a, Rectangle b) {
+        long deltaX = (long) a.x + (a.width / 2L) - (b.x + (b.width / 2L));
+        long deltaY = (long) a.y + (a.height / 2L) - (b.y + (b.height / 2L));
+        return (deltaX * deltaX) + (deltaY * deltaY);
     }
 }

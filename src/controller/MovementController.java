@@ -10,12 +10,16 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 import model.culture.Culture;
 import model.culture.GrilleCulture;
 import model.culture.Stade;
 import model.culture.Type;
 import model.enemy.EnemyModel;
+import model.environment.FieldObstacleMap;
+import model.environment.TreeInstance;
+import model.environment.TreeManager;
 import model.movement.MovementModel;
 import model.movement.Unit;
 import model.management.Inventaire;
@@ -24,6 +28,7 @@ import model.runtime.GamePauseController;
 import model.shop.FacilityType;
 import view.*;
 import view.shop.ShopOverlay;
+import view.workshop.WorkshopOverlay;
 
 /**
  * Le contrôleur chargé de gérer les intéractions.
@@ -38,12 +43,16 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     private final FieldPanel fieldPanel;
     private final InventoryStatusOverlay inventoryStatusOverlay;
     private final ShopOverlay shopOverlay;
+    private final WorkshopOverlay workshopOverlay;
+    private final TreeManager treeManager;
     private final GamePauseController pauseController;
 
     // Constructeur de la classe
     public MovementController(MovementModel model, MovementView view, EnemyModel enemyModel, EnemyView enemyView, SidebarPanel sidebarPanel,
                               GrilleCulture grilleCulture, Money playerMoney, Inventaire inventaire,
+                              TreeManager treeManager,
                               FieldPanel fieldPanel, InventoryStatusOverlay inventoryStatusOverlay, ShopOverlay shopOverlay,
+                              WorkshopOverlay workshopOverlay,
                               GameOverOverlay gameOverOverlay, Runnable restartGameAction) {
         this.model = model;
         this.grilleCulture = grilleCulture;
@@ -54,6 +63,8 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         this.fieldPanel = fieldPanel;
         this.inventoryStatusOverlay = inventoryStatusOverlay;
         this.shopOverlay = shopOverlay;
+        this.workshopOverlay = workshopOverlay;
+        this.treeManager = treeManager;
         this.pauseController = GamePauseController.getInstance();
         // On s'abonne aux événements clavier.
         view.addKeyListener(this);
@@ -85,6 +96,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
 
         JButton compostButton = sidebarPanel.getCompostButton();
         compostButton.addActionListener(this::gererBoutonCompostCaseActive);
+
+        JButton cutTreeButton = sidebarPanel.getCutTreeButton();
+        cutTreeButton.addActionListener(this::couperArbreProche);
 
         JButton replayButton = gameOverOverlay.getReplayButton();
         replayButton.addActionListener(event -> relancerPartie(restartGameAction));
@@ -166,7 +180,13 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         int gain = grilleCulture.recolterCulture(activeFieldCell.x, activeFieldCell.y);
 
         // Le portefeuille du joueur est mis à jour à part pour garder une logique bien découpée.
-        playerMoney.credit(gain);
+        Unit playerUnit = model.getPlayerUnit();
+        if (playerUnit == null) {
+            playerMoney.credit(gain);
+            return;
+        }
+
+        playerMoney.creditFromWorld(gain, playerUnit.getX(), playerUnit.getY());
     }
 
     /**
@@ -293,6 +313,33 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     }
 
     /**
+     * La coupe d'arbre suit exactement la même philosophie que les autres boutons :
+     * le contrôleur valide l'action, met à jour le modèle, puis laisse les vues
+     * se contenter d'afficher l'état courant.
+     *
+     * Ici, chaque clic ajoute simplement un impact.
+     * Au quatrième, l'arbre disparaît et le bois est crédité.
+     */
+    private void couperArbreProche(ActionEvent event) {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
+        TreeInstance interactableTree = getInteractableTreeForPlayer();
+        if (interactableTree == null || treeManager == null) {
+            return;
+        }
+
+        boolean treeFelled = treeManager.cutTree(interactableTree.getGridX(), interactableTree.getGridY());
+        if (treeFelled) {
+            inventaire.ajoutBois(treeManager.getWoodRewardQuantity());
+        }
+
+        inventoryStatusOverlay.repaint();
+        movementView.requestFocusInWindow();
+    }
+
+    /**
      * Ouvre la boutique plein écran et fige le jeu tant que le panneau reste visible.
      */
     private void ouvrirBoutique() {
@@ -303,7 +350,24 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         stopPlayerMovement();
         fieldPanel.clearFencePreview();
         fieldPanel.clearCompostInfluenceHighlight();
+        showOverlay(shopOverlay);
         shopOverlay.openShop();
+    }
+
+    /**
+     * La menuiserie ouvre son propre overlay,
+     * mais suit exactement la même règle de pause que la boutique.
+     */
+    private void ouvrirMenuiserie() {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
+        stopPlayerMovement();
+        fieldPanel.clearFencePreview();
+        fieldPanel.clearCompostInfluenceHighlight();
+        showOverlay(workshopOverlay);
+        workshopOverlay.openWorkshop();
     }
 
     /**
@@ -438,6 +502,11 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         // si d'autres installations sélectionnables apparaissent plus tard.
         FacilityType clickedFacilityType = inventoryStatusOverlay.getFacilityTypeForSlot(slotIndex);
         if (clickedFacilityType != null) {
+            if (!isSelectableFacilityType(clickedFacilityType)) {
+                movementView.requestFocusInWindow();
+                return true;
+            }
+
             // Même logique que pour les graines:
             // slot vide -> on nettoie,
             // slot déjà actif -> on désélectionne,
@@ -536,6 +605,11 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         }
 
         if (handleInventoryClick(e)) {
+            return;
+        }
+
+        if (handleWorkshopClick(e)) {
+            movementView.requestFocusInWindow();
             return;
         }
 
@@ -644,6 +718,16 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         return true;
     }
 
+    private boolean handleWorkshopClick(MouseEvent event) {
+        Point pointInFieldPanel = getPointInFieldPanel(event);
+        if (pointInFieldPanel == null || !fieldPanel.getWorkshopScreenBounds().contains(pointInFieldPanel)) {
+            return false;
+        }
+
+        ouvrirMenuiserie();
+        return true;
+    }
+
     /**
      * Convertit un clic provenant d'une vue Swing quelconque
      * vers une case logique du champ.
@@ -671,5 +755,35 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
                 event.getPoint(),
                 fieldPanel
         );
+    }
+
+    private TreeInstance getInteractableTreeForPlayer() {
+        Unit player = model.getPlayerUnit();
+        FieldObstacleMap obstacleMap = fieldPanel.getFieldObstacleMap();
+        if (player == null || obstacleMap == null) {
+            return null;
+        }
+
+        return obstacleMap.findInteractableTree(
+                player.getX(),
+                player.getY(),
+                Unit.SIZE,
+                Unit.SIZE
+        );
+    }
+
+    private void showOverlay(JComponent overlay) {
+        if (overlay == null || movementView.getRootPane() == null) {
+            return;
+        }
+        if (movementView.getRootPane().getGlassPane() != overlay) {
+            movementView.getRootPane().setGlassPane(overlay);
+        }
+    }
+
+    private boolean isSelectableFacilityType(FacilityType facilityType) {
+        return facilityType == FacilityType.CLOTURE
+                || facilityType == FacilityType.CHEMIN
+                || facilityType == FacilityType.COMPOST;
     }
 }

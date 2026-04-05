@@ -1,5 +1,7 @@
 package view.shop;
 
+import model.shop.Facility;
+import model.shop.FacilityType;
 import model.shop.Product;
 import view.ProductPixelArt;
 
@@ -28,12 +30,17 @@ public class ProductCardView extends JPanel {
     private static final Color CARD_FILL_SELECTED = new Color(102, 72, 46, 248);
     private static final Color BORDER_SOFT = new Color(138, 110, 73, 180);
     private static final Color ACCENT = new Color(216, 181, 96);
+    private static final Color BADGE_FILL_DEFAULT = new Color(45, 75, 42, 220);
+    private static final Color BADGE_BORDER_DEFAULT = new Color(126, 190, 110);
+    private static final Color BADGE_FILL_ERROR = new Color(114, 43, 38, 225);
+    private static final Color BADGE_BORDER_ERROR = new Color(232, 112, 101);
 
     private final Product product;
     private final String categoryLabel;
     private final String detailLabel;
-    private final int remainingStock;
-    private final int cartQuantity;
+    private final String valueLabel;
+    private final String footerLabel;
+    private final String badgeText;
     private final boolean selected;
     private final Image woodTexture;
     private final Font labelFont;
@@ -49,8 +56,9 @@ public class ProductCardView extends JPanel {
             Product product,
             String categoryLabel,
             String detailLabel,
-            int remainingStock,
-            int cartQuantity,
+            String valueLabel,
+            String footerLabel,
+            String badgeText,
             boolean selected,
             Image woodTexture,
             Font labelFont,
@@ -61,8 +69,9 @@ public class ProductCardView extends JPanel {
         this.product = product;
         this.categoryLabel = categoryLabel;
         this.detailLabel = detailLabel == null ? "" : detailLabel.trim();
-        this.remainingStock = remainingStock;
-        this.cartQuantity = cartQuantity;
+        this.valueLabel = valueLabel == null ? "" : valueLabel.trim();
+        this.footerLabel = footerLabel == null ? "" : footerLabel.trim();
+        this.badgeText = badgeText == null ? "" : badgeText.trim();
         this.selected = selected;
         this.woodTexture = woodTexture;
         this.labelFont = labelFont;
@@ -130,7 +139,7 @@ public class ProductCardView extends JPanel {
         g2d.setColor(new Color(92, 68, 46, 220));
         g2d.fillRoundRect(16, 16, 88, 88, 18, 18);
 
-        int pixelSize = 7;
+        int pixelSize = getCardArtPixelSize();
         int artWidth = ProductPixelArt.getProductArtWidth(product, pixelSize);
         int artHeight = ProductPixelArt.getProductArtHeight(product, pixelSize);
         int artX = 16 + ((88 - artWidth) / 2);
@@ -160,26 +169,33 @@ public class ProductCardView extends JPanel {
                 detailY += 16;
             }
             g2d.setColor(TEXT_SECONDARY);
-            g2d.drawString(product.getPrice() + " EUR", 120, detailY + 8);
-            g2d.drawString("Stock : " + remainingStock, 120, detailY + 32);
+            if (!valueLabel.isBlank()) {
+                g2d.drawString(valueLabel, 120, detailY + 8);
+            }
+            if (!footerLabel.isBlank()) {
+                g2d.drawString(footerLabel, 120, detailY + 32);
+            }
         } else {
             g2d.setColor(TEXT_SECONDARY);
-            g2d.drawString(product.getPrice() + " EUR", 120, 86);
-            g2d.drawString("Stock : " + remainingStock, 120, 110);
+            if (!valueLabel.isBlank()) {
+                g2d.drawString(valueLabel, 120, 86);
+            }
+            if (!footerLabel.isBlank()) {
+                g2d.drawString(footerLabel, 120, 110);
+            }
         }
 
-        if (cartQuantity > 0) {
+        if (!badgeText.isBlank()) {
             // Le badge ne s'affiche que si l'article est deja dans le panier.
             // Ca evite d'ajouter du bruit sur toutes les cartes en permanence.
-            String badgeText = "Panier " + cartQuantity;
             java.awt.FontMetrics badgeMetrics = g2d.getFontMetrics();
             int badgeWidth = badgeMetrics.stringWidth(badgeText) + 18;
             int badgeX = getWidth() - badgeWidth - 14;
             int badgeY = getHeight() - 38;
 
-            g2d.setColor(new Color(45, 75, 42, 220));
+            g2d.setColor(getBadgeFillColor());
             g2d.fillRoundRect(badgeX, badgeY, badgeWidth, 24, 12, 12);
-            g2d.setColor(new Color(126, 190, 110));
+            g2d.setColor(getBadgeBorderColor());
             g2d.drawRoundRect(badgeX, badgeY, badgeWidth, 24, 12, 12);
             g2d.setColor(TEXT_PRIMARY);
             int badgeTextX = badgeX + ((badgeWidth - badgeMetrics.stringWidth(badgeText)) / 2);
@@ -192,6 +208,25 @@ public class ProductCardView extends JPanel {
 
     private boolean hasDetailLabel() {
         return !detailLabel.isBlank();
+    }
+
+    /**
+     * Le pont utilise un sprite plus massif que les autres objets.
+     * On le réduit un peu dans la carte centrale pour garder un meilleur équilibre visuel.
+     */
+    private int getCardArtPixelSize() {
+        if (product instanceof Facility && ((Facility) product).getType() == FacilityType.PONT) {
+            return 11;
+        }
+        return 7;
+    }
+
+    private Color getBadgeFillColor() {
+        return "Bois requis".equals(badgeText) ? BADGE_FILL_ERROR : BADGE_FILL_DEFAULT;
+    }
+
+    private Color getBadgeBorderColor() {
+        return "Bois requis".equals(badgeText) ? BADGE_BORDER_ERROR : BADGE_BORDER_DEFAULT;
     }
 
     /**

@@ -559,8 +559,9 @@ public class ShopOverlay extends JPanel {
                         product,
                         getProductCategoryLabel(product),
                         getProductCatalogDetailLabel(product),
-                        shop.getRemainingStock(product),
-                        shop.getShoppingCardQuantity(product),
+                        product.getPrice() + " EUR",
+                        "Stock : " + shop.getRemainingStock(product),
+                        getCatalogBadgeText(product),
                         product == selectedProduct,
                         woodTexture,
                         labelFont,
@@ -901,6 +902,11 @@ public class ShopOverlay extends JPanel {
             default:
                 return "";
         }
+    }
+
+    private String getCatalogBadgeText(Product product) {
+        int cartQuantity = shop.getShoppingCardQuantity(product);
+        return cartQuantity > 0 ? "Panier " + cartQuantity : "";
     }
 
     private JComponent createLeftAlignedRow(JComponent component) {

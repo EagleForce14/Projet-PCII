@@ -7,5 +7,6 @@ public enum FacilityType {
     CLOTURE,
     CHEMIN,
     COMPOST,
-    JARDINIER;
+    JARDINIER,
+    PONT;
 }
