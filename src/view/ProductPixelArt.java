@@ -26,12 +26,12 @@ public final class ProductPixelArt {
     private static final int COMPOST_ART_MAX_SIDE = 6;
     private static final int BRIDGE_ART_MAX_SIDE = 8;
     private static final int WOOD_ART_MAX_SIDE = 8;
-    private static final int COIN_ART_COLUMNS = 5;
-    private static final int COIN_ART_ROWS = 5;
+    private static final int COIN_ART_MAX_SIDE = 7;
     private static final Image PATH_IMAGE = ImageLoader.load("/assets/stone_with_grass.png");
     private static final Image COMPOST_IMAGE = ImageLoader.load("/assets/Compost.png");
     private static final Image BRIDGE_IMAGE = ImageLoader.load("/assets/bridge.png");
     private static final Image WOOD_IMAGE = ImageLoader.load("/assets/wood.png");
+    private static final Image COIN_IMAGE = ImageLoader.load("/assets/coin.png");
 
     // Le constructeur de la classe
     private ProductPixelArt() {}
@@ -91,11 +91,11 @@ public final class ProductPixelArt {
     }
 
     public static int getCoinArtWidth(int pixelSize) {
-        return COIN_ART_COLUMNS * pixelSize;
+        return getScaledImageSize(COIN_IMAGE, COIN_ART_MAX_SIDE * pixelSize).width;
     }
 
     public static int getCoinArtHeight(int pixelSize) {
-        return COIN_ART_ROWS * pixelSize;
+        return getScaledImageSize(COIN_IMAGE, COIN_ART_MAX_SIDE * pixelSize).height;
     }
 
     public static void drawProduct(Graphics2D g2d, Product product, int x, int y, int pixelSize) {
@@ -163,30 +163,8 @@ public final class ProductPixelArt {
         drawScaledImage(g2d, WOOD_IMAGE, x, y, WOOD_ART_MAX_SIDE * pixelSize);
     }
 
-    /**
-     * Petit pictogramme de pièce utilisé par les animations de gain d'argent.
-     * On le garde local ici pour que toutes les vues utilisent exactement
-     * la même pièce si d'autres écrans en ont besoin plus tard.
-     */
     public static void drawCoinResource(Graphics2D g2d, int x, int y, int pixelSize) {
-        Color outline = new Color(136, 75, 18);
-        Color shadow = new Color(193, 118, 22);
-        Color fill = new Color(244, 182, 58);
-        Color highlight = new Color(255, 235, 143);
-
-        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, outline);
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, outline);
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, fill);
-        fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, outline);
-        fillPixel(g2d, x, y + (2 * pixelSize), pixelSize, outline);
-        fillPixel(g2d, x + pixelSize, y + (2 * pixelSize), pixelSize, fill);
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, highlight);
-        fillPixel(g2d, x + (3 * pixelSize), y + (2 * pixelSize), pixelSize, fill);
-        fillPixel(g2d, x + (4 * pixelSize), y + (2 * pixelSize), pixelSize, outline);
-        fillPixel(g2d, x + pixelSize, y + (3 * pixelSize), pixelSize, outline);
-        fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, shadow);
-        fillPixel(g2d, x + (3 * pixelSize), y + (3 * pixelSize), pixelSize, outline);
-        fillPixel(g2d, x + (2 * pixelSize), y + (4 * pixelSize), pixelSize, outline);
+        drawScaledImage(g2d, COIN_IMAGE, x, y, COIN_ART_MAX_SIDE * pixelSize);
     }
 
     private static void drawTulip(Graphics2D g2d, int x, int y, int pixelSize) {
