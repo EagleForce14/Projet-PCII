@@ -15,11 +15,9 @@ public class GrilleCulture {
     private static final long FENCE_BAR_VISIBLE_MS = 1400L;
 
     /**
-     * La grille n'est plus un petit carré central :
-     * elle couvre désormais toute la zone de jeu visible.
+     * La grille couvre désormais toute la zone de jeu visible.
      *
-     * Ces dimensions ont été choisies pour remplir confortablement la fenêtre
-     * avec des cases carrées proches de la taille visuelle de l'ancien champ.
+     * Ces dimensions ont été choisies pour remplir confortablement la fenêtre.
      */
     public static final int LARGEUR_GRILLE = 22;
     
@@ -80,7 +78,6 @@ public class GrilleCulture {
      * Les composts sont peu nombreux par design :
      * on en autorise au maximum deux sur la map.
      *
-     *
      * Une petite liste de positions reste donc plus simple et plus lisible
      * qu'une matrice dédiée supplémentaire.
      */
@@ -98,15 +95,9 @@ public class GrilleCulture {
     private final boolean[][] pathCells;
 
     /*
-     * La rivière occupe elle aussi toute la surface d'une case.
-     * On la stocke donc comme le chemin : un simple drapeau par case.
-     */
-    private final boolean[][] riverCells;
-
-    /*
-     * Certaines cases de rivière font partie du decor initial
-     * et doivent utiliser un sprite dedie (`river2.png`).
-     * Elles restent de vraies cases de rivière pour toutes les regles.
+     * La rivière est décorative.
+     * On stocke donc directement ses cases ici :
+     * elles servent à la fois au rendu et à toutes les règles de blocage.
      */
     private final boolean[][] decorativeRiverCells;
 
@@ -149,7 +140,6 @@ public class GrilleCulture {
         this.compostCells = new ArrayList<>();
         this.bridgeAnchorCells = new ArrayList<>();
         this.pathCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
-        this.riverCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         this.decorativeRiverCells = new boolean[LARGEUR_GRILLE][HAUTEUR_GRILLE];
         // Toute la map démarre en herbe :
         // chaque case existe déjà, mais aucune n'est labourée au lancement.
@@ -157,7 +147,6 @@ public class GrilleCulture {
             for (int j = 0; j < HAUTEUR_GRILLE; j++) {
                 grille[i][j] = new ZoneCulture(false);
                 pathCells[i][j] = false;
-                riverCells[i][j] = false;
                 decorativeRiverCells[i][j] = false;
             }
         }
@@ -422,18 +411,10 @@ public class GrilleCulture {
 
     /**
      * Lecture simple de l'état "rivière" d'une case.
-     * La vue l'utilise pour son rendu
-     * et les règles métier pour bloquer déplacements et placements.
+     * La rivière est seulement décorative,
+     * mais elle porte aussi toutes les règles métier de blocage.
      */
     public boolean hasRiver(int x, int y) {
-        return estDansGrille(x, y) && riverCells[x][y];
-    }
-
-    /**
-     * Variante de rivière reservee au decor fixe du champ.
-     * Elle partage exactement les memes regles de blocage.
-     */
-    public boolean hasDecorativeRiver(int x, int y) {
         return estDansGrille(x, y) && decorativeRiverCells[x][y];
     }
 
@@ -535,7 +516,6 @@ public class GrilleCulture {
             throw new IllegalStateException("La rivière decorative doit être posée sur une case d'herbe libre.");
         }
 
-        riverCells[x][y] = true;
         decorativeRiverCells[x][y] = true;
     }
 

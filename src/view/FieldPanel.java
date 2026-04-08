@@ -1044,10 +1044,8 @@ public class FieldPanel extends JPanel {
         Image[] variants;
         if (isBlockedByBarn(gridX, gridY)) {
             variants = pathTileImages;
-        } else if (grilleCulture.hasDecorativeRiver(gridX, gridY)) {
-            return getDecorativeRiverTile(gridY);
         } else if (grilleCulture.hasRiver(gridX, gridY)) {
-            variants = riverTileImages;
+            return getDecorativeRiverTile(gridY);
         } else if (grilleCulture.hasPath(gridX, gridY)) {
             variants = pathTileImages;
         } else if (grilleCulture.isLabouree(gridX, gridY)) {

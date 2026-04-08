@@ -164,7 +164,7 @@ public class FieldObstacleMap {
          *
          * Les clôtures, elles, restent propres aux lapins via `blockFences`.
          */
-        if (intersectsPlacedRiver(entityBounds, true)) {
+        if (intersectsPlacedRiver(entityBounds)) {
             return false;
         }
 
@@ -196,8 +196,6 @@ public class FieldObstacleMap {
     }
 
     /**
-     * Renvoie l'arbre qu'une entité est en train de "pousser".
-     *
      * En pratique, le joueur ne pénètre jamais réellement la hitbox de l'arbre,
      * puisqu'elle bloque le déplacement.
      * On dilate donc légèrement cette hitbox pour que le bouton de coupe
@@ -307,9 +305,9 @@ public class FieldObstacleMap {
      * Seule exception : pour le joueur, un pont posé ouvre un couloir étroit
      * au milieu de la rivière. On vérifie alors que tout le corps de l'entité
      * reste bien contenu dans ce passage central, afin d'interdire la marche
-     * sur les bords du sprite.
+     * sur les bords de l'image du pont.
      */
-    private boolean intersectsPlacedRiver(Rectangle entityBounds, boolean allowBridgeCrossing) {
+    private boolean intersectsPlacedRiver(Rectangle entityBounds) {
         /*
          * La grille reste petite.
          * On choisit donc ici une boucle toute simple et très lisible :
@@ -327,7 +325,7 @@ public class FieldObstacleMap {
                     continue;
                 }
 
-                if (allowBridgeCrossing && isBridgePassageCrossable(column, row, entityBounds)) {
+                if (isBridgePassageCrossable(column, row, entityBounds)) {
                     continue;
                 }
 
