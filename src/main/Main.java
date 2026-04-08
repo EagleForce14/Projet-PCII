@@ -1,6 +1,7 @@
 package main;
 
 import controller.MovementController;
+import controller.grotte.GrotteController;
 
 import model.culture.GrilleCulture;
 import model.enemy.EnemyModel;
@@ -9,6 +10,8 @@ import model.environment.FieldObstacleMap;
 import model.environment.PredefinedFieldLayout;
 import model.environment.TreeManager;
 import model.environment.TreeThread;
+import model.grotte.GrotteMap;
+import model.grotte.GrotteObstacleMap;
 import model.movement.Barn;
 import model.movement.MovementModel;
 import model.movement.PhysicsThread;
@@ -21,19 +24,24 @@ import model.runtime.GameSession;
 import model.shop.Shop;
 import model.workshop.WorkshopConstructionManager;
 import view.*;
+import view.grotte.GrotteFieldPanel;
 import view.shop.ShopOverlay;
 import view.workshop.WorkshopOverlay;
 
 import javax.swing.JFrame;
+import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.OverlayLayout;
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.Point;
 
 public class Main {
     private static final Dimension GAME_AREA_MINIMUM_SIZE = new Dimension(960, 690);
     private static final Dimension GAME_AREA_PREFERRED_SIZE = new Dimension(1180, 885);
+    private static final String FARM_CARD = "farm";
+    private static final String GROTTE_CARD = "grotte";
 
     public static void main(String[] args) {
         JFrame frame = createFrame();
@@ -136,8 +144,38 @@ public class Main {
         hudPanel.add(topBarPanel, BorderLayout.NORTH);
         gamePanel.add(hudPanel);
 
+        GrotteMap grotteMap = new GrotteMap();
+        GrotteFieldPanel grotteFieldPanel = new GrotteFieldPanel(grotteMap);
+        grotteFieldPanel.setAlignmentX(0.5f);
+        grotteFieldPanel.setAlignmentY(0.5f);
+
+        MovementModel grotteMovementModel = new MovementModel();
+        Point grotteInitialOffset = grotteFieldPanel.getInitialPlayerOffset();
+        Unit grottePlayerUnit = new Unit(grotteInitialOffset.x, grotteInitialOffset.y);
+        grottePlayerUnit.setFieldObstacleMap(new GrotteObstacleMap(grotteMap, grotteFieldPanel));
+        grotteMovementModel.setPlayerUnit(grottePlayerUnit);
+
+        MovementView grotteMovementView = new MovementView(grotteMovementModel, grotteFieldPanel);
+        grotteMovementView.setAlignmentX(0.5f);
+        grotteMovementView.setAlignmentY(0.5f);
+
+        JPanel grotteFieldLayer = new JPanel(new BorderLayout());
+        grotteFieldLayer.setOpaque(false);
+        grotteFieldLayer.setAlignmentX(0.5f);
+        grotteFieldLayer.setAlignmentY(0.5f);
+        grotteFieldLayer.add(grotteFieldPanel, BorderLayout.CENTER);
+
+        JPanel grotteGamePanel = createGamePanel();
+        grotteGamePanel.setLayout(new OverlayLayout(grotteGamePanel));
+        grotteGamePanel.add(grotteMovementView);
+        grotteGamePanel.add(grotteFieldLayer);
+
+        JPanel centerPanel = new JPanel(new CardLayout());
+        centerPanel.add(gamePanel, FARM_CARD);
+        centerPanel.add(grotteGamePanel, GROTTE_CARD);
+
         JPanel contentPanel = new JPanel(new BorderLayout());
-        contentPanel.add(gamePanel, BorderLayout.CENTER);
+        contentPanel.add(centerPanel, BorderLayout.CENTER);
         contentPanel.add(actionSidebarPanel, BorderLayout.EAST);
         frame.setContentPane(contentPanel);
 
@@ -146,6 +184,7 @@ public class Main {
         frame.setGlassPane(shopOverlay);
 
         PhysicsThread physicsThread = new PhysicsThread(model);
+        PhysicsThread grottePhysicsThread = new PhysicsThread(grotteMovementModel);
         EnemyPhysicsThread enemyPhysicsThread = new EnemyPhysicsThread(enemyModel);
         RenderThread renderThread = new RenderThread(contentPanel);
         TreeThread treeThread = new TreeThread(treeManager, fieldObstacleMap, playerUnit, enemyModel);
@@ -153,6 +192,7 @@ public class Main {
                 jour,
                 grilleCulture,
                 physicsThread,
+                grottePhysicsThread,
                 enemyPhysicsThread,
                 renderThread,
                 treeThread,
@@ -183,6 +223,38 @@ public class Main {
                 () -> restartCurrentGame(frame, session)
         );
 
+        CardLayout centerLayout = (CardLayout) centerPanel.getLayout();
+        JButton caveButton = actionSidebarPanel.getCaveButton();
+        Runnable returnToFarm = () -> {
+            stopUnitMovement(playerUnit);
+            stopUnitMovement(grottePlayerUnit);
+            centerLayout.show(centerPanel, FARM_CARD);
+            centerPanel.putClientProperty("activeCard", FARM_CARD);
+            actionSidebarPanel.setCaveMode(false);
+            grottePlayerUnit.exitCave();
+            playerUnit.exitCave();
+            movementView.requestFocusInWindow();
+        };
+
+        new GrotteController(grotteMovementModel, grotteMovementView, grotteFieldPanel, returnToFarm);
+
+        caveButton.addActionListener(event -> {
+            boolean enteringCave = !GROTTE_CARD.equals(centerPanel.getClientProperty("activeCard"));
+            stopUnitMovement(playerUnit);
+            stopUnitMovement(grottePlayerUnit);
+            if (enteringCave) {
+                centerLayout.show(centerPanel, GROTTE_CARD);
+                centerPanel.putClientProperty("activeCard", GROTTE_CARD);
+                actionSidebarPanel.setCaveMode(true);
+                playerUnit.exitCave();
+                grottePlayerUnit.enterCave();
+                grotteMovementView.requestFocusInWindow();
+            } else {
+                returnToFarm.run();
+            }
+        });
+        centerPanel.putClientProperty("activeCard", FARM_CARD);
+
         if (firstLaunch) {
             frame.pack();
             frame.setLocationRelativeTo(null);
@@ -204,6 +276,7 @@ public class Main {
         enemyModel.setViewportSize(gamePanel.getWidth(), gamePanel.getHeight());
 
         physicsThread.start();
+        grottePhysicsThread.start();
         enemyPhysicsThread.start();
         renderThread.start();
         treeThread.start();
@@ -255,6 +328,17 @@ public class Main {
         gamePanel.setMinimumSize(GAME_AREA_MINIMUM_SIZE);
         gamePanel.setPreferredSize(GAME_AREA_PREFERRED_SIZE);
         return gamePanel;
+    }
+
+    private static void stopUnitMovement(Unit unit) {
+        if (unit == null) {
+            return;
+        }
+
+        unit.setMoveUp(false);
+        unit.setMoveDown(false);
+        unit.setMoveLeft(false);
+        unit.setMoveRight(false);
     }
 
     private static void restartCurrentGame(JFrame frame, GameSession session) {

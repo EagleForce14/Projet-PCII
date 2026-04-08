@@ -8,9 +8,12 @@ import javax.swing.SwingUtilities;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
 import java.util.List;
 
 /**
@@ -22,10 +25,10 @@ import java.util.List;
  * Ici, on expose seulement de petits helpers que le contrôleur peut appeler.
  */
 public class EnemyView extends JPanel {
-    // Taille visuelle du corps du lapin dessiné à l'écran.
-    private static final int RABBIT_BODY_RADIUS = 12;
-    // Rayon de tolérance pour rendre le clic plus confortable qu'un simple "pile sur le pixel".
-    private static final int RABBIT_CLICK_RADIUS = 18;
+    // Rayon de tolérance pour rendre le clic plus confortable qu'un simple clic précis "pile sur le pixel".
+    private static final int ENEMY_CLICK_RADIUS = 27;
+    private static final int ENEMY_FRAME_WIDTH = 54;
+    private static final int ENEMY_FRAME_HEIGHT = 54;
 
     // Modèle contenant les lapins actifs.
     private final EnemyModel model;
@@ -35,6 +38,11 @@ public class EnemyView extends JPanel {
     private final EnemyStatusOverlay statusOverlay;
     // Lapin actuellement sélectionné par un clic utilisateur.
     private EnemyUnit selectedEnemy;
+    private final BufferedImage enemyFrontSprite;
+    private final BufferedImage enemyBackSprite;
+    private final BufferedImage enemyLeftSprite;
+    private final BufferedImage enemyRightSprite;
+    private final BufferedImage enemyEatingSprite;
 
     /**
      * Prépare uniquement l'état graphique de la vue.
@@ -44,8 +52,101 @@ public class EnemyView extends JPanel {
         this.model = model;
         this.fieldPanel = fieldPanel;
         this.statusOverlay = new EnemyStatusOverlay();
+        BufferedImage[] displaySprites = loadDisplayEnemySprites();
+        this.enemyFrontSprite = displaySprites[0];
+        this.enemyBackSprite = displaySprites[1];
+        this.enemyLeftSprite = displaySprites[2];
+        this.enemyRightSprite = displaySprites[3];
+        this.enemyEatingSprite = displaySprites[4];
         this.setOpaque(false);
         this.setDoubleBuffered(true); // Évite les clignotements
+    }
+
+    private BufferedImage[] loadDisplayEnemySprites() {
+        BufferedImage frontSprite = loadSprite("/assets/ennemi_ferme_front.png");
+        BufferedImage backSprite = loadSprite("/assets/ennemi_ferme_back.png");
+        BufferedImage leftSprite = loadSprite("/assets/ennemi_ferme_left.png");
+        BufferedImage rightSprite = loadSprite("/assets/ennemi_ferme_right.png");
+        BufferedImage eatingSprite = loadSprite("/assets/ennemi_ferme_eating.png");
+
+        int maxWidth = 1;
+        int maxHeight = 1;
+        BufferedImage[] sprites = {frontSprite, backSprite, leftSprite, rightSprite, eatingSprite};
+        for (BufferedImage sprite : sprites) {
+            maxWidth = Math.max(maxWidth, sprite.getWidth());
+            maxHeight = Math.max(maxHeight, sprite.getHeight());
+        }
+
+        return new BufferedImage[] {
+                prepareDisplaySprite(frontSprite, maxWidth, maxHeight),
+                prepareDisplaySprite(backSprite, maxWidth, maxHeight),
+                prepareDisplaySprite(leftSprite, maxWidth, maxHeight),
+                prepareDisplaySprite(rightSprite, maxWidth, maxHeight),
+                prepareDisplaySprite(eatingSprite, maxWidth, maxHeight)
+        };
+    }
+
+    private BufferedImage loadSprite(String path) {
+        Image image = ImageLoader.load(path);
+        if (image == null) {
+            return new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+        }
+
+        int width = Math.max(1, image.getWidth(null));
+        int height = Math.max(1, image.getHeight(null));
+        BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = bufferedImage.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g2d.drawImage(image, 0, 0, null);
+        g2d.dispose();
+        return makeWhiteBackgroundTransparent(bufferedImage);
+    }
+
+    /**
+     * Toutes les poses sont posées dans le même canevas transparent.
+     * On les centre horizontalement et on aligne le bas pour éviter tout saut visuel.
+     */
+    private BufferedImage normalizeSprite(BufferedImage sprite, int canvasWidth, int canvasHeight) {
+        BufferedImage normalizedSprite = new BufferedImage(canvasWidth, canvasHeight, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = normalizedSprite.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        int drawX = (canvasWidth - sprite.getWidth()) / 2;
+        int drawY = canvasHeight - sprite.getHeight();
+        g2d.drawImage(sprite, drawX, drawY, null);
+        g2d.dispose();
+        return normalizedSprite;
+    }
+
+    private BufferedImage prepareDisplaySprite(BufferedImage sprite, int canvasWidth, int canvasHeight) {
+        BufferedImage normalizedSprite = normalizeSprite(sprite, canvasWidth, canvasHeight);
+        return scaleSprite(normalizedSprite, ENEMY_FRAME_WIDTH, ENEMY_FRAME_HEIGHT);
+    }
+
+    private BufferedImage scaleSprite(BufferedImage sprite, int width, int height) {
+        BufferedImage scaledSprite = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = scaledSprite.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g2d.drawImage(sprite, 0, 0, width, height, null);
+        g2d.dispose();
+        return scaledSprite;
+    }
+
+    /**
+     * Les fichiers utilisent un fond blanc uni, qu'on transforme ici en alpha.
+     */
+    private BufferedImage makeWhiteBackgroundTransparent(BufferedImage sprite) {
+        BufferedImage transparentSprite = new BufferedImage(sprite.getWidth(), sprite.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < sprite.getHeight(); y++) {
+            for (int x = 0; x < sprite.getWidth(); x++) {
+                int pixel = sprite.getRGB(x, y);
+                if ((pixel & 0x00FFFFFF) == 0x00FFFFFF) {
+                    transparentSprite.setRGB(x, y, 0x00000000);
+                } else {
+                    transparentSprite.setRGB(x, y, pixel);
+                }
+            }
+        }
+        return transparentSprite;
     }
 
     /**
@@ -74,15 +175,15 @@ public class EnemyView extends JPanel {
 
         // Pour savoir si la souris "vise" un lapin, on travaille avec une distance au carré.
         // Cela évite une racine carrée inutile et garde un calcul simple.
-        double clickRadiusSquared = (double) RABBIT_CLICK_RADIUS * RABBIT_CLICK_RADIUS;
+        double clickRadiusSquared = (double) ENEMY_CLICK_RADIUS * ENEMY_CLICK_RADIUS;
 
         EnemyUnit nearestEnemy = null;
         double nearestDistanceSquared = Double.MAX_VALUE;
         for (EnemyUnit enemy : model.getEnemyUnits()) {
             // Les positions des lapins sont stockées dans un repère centré sur le champ.
             // On les convertit donc ici en vraie position écran.
-            int rabbitCenterX = centerX + enemy.getX();
-            int rabbitCenterY = centerY + enemy.getY();
+            double rabbitCenterX = centerX + enemy.getPreciseX();
+            double rabbitCenterY = centerY + enemy.getPreciseY();
 
             // Vecteur entre la souris et le centre du lapin.
             double dx = point.x - rabbitCenterX;
@@ -140,53 +241,47 @@ public class EnemyView extends JPanel {
         }
     }
 
+    private BufferedImage resolveSprite(EnemyUnit enemy) {
+        switch (enemy.getDisplaySprite()) {
+            case BACK:
+                return enemyBackSprite;
+            case LEFT:
+                return enemyLeftSprite;
+            case RIGHT:
+                return enemyRightSprite;
+            case EATING:
+                return enemyEatingSprite;
+            case FRONT:
+            default:
+                return enemyFrontSprite;
+        }
+    }
+
     /**
-     * Dessine un lapin stylisé très léger.
-     * On garde peu de détails pour que la lecture du plateau reste simple.
+     * Dessine l'ennemi à l'intérieur d'un cadre fixe.
+     * Les PNG ayant été normalisés au chargement, chaque pose garde exactement le même encombrement visuel.
      */
-    private void drawRabbit(Graphics2D g2d, int rabbitCenterX, int rabbitCenterY, boolean isSelected) {
-        // Halo discret pour montrer quel lapin pilote actuellement l'overlay.
+    private void drawEnemySprite(
+            Graphics2D g2d,
+            EnemyUnit enemy,
+            double enemyCenterX,
+            double enemyCenterY,
+            boolean isSelected
+    ) {
         if (isSelected) {
             g2d.setColor(new Color(255, 218, 107, 70));
-            g2d.fillOval(rabbitCenterX - 20, rabbitCenterY - 20, 40, 40);
+            g2d.fillOval(
+                    (int) Math.round(enemyCenterX - 27),
+                    (int) Math.round(enemyCenterY - 27),
+                    54,
+                    54
+            );
         }
 
-        // Les deux rectangles arrondis forment les oreilles.
-        g2d.setColor(new Color(245, 232, 236));
-        g2d.fillRoundRect(rabbitCenterX - 11, rabbitCenterY - 22, 7, 15, 5, 5);
-        g2d.fillRoundRect(rabbitCenterX + 4, rabbitCenterY - 22, 7, 15, 5, 5);
-
-        // On ajoute l'intérieur rosé des oreilles pour éviter une silhouette trop plate.
-        g2d.setColor(new Color(230, 176, 195));
-        g2d.fillRoundRect(rabbitCenterX - 9, rabbitCenterY - 19, 3, 10, 4, 4);
-        g2d.fillRoundRect(rabbitCenterX + 6, rabbitCenterY - 19, 3, 10, 4, 4);
-
-        // Corps principal.
-        g2d.setColor(new Color(252, 248, 250));
-        g2d.fillOval(
-                rabbitCenterX - RABBIT_BODY_RADIUS,
-                rabbitCenterY - RABBIT_BODY_RADIUS,
-                RABBIT_BODY_RADIUS * 2,
-                RABBIT_BODY_RADIUS * 2
-        );
-
-        // Petit contour pour que le lapin reste lisible sur les zones claires du décor.
-        g2d.setColor(new Color(210, 200, 206));
-        g2d.drawOval(
-                rabbitCenterX - RABBIT_BODY_RADIUS,
-                rabbitCenterY - RABBIT_BODY_RADIUS,
-                RABBIT_BODY_RADIUS * 2,
-                RABBIT_BODY_RADIUS * 2
-        );
-
-        // Deux points sombres pour les yeux.
-        g2d.setColor(new Color(74, 58, 60));
-        g2d.fillOval(rabbitCenterX - 5, rabbitCenterY - 3, 3, 3);
-        g2d.fillOval(rabbitCenterX + 2, rabbitCenterY - 3, 3, 3);
-
-        // Petit nez rosé.
-        g2d.setColor(new Color(214, 126, 145));
-        g2d.fillOval(rabbitCenterX - 2, rabbitCenterY + 1, 4, 3);
+        BufferedImage sprite = resolveSprite(enemy);
+        double frameX = enemyCenterX - (ENEMY_FRAME_WIDTH / 2.0);
+        double frameY = enemyCenterY - (ENEMY_FRAME_HEIGHT / 2.0);
+        g2d.drawImage(sprite, AffineTransform.getTranslateInstance(frameX, frameY), this);
     }
 
     /**
@@ -219,15 +314,15 @@ public class EnemyView extends JPanel {
         // Toute la vue est rendue en 2D avec antialiasing léger
         // pour garder des formes propres malgré les petites tailles de dessin.
         Graphics2D g2d = (Graphics2D) g;
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 
         for (EnemyUnit enemy : enemies) {
             // Le lapin n'est pas stocké en coordonnées écran.
             // Sa position est un décalage par rapport au centre du champ.
             // Pour le dessiner dans la fenêtre, on ajoute ce décalage à centerX/centerY.
-            int rabbitCenterX = centerX + enemy.getX();
-            int rabbitCenterY = centerY + enemy.getY();
-            drawRabbit(g2d, rabbitCenterX, rabbitCenterY, enemy == selectedEnemy);
+            double rabbitCenterX = centerX + enemy.getPreciseX();
+            double rabbitCenterY = centerY + enemy.getPreciseY();
+            drawEnemySprite(g2d, enemy, rabbitCenterX, rabbitCenterY, enemy == selectedEnemy);
         }
 
         // L'overlay reste fixe à l'écran pour être lisible,

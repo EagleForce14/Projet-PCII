@@ -2,6 +2,7 @@ package model.environment;
 
 import model.culture.CellSide;
 import model.movement.BuildingGeometry;
+import model.movement.MovementCollisionMap;
 import view.FieldPanel;
 import view.InventoryStatusOverlay;
 
@@ -20,7 +21,7 @@ import java.awt.Rectangle;
  * éviter que le joueur, les lapins, les arbres et la vue
  * ne réinventent chacun leur propre définition d'une case bloquante.
  */
-public class FieldObstacleMap {
+public class FieldObstacleMap implements MovementCollisionMap {
     private static final double TREE_EDGE_MARGIN_RATIO = 0.25;
     private static final double TREE_TO_TREE_MARGIN_RATIO = 0.12;
     private static final double TREE_TO_BARN_MARGIN_RATIO = 0.18;

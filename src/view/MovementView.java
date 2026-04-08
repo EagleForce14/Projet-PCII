@@ -12,11 +12,11 @@ import java.util.List;
 public class MovementView extends JPanel {
     // Le modèle contenant la liste des unités à afficher
     private final MovementModel model;
-    private final FieldPanel fieldPanel;
+    private final PlayableMapPanel mapPanel;
 
-    public MovementView(MovementModel model, FieldPanel fieldPanel) {
+    public MovementView(MovementModel model, PlayableMapPanel mapPanel) {
         this.model = model;
-        this.fieldPanel = fieldPanel;
+        this.mapPanel = mapPanel;
         this.setOpaque(false);
         this.setDoubleBuffered(true); // Petite optimisation pour éviter les clignotements
         this.setFocusable(true); // Pour recevoir les événements clavier
@@ -32,7 +32,7 @@ public class MovementView extends JPanel {
         Point highlightedCell = null;
 
         // On convertit les bornes du champ dans le repère de cette vue pour dessiner l'unité au centre du champ
-        Rectangle fieldBounds = SwingUtilities.convertRectangle(fieldPanel, fieldPanel.getFieldBounds(), this);
+        Rectangle fieldBounds = SwingUtilities.convertRectangle(mapPanel.getMapComponent(), mapPanel.getFieldBounds(), this);
         int centerX = fieldBounds.x + (fieldBounds.width / 2);
         int centerY = fieldBounds.y + (fieldBounds.height / 2);
         // On calcule ici les positions minimales et maximales autorisées pour que
@@ -69,12 +69,12 @@ public class MovementView extends JPanel {
             // cases annule donc la surbrillance.
             if (u == playerUnit) {
                 Rectangle playerBounds = new Rectangle(drawX, drawY, Unit.SIZE, Unit.SIZE);
-                Rectangle playerBoundsInField = SwingUtilities.convertRectangle(this, playerBounds, fieldPanel);
-                highlightedCell = fieldPanel.getFullyOccupiedCell(playerBoundsInField);
+                Rectangle playerBoundsInField = SwingUtilities.convertRectangle(this, playerBounds, mapPanel.getMapComponent());
+                highlightedCell = mapPanel.getFullyOccupiedCell(playerBoundsInField);
 
                 // Une case recouverte par la grange ou par un arbre
                 // ne doit jamais devenir la case active du gameplay.
-                if (!fieldPanel.isFarmableCell(highlightedCell)) {
+                if (!mapPanel.isFarmableCell(highlightedCell)) {
                     highlightedCell = null;
                 }
 
@@ -96,14 +96,10 @@ public class MovementView extends JPanel {
                         this,
                         drawX + (Unit.SIZE / 2),
                         drawY + (Unit.SIZE / 2),
-                        fieldPanel
+                        mapPanel.getMapComponent()
                 );
-                Point pathCell = fieldPanel.getGridPositionAt(playerCenterInField.x, playerCenterInField.y);
-                if (pathCell != null && fieldPanel.getGrilleCulture().hasPath(pathCell.x, pathCell.y)) {
-                    u.setCurrentSpeed(Unit.PATH_SPEED);
-                } else {
-                    u.setCurrentSpeed(Unit.NORMAL_SPEED);
-                }
+                Point movementCell = mapPanel.getGridPositionAt(playerCenterInField.x, playerCenterInField.y);
+                u.setCurrentSpeed(mapPanel.resolveMovementSpeed(movementCell));
             }
             
             g.fillRect(drawX, drawY, Unit.SIZE, Unit.SIZE);
@@ -112,6 +108,6 @@ public class MovementView extends JPanel {
         // La condition d'activation des actions est liée à la présence
         // de l'unité déplaçable sur une case valide highlightée du champ.
         model.setActiveFieldCell(highlightedCell);
-        fieldPanel.setHighlightedCell(highlightedCell);
+        mapPanel.setHighlightedCell(highlightedCell);
     }
 }

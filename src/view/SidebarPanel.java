@@ -56,6 +56,7 @@ public class SidebarPanel extends JPanel {
     private final JButton compostButton;
     private final JButton cutTreeButton;
     private final JButton bridgeButton;
+    private final JButton caveButton;
     private final JLabel labourWarningLabel;
     private final JLabel bridgePlacementHintLabel;
     private final JPanel pathActionRow;
@@ -81,6 +82,7 @@ public class SidebarPanel extends JPanel {
     private boolean currentBridgeHintVisibleState;
     private String currentCompostButtonLabel;
     private boolean currentLabourWarningVisibleState;
+    private boolean caveMode;
 
     // Constructeur de la classe
     public SidebarPanel(MovementModel movementModel, GrilleCulture grilleCulture, FieldPanel fieldPanel,
@@ -175,6 +177,9 @@ public class SidebarPanel extends JPanel {
         bridgeActionRow = createSpecialActionRow(bridgeButton);
         bridgeActionRow.setVisible(false);
 
+        // Bouton temporaire de navigation : il sert uniquement à afficher la grotte pendant le développement.
+        caveButton = createStyledButton("Aller grotte", new Color(64, 70, 86, 255), 11.5f);
+
         labourWarningLabel = new JLabel(
                 "<html>Le labourage n'est pas autorisé sur une case adjacente à une clôture.</html>"
         );
@@ -203,6 +208,7 @@ public class SidebarPanel extends JPanel {
         specialActionsPanel.add(cutTreeActionRow);
         specialActionsPanel.add(bridgePlacementHintLabel);
         specialActionsPanel.add(labourWarningLabel);
+        specialActionsPanel.add(createSpecialActionRow(caveButton));
 
         contentPanel.add(titleRow, BorderLayout.NORTH);
         contentPanel.add(buttonsGrid, BorderLayout.CENTER);
@@ -296,6 +302,45 @@ public class SidebarPanel extends JPanel {
      * Lit l'état dans le modèle et applique visuellement l'activation si nécessaire.
      */
     private void syncFromModel() {
+        if (caveMode) {
+            if (currentLabourEnabledState
+                    || currentPlantEnabledState
+                    || currentHarvestEnabledState
+                    || currentCleanEnabledState
+                    || currentWaterEnabledState
+                    || currentPathEnabledState
+                    || currentPathVisibleState
+                    || currentCompostEnabledState
+                    || currentCompostVisibleState
+                    || currentCutTreeEnabledState
+                    || currentCutTreeVisibleState
+                    || currentBridgeEnabledState
+                    || currentBridgeVisibleState
+                    || currentBridgeHintVisibleState
+                    || currentLabourWarningVisibleState
+                    || !"Poser compost".equals(currentCompostButtonLabel)) {
+                applyButtonsEnabledState(
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        "Poser compost",
+                        false
+                );
+            }
+            return;
+        }
+
         boolean shouldEnableLabour = canLabourActiveCell();
         boolean shouldEnablePlant = canPlantActiveCell();
         boolean shouldEnableHarvest = canHarvestActiveCell();
@@ -618,6 +663,20 @@ public class SidebarPanel extends JPanel {
 
     public JButton getBridgeButton() {
         return bridgeButton;
+    }
+
+    public JButton getCaveButton() {
+        return caveButton;
+    }
+
+    public void setCaveMode(boolean caveMode) {
+        if (this.caveMode == caveMode) {
+            return;
+        }
+
+        this.caveMode = caveMode;
+        caveButton.setText(caveMode ? "Retour ferme" : "Aller grotte");
+        repaint();
     }
 
 

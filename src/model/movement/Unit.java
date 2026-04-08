@@ -1,7 +1,6 @@
 package model.movement;
 
 import model.Combat.CombatUnit;
-import model.environment.FieldObstacleMap;
 
 /**
  * Représente une entité déplaçable.
@@ -30,7 +29,7 @@ public class Unit {
      * pour ne pas compliquer inutilement le déplacement.
      */
     private volatile int currentSpeed = NORMAL_SPEED;
-    private FieldObstacleMap fieldObstacleMap;
+    private MovementCollisionMap fieldObstacleMap;
 
     // Attribut pour la gestion des combats
     private CombatUnit combatUnit;
@@ -101,7 +100,7 @@ public class Unit {
     public void setMoveLeft(boolean moveLeft) { this.moveLeft = moveLeft; }
     public void setMoveRight(boolean moveRight) { this.moveRight = moveRight; }
     public void setCurrentSpeed(int currentSpeed) { this.currentSpeed = currentSpeed; }
-    public void setFieldObstacleMap(FieldObstacleMap fieldObstacleMap) { this.fieldObstacleMap = fieldObstacleMap; }
+    public void setFieldObstacleMap(MovementCollisionMap fieldObstacleMap) { this.fieldObstacleMap = fieldObstacleMap; }
 
     /**
      * Le joueur partage le même filtre d'occupation que les autres entités mobiles

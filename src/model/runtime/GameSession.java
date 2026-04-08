@@ -16,17 +16,20 @@ public final class GameSession {
     private final Jour jour;
     private final GrilleCulture grilleCulture;
     private final PhysicsThread physicsThread;
+    private final PhysicsThread cavePhysicsThread;
     private final EnemyPhysicsThread enemyPhysicsThread;
     private final RenderThread renderThread;
     private final TreeThread treeThread;
     private final WorkshopConstructionManager workshopConstructionManager;
 
     public GameSession(Jour jour, GrilleCulture grilleCulture, PhysicsThread physicsThread,
+                       PhysicsThread cavePhysicsThread,
                        EnemyPhysicsThread enemyPhysicsThread, RenderThread renderThread, TreeThread treeThread,
                        WorkshopConstructionManager workshopConstructionManager) {
         this.jour = jour;
         this.grilleCulture = grilleCulture;
         this.physicsThread = physicsThread;
+        this.cavePhysicsThread = cavePhysicsThread;
         this.enemyPhysicsThread = enemyPhysicsThread;
         this.renderThread = renderThread;
         this.treeThread = treeThread;
@@ -47,6 +50,9 @@ public final class GameSession {
         jour.arreter();
         jour.interrupt();
         physicsThread.interrupt();
+        if (cavePhysicsThread != null) {
+            cavePhysicsThread.interrupt();
+        }
         enemyPhysicsThread.interrupt();
         renderThread.arreter();
         treeThread.arreter();

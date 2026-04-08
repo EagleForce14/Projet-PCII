@@ -20,10 +20,19 @@ import java.util.Random;
  * attente de 5 secondes sur la culture avant de manger, ou retour/fuite vers l'extérieur.
  */
 public class EnemyUnit {
+    public enum DisplaySprite {
+        FRONT,
+        BACK,
+        LEFT,
+        RIGHT,
+        EATING
+    }
+
     private static final int SPAWN_SIDE_TOP = 0;
     private static final int SPAWN_SIDE_RIGHT = 1;
     private static final int SPAWN_SIDE_BOTTOM = 2;
     private static final int SPAWN_SIDE_LEFT = 3;
+    private static final double DISPLAY_DIRECTION_EPSILON = 0.01;
     // La taille de la zone de "sécurité" autour de la grange (on ne peut pas traverser cette zone i.e.
     // on ne peut pas traverser la grange)
     private static final int HITBOX_SIZE = 20;
@@ -1146,6 +1155,14 @@ public class EnemyUnit {
      */
     public synchronized int getX() { return (int) x; }
 
+    /**
+     * Expose la position X exacte pour le rendu des sprites.
+     * On évite ainsi les à-coups liés à une troncature trop tôt en entier.
+     */
+    public synchronized double getPreciseX() {
+        return x;
+    }
+
     public static int getCollisionSize() {
         return HITBOX_SIZE;
     }
@@ -1156,9 +1173,55 @@ public class EnemyUnit {
     public synchronized int getY() { return (int) y; }
 
     /**
+     * Même principe que getPreciseX, mais sur l'axe vertical.
+     * La vue peut alors placer le sprite avec une précision sub-pixel.
+     */
+    public synchronized double getPreciseY() {
+        return y;
+    }
+
+    /**
      * Indique au modèle si ce lapin peut être retiré de la liste active.
      */
     public synchronized boolean hasFled() { return hasFled; }
+
+    /**
+     * Expose à la vue quel sprite afficher sans lui faire relire la logique métier.
+     * On privilégie le vrai dernier pas appliqué, puis la cible courante si le lapin
+     * n'a pas encore réellement bougé.
+     */
+    private DisplaySprite resolveDisplaySprite() {
+        if (isEatingCultureCountdownActive()) {
+            return DisplaySprite.EATING;
+        }
+
+        double displayVectorX = lastMoveX;
+        double displayVectorY = lastMoveY;
+        double directionMagnitudeSquared = (displayVectorX * displayVectorX) + (displayVectorY * displayVectorY);
+        if (directionMagnitudeSquared < (DISPLAY_DIRECTION_EPSILON * DISPLAY_DIRECTION_EPSILON)) {
+            displayVectorX = targetX - x;
+            displayVectorY = targetY - y;
+        }
+
+        if (!Double.isFinite(displayVectorX) || !Double.isFinite(displayVectorY)) {
+            return DisplaySprite.FRONT;
+        }
+
+        if (Math.abs(displayVectorX) < DISPLAY_DIRECTION_EPSILON
+                && Math.abs(displayVectorY) < DISPLAY_DIRECTION_EPSILON) {
+            return DisplaySprite.FRONT;
+        }
+
+        if (Math.abs(displayVectorX) >= Math.abs(displayVectorY)) {
+            return displayVectorX >= 0 ? DisplaySprite.RIGHT : DisplaySprite.LEFT;
+        }
+
+        return displayVectorY >= 0 ? DisplaySprite.FRONT : DisplaySprite.BACK;
+    }
+
+    public synchronized DisplaySprite getDisplaySprite() {
+        return resolveDisplaySprite();
+    }
 
     /**
      * Indique à l'overlay si le chrono pertinent est actuellement celui de la consommation.

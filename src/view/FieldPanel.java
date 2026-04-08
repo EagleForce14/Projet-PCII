@@ -9,10 +9,12 @@ import model.environment.FieldObstacleMap;
 import model.environment.PredefinedFieldLayout;
 import model.environment.TreeManager;
 import model.movement.Barn;
+import model.movement.Unit;
 import model.movement.Workshop;
 
 import javax.swing.JPanel;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -20,13 +22,14 @@ import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.Objects;
 
 /**
  * Panneau d'affichage du champ, compose d'une grille d'images.
  */
-public class FieldPanel extends JPanel {
+public class FieldPanel extends JPanel implements PlayableMapPanel {
     // Taille préférée alignée sur la zone de jeu principale.
     // Le panneau peut s'étirer ensuite, mais ces valeurs servent de base cohérente
     // pour tous les calculs effectués avant l'affichage réel.
@@ -140,6 +143,10 @@ public class FieldPanel extends JPanel {
     private Rectangle cachedBarnBlockedGridBounds;
     private int cachedDecorativeRiverColumn = Integer.MIN_VALUE;
     private Rectangle cachedRightRiverUpperDecorationLogicalBounds;
+    private BufferedImage staticTerrainCache;
+    private int cachedTerrainWidth = -1;
+    private int cachedTerrainHeight = -1;
+    private Rectangle cachedTerrainFieldBounds;
 
     /**
      * Initialise la carte.
@@ -207,6 +214,16 @@ public class FieldPanel extends JPanel {
     public Point getInitialPlayerOffset() {
         Rectangle fieldBounds = getPreferredFieldBounds();
         return getLogicalCellCenter(getColumnCount() / 2, getRowCount() / 2, fieldBounds);
+    }
+
+    @Override
+    public int resolveMovementSpeed(Point cell) {
+        return cell != null && grilleCulture.hasPath(cell.x, cell.y) ? Unit.PATH_SPEED : Unit.NORMAL_SPEED;
+    }
+
+    @Override
+    public Component getMapComponent() {
+        return this;
     }
 
     /**
@@ -1397,10 +1414,26 @@ public class FieldPanel extends JPanel {
      * ce helper s'occupe du détail d'une tuile.
      */
     private void drawCell(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
-        drawGroundTile(g2, gridX, gridY, cellBounds);
-        drawBarnTopBushDecoration(g2, gridX, gridY, cellBounds);
-        drawBarnLeftVerticalBushDecoration(g2, gridX, gridY, cellBounds);
-        drawBarnRightVerticalBushDecoration(g2, gridX, gridY, cellBounds);
+        drawDynamicCell(g2, gridX, gridY, cellBounds);
+    }
+
+    /**
+     * Partie dynamique d'une case :
+     * cultures, compost, animations et overlays liés au gameplay courant.
+     */
+    private void drawDynamicCell(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
+        if (cellBounds == null) {
+            return;
+        }
+
+        drawCultureLayer(g2, gridX, gridY, cellBounds);
+        drawCellGameplayOverlays(g2, gridX, gridY, cellBounds);
+    }
+
+    private void drawCultureLayer(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
+        if (shouldRedrawGroundDynamically(gridX, gridY)) {
+            drawGroundTile(g2, gridX, gridY, cellBounds);
+        }
 
         Culture culture = grilleCulture.getCulture(gridX, gridY);
         Image cultureImage = getCultureImage(culture);
@@ -1411,7 +1444,18 @@ public class FieldPanel extends JPanel {
         if (shouldAnimateWateredCell(culture)) {
             drawWateringAnimation(g2, cellBounds.x, cellBounds.y, cellBounds.width);
         }
+    }
 
+    /**
+     * Le cache de terrain contient le décor immobile initial.
+     * Dès qu'une case passe en terre labourée, sa tuile de sol doit repasser
+     * dans le flux dynamique pour rester visuellement à jour.
+     */
+    private boolean shouldRedrawGroundDynamically(int gridX, int gridY) {
+        return grilleCulture.isLabouree(gridX, gridY);
+    }
+
+    private void drawCellGameplayOverlays(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
         if (grilleCulture.hasCompostAt(gridX, gridY)) {
             drawCompostDecoration(g2, cellBounds);
         }
@@ -1426,6 +1470,58 @@ public class FieldPanel extends JPanel {
 
         if (shouldShowLabourFenceWarning(gridX, gridY)) {
             drawLabourFenceWarningBadge(g2, cellBounds);
+        }
+    }
+
+    private void invalidateStaticTerrainCache() {
+        staticTerrainCache = null;
+        cachedTerrainWidth = -1;
+        cachedTerrainHeight = -1;
+        cachedTerrainFieldBounds = null;
+    }
+
+    private void ensureStaticTerrainCache() {
+        if (getWidth() <= 0 || getHeight() <= 0) {
+            invalidateStaticTerrainCache();
+            return;
+        }
+
+        Rectangle fieldBounds = getFieldBounds();
+        if (staticTerrainCache != null
+                && cachedTerrainWidth == getWidth()
+                && cachedTerrainHeight == getHeight()
+                && Objects.equals(cachedTerrainFieldBounds, fieldBounds)) {
+            return;
+        }
+
+        cachedTerrainWidth = getWidth();
+        cachedTerrainHeight = getHeight();
+        cachedTerrainFieldBounds = fieldBounds == null ? null : new Rectangle(fieldBounds);
+        staticTerrainCache = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
+
+        Graphics2D cacheGraphics = staticTerrainCache.createGraphics();
+        cacheGraphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        paintStaticTerrain(cacheGraphics, fieldBounds);
+        cacheGraphics.dispose();
+    }
+
+    /**
+     * Le cache contient uniquement le décor immobile du champ :
+     * sol, chemins, rivière et habillage autour de la grange.
+     */
+    private void paintStaticTerrain(Graphics2D g2, Rectangle fieldBounds) {
+        if (fieldBounds == null) {
+            return;
+        }
+
+        for (int row = 0; row < getRowCount(); row++) {
+            for (int column = 0; column < getColumnCount(); column++) {
+                Rectangle cellBounds = buildScreenCellBounds(column, row, fieldBounds);
+                drawGroundTile(g2, column, row, cellBounds);
+                drawBarnTopBushDecoration(g2, column, row, cellBounds);
+                drawBarnLeftVerticalBushDecoration(g2, column, row, cellBounds);
+                drawBarnRightVerticalBushDecoration(g2, column, row, cellBounds);
+            }
         }
     }
 
@@ -2202,6 +2298,13 @@ public class FieldPanel extends JPanel {
         Graphics2D g2 = (Graphics2D) g.create();
 
         Rectangle fieldBounds = getFieldBounds();
+        ensureStaticTerrainCache();
+        if (staticTerrainCache != null) {
+            g2.drawImage(staticTerrainCache, 0, 0, this);
+        } else {
+            paintStaticTerrain(g2, fieldBounds);
+        }
+
         for (int row = 0; row < getRowCount(); row++) {
             for (int column = 0; column < getColumnCount(); column++) {
                 Rectangle cellBounds = buildScreenCellBounds(column, row, fieldBounds);
