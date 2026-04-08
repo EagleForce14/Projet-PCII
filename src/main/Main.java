@@ -35,7 +35,7 @@ public class Main {
     private static final Dimension GAME_AREA_MINIMUM_SIZE = new Dimension(960, 690);
     private static final Dimension GAME_AREA_PREFERRED_SIZE = new Dimension(1180, 885);
 
-    public static void main() {
+    public static void main(String[] args) {
         JFrame frame = createFrame();
         installNewGame(frame, true);
     }
@@ -65,7 +65,7 @@ public class Main {
         Jour jour = new Jour();
         GrilleCulture grilleCulture = new GrilleCulture(jour.getGestionnaireObjectifs());
         TreeManager treeManager = new TreeManager(grilleCulture);
-        Money playerMoney = new Money(150);
+        Money playerMoney = new Money(300);
         Inventaire inventaire = new Inventaire();
         Shop shop = new Shop();
         WorkshopConstructionManager workshopConstructionManager = new WorkshopConstructionManager(inventaire);
