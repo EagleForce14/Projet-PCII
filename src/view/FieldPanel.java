@@ -5,6 +5,7 @@ import model.culture.CellSide;
 import model.culture.FenceDestructionEffect;
 import model.culture.GrilleCulture;
 import model.culture.Stade;
+import model.culture.Type;
 import model.environment.FieldObstacleMap;
 import model.environment.PredefinedFieldLayout;
 import model.environment.TreeManager;
@@ -23,13 +24,24 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
  * Panneau d'affichage du champ, compose d'une grille d'images.
  */
 public class FieldPanel extends JPanel implements PlayableMapPanel {
+    private static final double CARROT_YOUNG_MAP_SCALE = 0.62;
+    private static final double CARROT_INTERMEDIATE_MAP_SCALE = 0.68;
+    private static final double CARROT_MATURE_MAP_SCALE = 0.78;
+    private static final double CARROT_WILTED_MAP_SCALE = 0.72;
+    private static final double CAULIFLOWER_YOUNG_MAP_SCALE = 0.88;
+    private static final double CAULIFLOWER_INTERMEDIATE_MAP_SCALE = 0.90;
+    private static final double CAULIFLOWER_MATURE_MAP_SCALE = 0.82;
+    private static final double CAULIFLOWER_WILTED_MAP_SCALE = 0.82;
+
     // Taille préférée alignée sur la zone de jeu principale.
     // Le panneau peut s'étirer ensuite, mais ces valeurs servent de base cohérente
     // pour tous les calculs effectués avant l'affichage réel.
@@ -125,6 +137,14 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private final Image croissanceInterImage;
     private final Image maturiteImage;
     private final Image fletrieImage;
+    private final Image carotteJeunePousseImage;
+    private final Image carotteIntermediaireImage;
+    private final Image carotteMatureImage;
+    private final Image carotteFletrieImage;
+    private final Image choufleurJeuneImage;
+    private final Image choufleurIntermediaireImage;
+    private final Image choufleurMatureImage;
+    private final Image choufleurFletriImage;
     private final Image compostImage;
     private final Image bridgeImage;
 
@@ -147,6 +167,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private int cachedTerrainWidth = -1;
     private int cachedTerrainHeight = -1;
     private Rectangle cachedTerrainFieldBounds;
+    private final Map<Image, Rectangle> visibleCultureBoundsCache = new IdentityHashMap<>();
 
     /**
      * Initialise la carte.
@@ -171,6 +192,14 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         this.croissanceInterImage = ImageLoader.load("/assets/croissance_inter.png");
         this.maturiteImage = ImageLoader.load("/assets/maturite.png");
         this.fletrieImage = ImageLoader.load("/assets/fletrie.png");
+        this.carotteJeunePousseImage = ImageLoader.load("/assets/carotte_jeune_pousse.png");
+        this.carotteIntermediaireImage = ImageLoader.load("/assets/carotte_intermediaire.png");
+        this.carotteMatureImage = ImageLoader.load("/assets/carotte_mature.png");
+        this.carotteFletrieImage = ImageLoader.load("/assets/carotte_fletrie.png");
+        this.choufleurJeuneImage = ImageLoader.load("/assets/choufleur_jeune.png");
+        this.choufleurIntermediaireImage = ImageLoader.load("/assets/choufleur_inter.png");
+        this.choufleurMatureImage = ImageLoader.load("/assets/choufleur_mature.png");
+        this.choufleurFletriImage = ImageLoader.load("/assets/choufleur_fletri.png");
         this.compostImage = ImageLoader.load("/assets/Compost.png");
         this.bridgeImage = ImageLoader.load("/assets/bridge.png");
         this.compostInfluenceVisible = false;
@@ -837,6 +866,13 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
             return null;
         }
 
+        if (culture.getType() == Type.CAROTTE) {
+            return getCarrotCultureImage(culture.getStadeCroissance());
+        }
+        if (culture.getType() == Type.CHOUFLEUR) {
+            return getCauliflowerCultureImage(culture.getStadeCroissance());
+        }
+
         Stade stade = culture.getStadeCroissance();
         if (stade == Stade.JEUNE_POUSSE) {
             return jeunePousseImage;
@@ -849,6 +885,38 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         }
         if (stade == Stade.FLETRIE) {
             return fletrieImage;
+        }
+        return null;
+    }
+
+    private Image getCauliflowerCultureImage(Stade stade) {
+        if (stade == Stade.JEUNE_POUSSE) {
+            return choufleurJeuneImage;
+        }
+        if (stade == Stade.INTERMEDIAIRE) {
+            return choufleurIntermediaireImage;
+        }
+        if (stade == Stade.MATURE) {
+            return choufleurMatureImage;
+        }
+        if (stade == Stade.FLETRIE) {
+            return choufleurFletriImage;
+        }
+        return null;
+    }
+
+    private Image getCarrotCultureImage(Stade stade) {
+        if (stade == Stade.JEUNE_POUSSE) {
+            return carotteJeunePousseImage;
+        }
+        if (stade == Stade.INTERMEDIAIRE) {
+            return carotteIntermediaireImage;
+        }
+        if (stade == Stade.MATURE) {
+            return carotteMatureImage;
+        }
+        if (stade == Stade.FLETRIE) {
+            return carotteFletrieImage;
         }
         return null;
     }
@@ -1134,7 +1202,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     /**
      * Dessine l'image dans la case sans la déformer.
      */
-    private void drawCultureImage(Graphics2D g2, Image cultureImage, int x, int y, int tileSize) {
+    private void drawCultureImage(Graphics2D g2, Culture culture, Image cultureImage, int x, int y, int tileSize) {
         int imageWidth = cultureImage.getWidth(this);
         int imageHeight = cultureImage.getHeight(this);
         if (imageWidth <= 0 || imageHeight <= 0) {
@@ -1151,18 +1219,114 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
                 (double) availableWidth / imageWidth,
                 (double) availableHeight / imageHeight
         );
+        if (culture != null && culture.getType() == Type.CAROTTE) {
+            scale *= getCarrotMapScale(culture.getStadeCroissance());
+        } else if (culture != null && culture.getType() == Type.CHOUFLEUR) {
+            scale *= getCauliflowerMapScale(culture.getStadeCroissance());
+        }
 
         int drawWidth = (int) Math.round(imageWidth * scale);
         int drawHeight = (int) Math.round(imageHeight * scale);
+        Rectangle visibleBounds = getVisibleCultureBounds(cultureImage, imageWidth, imageHeight);
+        int visibleWidth = Math.max(1, visibleBounds.width);
+        int visibleHeight = Math.max(1, visibleBounds.height);
+        int scaledVisibleWidth = Math.max(1, (int) Math.round(visibleWidth * scale));
+        int scaledVisibleHeight = Math.max(1, (int) Math.round(visibleHeight * scale));
 
-        // On s'assure que l'image reste centrée dans la case même si elle n'occupe pas tout l'espace disponible.
-        int drawX = x + ((tileSize - drawWidth) / 2);
-        int drawY = y + ((tileSize - drawHeight) / 2);
+        // On centre la zone réellement visible de l'image plutôt que son canevas brut:
+        // cela corrige les sprites avec marges transparentes asymétriques.
+        int drawX = x + ((tileSize - scaledVisibleWidth) / 2) - (int) Math.round(visibleBounds.x * scale);
+        int drawY = y + ((tileSize - scaledVisibleHeight) / 2) - (int) Math.round(visibleBounds.y * scale);
 
         // Les plantes sont elles aussi en pixel art :
         // on évite donc le flou de l'interpolation bilinéaire.
         g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
         g2.drawImage(cultureImage, drawX, drawY, drawWidth, drawHeight, this);
+    }
+
+    private Rectangle getVisibleCultureBounds(Image cultureImage, int imageWidth, int imageHeight) {
+        Rectangle cachedBounds = visibleCultureBoundsCache.get(cultureImage);
+        if (cachedBounds != null) {
+            return cachedBounds;
+        }
+
+        BufferedImage bufferedImage = toBufferedImage(cultureImage, imageWidth, imageHeight);
+        if (bufferedImage == null) {
+            Rectangle fullBounds = new Rectangle(0, 0, imageWidth, imageHeight);
+            visibleCultureBoundsCache.put(cultureImage, fullBounds);
+            return fullBounds;
+        }
+
+        int minX = imageWidth;
+        int minY = imageHeight;
+        int maxX = -1;
+        int maxY = -1;
+        for (int pixelY = 0; pixelY < imageHeight; pixelY++) {
+            for (int pixelX = 0; pixelX < imageWidth; pixelX++) {
+                int alpha = (bufferedImage.getRGB(pixelX, pixelY) >>> 24) & 0xFF;
+                if (alpha == 0) {
+                    continue;
+                }
+                minX = Math.min(minX, pixelX);
+                minY = Math.min(minY, pixelY);
+                maxX = Math.max(maxX, pixelX);
+                maxY = Math.max(maxY, pixelY);
+            }
+        }
+
+        Rectangle visibleBounds = maxX >= minX && maxY >= minY
+                ? new Rectangle(minX, minY, (maxX - minX) + 1, (maxY - minY) + 1)
+                : new Rectangle(0, 0, imageWidth, imageHeight);
+        visibleCultureBoundsCache.put(cultureImage, visibleBounds);
+        return visibleBounds;
+    }
+
+    private double getCarrotMapScale(Stade stade) {
+        if (stade == Stade.JEUNE_POUSSE) {
+            return CARROT_YOUNG_MAP_SCALE;
+        }
+        if (stade == Stade.INTERMEDIAIRE) {
+            return CARROT_INTERMEDIATE_MAP_SCALE;
+        }
+        if (stade == Stade.MATURE) {
+            return CARROT_MATURE_MAP_SCALE;
+        }
+        if (stade == Stade.FLETRIE) {
+            return CARROT_WILTED_MAP_SCALE;
+        }
+        return CARROT_MATURE_MAP_SCALE;
+    }
+
+    private double getCauliflowerMapScale(Stade stade) {
+        if (stade == Stade.JEUNE_POUSSE) {
+            return CAULIFLOWER_YOUNG_MAP_SCALE;
+        }
+        if (stade == Stade.INTERMEDIAIRE) {
+            return CAULIFLOWER_INTERMEDIATE_MAP_SCALE;
+        }
+        if (stade == Stade.MATURE) {
+            return CAULIFLOWER_MATURE_MAP_SCALE;
+        }
+        if (stade == Stade.FLETRIE) {
+            return CAULIFLOWER_WILTED_MAP_SCALE;
+        }
+        return CAULIFLOWER_MATURE_MAP_SCALE;
+    }
+
+    private BufferedImage toBufferedImage(Image image, int imageWidth, int imageHeight) {
+        if (image instanceof BufferedImage) {
+            return (BufferedImage) image;
+        }
+
+        if (imageWidth <= 0 || imageHeight <= 0) {
+            return null;
+        }
+
+        BufferedImage bufferedImage = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D imageGraphics = bufferedImage.createGraphics();
+        imageGraphics.drawImage(image, 0, 0, null);
+        imageGraphics.dispose();
+        return bufferedImage;
     }
 
     /**
@@ -1438,7 +1602,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         Culture culture = grilleCulture.getCulture(gridX, gridY);
         Image cultureImage = getCultureImage(culture);
         if (cultureImage != null) {
-            drawCultureImage(g2, cultureImage, cellBounds.x, cellBounds.y, cellBounds.width);
+            drawCultureImage(g2, culture, cultureImage, cellBounds.x, cellBounds.y, cellBounds.width);
         }
 
         if (shouldAnimateWateredCell(culture)) {

@@ -47,14 +47,17 @@ public class MovementView extends JPanel {
             // On borne la position avant le dessin pour empêcher l'unité de sortir de l'écran.
             u.clampPosition(minX, maxX, minY, maxY);
 
-            // Dessin de la zone d'influence
-            g.setColor(new Color(0, 0, 255, 50)); // Bleu semi-transparent
-            int radius = Unit.INFLUENCE_RADIUS;
-            int circleX = centerX + u.getX() - radius;
-            int circleY = centerY + u.getY() - radius;
-            g.fillOval(circleX, circleY, radius * 2, radius * 2);
-            g.setColor(Color.BLUE);
-            g.drawOval(circleX, circleY, radius * 2, radius * 2);
+            // La zone d'influence n'existe pas en grotte :
+            // ni visuellement, ni côté logique.
+            if (!u.isInCave()) {
+                g.setColor(new Color(0, 0, 255, 50)); // Bleu semi-transparent
+                int radius = Unit.INFLUENCE_RADIUS;
+                int circleX = centerX + u.getX() - radius;
+                int circleY = centerY + u.getY() - radius;
+                g.fillOval(circleX, circleY, radius * 2, radius * 2);
+                g.setColor(Color.BLUE);
+                g.drawOval(circleX, circleY, radius * 2, radius * 2);
+            }
 
             // La couleur du rectangle
             g.setColor(Color.RED);

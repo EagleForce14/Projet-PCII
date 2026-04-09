@@ -119,6 +119,10 @@ public class Unit {
      * @return true si la cible est dans le rayon d'influence, false sinon.
      */
     public boolean isInInfluenceZone(int targetX, int targetY) {
+        if (inCave) {
+            return false;
+        }
+
         // Remarque : on calcule la distance au carré pour éviter d'utiliser la racine carrée coûteuse
         int dx = this.x - targetX;
         int dy = this.y - targetY;

@@ -7,10 +7,12 @@ import model.environment.FenceCollision;
 import model.culture.Stade;
 import model.environment.FieldObstacleMap;
 import model.movement.Barn;
+import model.movement.MovementCollisionMap;
 import model.movement.Unit;
 import model.objective.GestionnaireObjectifs;
 
 import java.awt.Rectangle;
+import java.awt.geom.Point2D;
 import java.util.Random;
 
 /**
@@ -28,11 +30,29 @@ public class EnemyUnit {
         EATING
     }
 
+    private enum EnemyKind {
+        FARM_RABBIT,
+        CAVE_MONSTER
+    }
+
+    private enum CaveBehavior {
+        PAUSE,
+        PATROL
+    }
+
     private static final int SPAWN_SIDE_TOP = 0;
     private static final int SPAWN_SIDE_RIGHT = 1;
     private static final int SPAWN_SIDE_BOTTOM = 2;
     private static final int SPAWN_SIDE_LEFT = 3;
     private static final double DISPLAY_DIRECTION_EPSILON = 0.01;
+    private static final double CAVE_PATROL_SPEED = 1.4;
+    private static final int CAVE_PATROL_RETARGET_MIN_FRAMES = 28;
+    private static final int CAVE_PATROL_RETARGET_RANDOM_FRAMES = 42;
+    private static final int CAVE_PAUSE_MIN_FRAMES = 6;
+    private static final int CAVE_PAUSE_RANDOM_FRAMES = 22;
+    private static final double CAVE_PAUSE_PROBABILITY = 0.12;
+    private static final double CAVE_GLOBAL_PATROL_PROBABILITY = 0.32;
+    private static final int CAVE_WALK_FRAME_TOGGLE_TICKS = 8;
     // La taille de la zone de "sécurité" autour de la grange (on ne peut pas traverser cette zone i.e.
     // on ne peut pas traverser la grange)
     private static final int HITBOX_SIZE = 20;
@@ -114,6 +134,20 @@ public class EnemyUnit {
     private int wanderTimer = 0;
     // Générateur aléatoire pour rendre les comportements moins mécaniques.
     private final Random random = new Random();
+    private final EnemyKind enemyKind;
+    private Rectangle caveGuardBounds;
+    private Rectangle cavePatrolBounds;
+    private double caveHomeX;
+    private double caveHomeY;
+    private int caveRoomIndex = -1;
+    private CaveBehavior caveBehavior = CaveBehavior.PATROL;
+    private int cavePatrolRetargetTimer = 0;
+    private int cavePauseTimer = 0;
+    private boolean caveMoving = false;
+    private double caveDisplayVectorX = 0.0;
+    private double caveDisplayVectorY = 1.0;
+    private int caveWalkFrameIndex = 0;
+    private int caveWalkTickCounter = 0;
     
     // Largeur courante de la fenêtre de jeu.
     private int viewportWidth;
@@ -126,18 +160,21 @@ public class EnemyUnit {
 
     // Gestionnaire d'objectifs pour mettre à jour les objectifs liés à la fuite.
     private final GestionnaireObjectifs gestionnaireObjectifs;
-    private final FieldObstacleMap fieldObstacleMap;
+    private final FieldObstacleMap farmObstacleMap;
+    private final MovementCollisionMap movementCollisionMap;
     private final int decorativeRiverColumn;
 
     // On construit ici une unité ennemie avec les dimensions connues au moment de son apparition.
     public EnemyUnit(int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight, GrilleCulture grilleCulture,
                      GestionnaireObjectifs gestionnaireObjectifs, FieldObstacleMap fieldObstacleMap) {
+        this.enemyKind = EnemyKind.FARM_RABBIT;
         this.viewportWidth = viewportWidth;
         this.viewportHeight = viewportHeight;
         this.fieldWidth = fieldWidth;
         this.fieldHeight = fieldHeight;
         this.gestionnaireObjectifs = gestionnaireObjectifs;
-        this.fieldObstacleMap = fieldObstacleMap;
+        this.farmObstacleMap = fieldObstacleMap;
+        this.movementCollisionMap = fieldObstacleMap;
         this.decorativeRiverColumn = resolveDecorativeRiverColumn(grilleCulture);
         // On fait apparaître le lapin hors écran.
         spawnOutside();
@@ -145,6 +182,85 @@ public class EnemyUnit {
         lastX = x;
         // On initialise la dernière position connue sur Y.
         lastY = y;
+    }
+
+    /**
+     * Variante dédiée à la grotte.
+     * Le monstre apparaît près de son poste de garde,
+     * puis peut patrouiller dans toute la grotte.
+     */
+    public EnemyUnit(Rectangle caveSpawnBounds, Rectangle cavePatrolBounds, int roomIndex, MovementCollisionMap movementCollisionMap) {
+        this.enemyKind = EnemyKind.CAVE_MONSTER;
+        this.viewportWidth = 1280;
+        this.viewportHeight = 720;
+        this.fieldWidth = 900;
+        this.fieldHeight = 540;
+        this.gestionnaireObjectifs = null;
+        this.farmObstacleMap = null;
+        this.movementCollisionMap = movementCollisionMap;
+        this.decorativeRiverColumn = -1;
+        this.caveGuardBounds = buildCaveGuardBounds(caveSpawnBounds);
+        this.cavePatrolBounds = cavePatrolBounds == null ? new Rectangle(-20, -20, 40, 40) : new Rectangle(cavePatrolBounds);
+        this.caveRoomIndex = roomIndex;
+        this.caveBehavior = CaveBehavior.PATROL;
+        this.preferredTurnSign = random.nextBoolean() ? 1 : -1;
+
+        Point2D.Double spawnPoint = findValidCavePoint(caveSpawnBounds, 40);
+        if (spawnPoint == null) {
+            spawnPoint = findValidCavePoint(this.cavePatrolBounds, 80);
+        }
+        if (spawnPoint == null) {
+            spawnPoint = new Point2D.Double(0.0, 0.0);
+        }
+
+        x = spawnPoint.x;
+        y = spawnPoint.y;
+        targetX = x;
+        targetY = y;
+        caveHomeX = x;
+        caveHomeY = y;
+        lastX = x;
+        lastY = y;
+        pickNewCavePatrolTarget();
+    }
+
+    private double randomCoordinateInBounds(int origin, int size) {
+        if (size <= 0) {
+            return origin;
+        }
+        return origin + (random.nextDouble() * size);
+    }
+
+    private Rectangle buildCaveGuardBounds(Rectangle caveSpawnBounds) {
+        if (caveSpawnBounds == null) {
+            return null;
+        }
+
+        int paddingX = Math.max(70, caveSpawnBounds.width);
+        int paddingY = Math.max(70, caveSpawnBounds.height);
+        return new Rectangle(
+                caveSpawnBounds.x - paddingX,
+                caveSpawnBounds.y - paddingY,
+                caveSpawnBounds.width + (paddingX * 2),
+                caveSpawnBounds.height + (paddingY * 2)
+        );
+    }
+
+    private Point2D.Double findValidCavePoint(Rectangle bounds, int attempts) {
+        if (bounds == null) {
+            return null;
+        }
+
+        for (int attempt = 0; attempt < attempts; attempt++) {
+            double candidateX = randomCoordinateInBounds(bounds.x, bounds.width);
+            double candidateY = randomCoordinateInBounds(bounds.y, bounds.height);
+            if (!canOccupy(candidateX, candidateY)) {
+                continue;
+            }
+            return new Point2D.Double(candidateX, candidateY);
+        }
+
+        return null;
     }
     
     /**
@@ -226,6 +342,11 @@ public class EnemyUnit {
      */
     public synchronized void update(EnemyModel enemyModel, Unit player, GrilleCulture grilleCulture, int viewportWidth, int viewportHeight,
                                     int fieldWidth, int fieldHeight) {
+        if (enemyKind == EnemyKind.CAVE_MONSTER) {
+            updateCaveMonster(enemyModel, player, viewportWidth, viewportHeight, fieldWidth, fieldHeight);
+            return;
+        }
+
         refreshDimensions(viewportWidth, viewportHeight, fieldWidth, fieldHeight);
         // L'ordre compte:
         // 1) la fuite peut annuler une cible,
@@ -253,6 +374,174 @@ public class EnemyUnit {
         this.viewportHeight = viewportHeight;
         this.fieldWidth = fieldWidth;
         this.fieldHeight = fieldHeight;
+    }
+
+    /**
+     * Version grotte :
+     * certains monstres patrouillent comme éclaireurs,
+     * les autres restent immobiles jusqu'à l'alerte.
+     */
+    private void updateCaveMonster(
+            EnemyModel enemyModel,
+            Unit player,
+            int viewportWidth,
+            int viewportHeight,
+            int fieldWidth,
+            int fieldHeight
+    ) {
+        refreshDimensions(viewportWidth, viewportHeight, fieldWidth, fieldHeight);
+        updateCavePatrolState();
+        moveDirectlyTowardTarget(resolveCaveSpeed());
+    }
+
+    /**
+     * Tous les monstres de grotte suivent désormais le même schéma simple :
+     * ils patrouillent près de leur poste, puis marquent parfois une pause.
+     */
+    private void updateCavePatrolState() {
+        if (cavePauseTimer > 0) {
+            cavePauseTimer--;
+            caveBehavior = CaveBehavior.PAUSE;
+            targetX = x;
+            targetY = y;
+            return;
+        }
+
+        caveBehavior = CaveBehavior.PATROL;
+        cavePatrolRetargetTimer--;
+        double deltaX = targetX - x;
+        double deltaY = targetY - y;
+        double distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
+        if (cavePatrolRetargetTimer > 0 && distanceSquared > 36.0) {
+            return;
+        }
+
+        if (random.nextDouble() < CAVE_PAUSE_PROBABILITY) {
+            cavePauseTimer = CAVE_PAUSE_MIN_FRAMES + random.nextInt(CAVE_PAUSE_RANDOM_FRAMES);
+            caveBehavior = CaveBehavior.PAUSE;
+            targetX = x;
+            targetY = y;
+            return;
+        }
+
+        pickNewCavePatrolTarget();
+        cavePatrolRetargetTimer = CAVE_PATROL_RETARGET_MIN_FRAMES + random.nextInt(CAVE_PATROL_RETARGET_RANDOM_FRAMES);
+    }
+
+    private double resolveCaveSpeed() {
+        return caveBehavior == CaveBehavior.PAUSE ? 0.0 : CAVE_PATROL_SPEED;
+    }
+
+    /**
+     * Ici on garde volontairement un déplacement direct et minimal :
+     * pas de collisions monstres/joueur pour l'instant,
+     * seulement une cible logique et une animation de marche propre.
+     */
+    private void moveDirectlyTowardTarget(double speed) {
+        if (speed <= 0.0) {
+            caveMoving = false;
+            return;
+        }
+
+        double deltaX = targetX - x;
+        double deltaY = targetY - y;
+        double distance = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
+        if (distance <= 0.0001) {
+            caveMoving = false;
+            return;
+        }
+
+        double step = Math.min(speed, distance);
+        double stepX = (deltaX / distance) * step;
+        double stepY = (deltaY / distance) * step;
+
+        if (!tryMove(stepX, stepY)) {
+            redirectCaveAroundObstacle(stepX, stepY, speed);
+        } else {
+            updateCaveAnimation(stepX, stepY);
+        }
+
+        clampInsidePatrolBounds();
+    }
+
+    private void updateCaveAnimation(double stepX, double stepY) {
+        caveMoving = Math.abs(stepX) >= 0.001 || Math.abs(stepY) >= 0.001;
+        if (!caveMoving) {
+            return;
+        }
+
+        caveDisplayVectorX = stepX;
+        caveDisplayVectorY = stepY;
+        caveWalkTickCounter++;
+        if (caveWalkTickCounter >= CAVE_WALK_FRAME_TOGGLE_TICKS) {
+            caveWalkTickCounter = 0;
+            caveWalkFrameIndex = 1 - caveWalkFrameIndex;
+        }
+    }
+
+    private void clampInsidePatrolBounds() {
+        if (cavePatrolBounds == null) {
+            return;
+        }
+
+        x = Math.max(cavePatrolBounds.x, Math.min(x, cavePatrolBounds.x + cavePatrolBounds.width));
+        y = Math.max(cavePatrolBounds.y, Math.min(y, cavePatrolBounds.y + cavePatrolBounds.height));
+    }
+
+    private void pickNewCavePatrolTarget() {
+        if (cavePatrolBounds == null && caveGuardBounds == null) {
+            targetX = caveHomeX;
+            targetY = caveHomeY;
+            return;
+        }
+
+        Rectangle preferredBounds = random.nextDouble() < CAVE_GLOBAL_PATROL_PROBABILITY
+                ? cavePatrolBounds
+                : caveGuardBounds;
+        Rectangle fallbackBounds = preferredBounds == cavePatrolBounds ? caveGuardBounds : cavePatrolBounds;
+
+        Point2D.Double patrolPoint = findValidCavePoint(preferredBounds, 80);
+        if (patrolPoint == null) {
+            patrolPoint = findValidCavePoint(fallbackBounds, 80);
+        }
+        if (patrolPoint == null) {
+            targetX = caveHomeX;
+            targetY = caveHomeY;
+            return;
+        }
+
+        targetX = patrolPoint.x;
+        targetY = patrolPoint.y;
+    }
+
+    /**
+     * Petit contournement pour la grotte :
+     * on garde la même idée que pour les lapins,
+     * mais sans logique de détour hors carte.
+     */
+    private void redirectCaveAroundObstacle(double desiredStepX, double desiredStepY, double speed) {
+        double desiredAngle = Math.atan2(desiredStepY, desiredStepX);
+        double[] offsets = preferredTurnSign >= 0 ? RIGHT_HAND_OFFSETS : LEFT_HAND_OFFSETS;
+
+        for (double offset : offsets) {
+            double angle = desiredAngle + offset;
+            double candidateStepX = Math.cos(angle) * speed;
+            double candidateStepY = Math.sin(angle) * speed;
+            if (!tryMove(candidateStepX, candidateStepY)) {
+                continue;
+            }
+
+            if (offset > 0.0001) {
+                preferredTurnSign = 1;
+            } else if (offset < -0.0001) {
+                preferredTurnSign = -1;
+            }
+
+            updateCaveAnimation(candidateStepX, candidateStepY);
+            return;
+        }
+
+        caveMoving = false;
     }
 
     /**
@@ -371,12 +660,12 @@ public class EnemyUnit {
      * au lieu de contourner l'obstacle.
      */
     private boolean advanceFenceAttack(GrilleCulture grilleCulture) {
-        if (!hasFenceAttackTarget(grilleCulture) || fieldObstacleMap == null) {
+        if (!hasFenceAttackTarget(grilleCulture) || farmObstacleMap == null) {
             clearFenceAttackTarget();
             return false;
         }
 
-        Rectangle fenceBounds = fieldObstacleMap.getFenceLogicalBounds(targetCultureGridX, targetCultureGridY, targetFenceSide);
+        Rectangle fenceBounds = farmObstacleMap.getFenceLogicalBounds(targetCultureGridX, targetCultureGridY, targetFenceSide);
         if (fenceBounds == null) {
             clearFenceAttackTarget();
             return false;
@@ -451,7 +740,7 @@ public class EnemyUnit {
             return true;
         }
 
-        if (!isTargetFenceCollision(fieldObstacleMap.findBlockingFenceCollision(x + stepX, y + stepY, HITBOX_SIZE, HITBOX_SIZE))) {
+        if (!isTargetFenceCollision(farmObstacleMap.findBlockingFenceCollision(x + stepX, y + stepY, HITBOX_SIZE, HITBOX_SIZE))) {
             redirectAroundObstacle(stepX, stepY, speed);
             return true;
         }
@@ -744,12 +1033,12 @@ public class EnemyUnit {
     }
 
     private boolean acquireTargetFence(double stepX, double stepY, GrilleCulture grilleCulture) {
-        if (!hasCultureTarget() || grilleCulture == null || fieldObstacleMap == null) {
+        if (!hasCultureTarget() || grilleCulture == null || farmObstacleMap == null) {
             return false;
         }
 
         FenceCollision collision =
-                fieldObstacleMap.findBlockingFenceCollision(x + stepX, y + stepY, HITBOX_SIZE, HITBOX_SIZE);
+                farmObstacleMap.findBlockingFenceCollision(x + stepX, y + stepY, HITBOX_SIZE, HITBOX_SIZE);
         if (collision == null
                 || collision.getGridX() != targetCultureGridX
                 || collision.getGridY() != targetCultureGridY
@@ -1090,8 +1379,13 @@ public class EnemyUnit {
      * grange, arbres, rivière, et clôtures côté lapins.
      */
     private boolean canOccupy(double centerX, double centerY) {
+        if (enemyKind == EnemyKind.CAVE_MONSTER) {
+            return movementCollisionMap == null
+                    || movementCollisionMap.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE);
+        }
+
         return Barn.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE)
-                && (fieldObstacleMap == null || fieldObstacleMap.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE, true));
+                && (farmObstacleMap == null || farmObstacleMap.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE, true));
     }
 
     /**
@@ -1185,6 +1479,14 @@ public class EnemyUnit {
      */
     public synchronized boolean hasFled() { return hasFled; }
 
+    public synchronized boolean isCaveMonster() {
+        return enemyKind == EnemyKind.CAVE_MONSTER;
+    }
+
+    public synchronized int getAssignedRoomIndex() {
+        return caveRoomIndex;
+    }
+
     /**
      * Expose à la vue quel sprite afficher sans lui faire relire la logique métier.
      * On privilégie le vrai dernier pas appliqué, puis la cible courante si le lapin
@@ -1223,10 +1525,58 @@ public class EnemyUnit {
         return resolveDisplaySprite();
     }
 
+    private SpriteKey resolveCaveSpriteKey() {
+        double displayVectorX = caveDisplayVectorX;
+        double displayVectorY = caveDisplayVectorY;
+        if (!Double.isFinite(displayVectorX) || !Double.isFinite(displayVectorY)) {
+            return SpriteKey.MONSTER_DOWN_IDLE;
+        }
+
+        if (Math.abs(displayVectorX) >= Math.abs(displayVectorY)) {
+            if (displayVectorX >= 0.0) {
+                if (!caveMoving) {
+                    return SpriteKey.MONSTER_RIGHT_IDLE;
+                }
+                return caveWalkFrameIndex == 0 ? SpriteKey.MONSTER_RIGHT_WALK_1 : SpriteKey.MONSTER_RIGHT_WALK_2;
+            }
+
+            if (!caveMoving) {
+                return SpriteKey.MONSTER_LEFT_IDLE;
+            }
+            return caveWalkFrameIndex == 0 ? SpriteKey.MONSTER_LEFT_WALK_1 : SpriteKey.MONSTER_LEFT_WALK_2;
+        }
+
+        if (displayVectorY < 0.0) {
+            return caveWalkFrameIndex == 0 ? SpriteKey.MONSTER_UP_WALK_1 : SpriteKey.MONSTER_UP_WALK_2;
+        }
+
+        if (!caveMoving) {
+            return SpriteKey.MONSTER_DOWN_IDLE;
+        }
+        return caveWalkFrameIndex == 0 ? SpriteKey.MONSTER_DOWN_WALK_1 : SpriteKey.MONSTER_DOWN_WALK_2;
+    }
+
+    public synchronized SpriteKey getSpriteKey() {
+        if (enemyKind == EnemyKind.CAVE_MONSTER) {
+            return resolveCaveSpriteKey();
+        }
+
+        return switch (resolveDisplaySprite()) {
+            case BACK -> SpriteKey.RABBIT_BACK;
+            case LEFT -> SpriteKey.RABBIT_LEFT;
+            case RIGHT -> SpriteKey.RABBIT_RIGHT;
+            case EATING -> SpriteKey.RABBIT_EATING;
+            case FRONT -> SpriteKey.RABBIT_FRONT;
+        };
+    }
+
     /**
      * Indique à l'overlay si le chrono pertinent est actuellement celui de la consommation.
      */
     public synchronized boolean isEatingCultureCountdownActive() {
+        if (enemyKind == EnemyKind.CAVE_MONSTER) {
+            return false;
+        }
         return hasCultureTarget() && isOnTargetCultureCell();
     }
 
@@ -1235,6 +1585,10 @@ public class EnemyUnit {
      * L'overlay peut ainsi calculer sa progression sans connaître les détails métier.
      */
     public synchronized long getOverlayCountdownMaxMs() {
+        if (enemyKind == EnemyKind.CAVE_MONSTER) {
+            return -1L;
+        }
+
         if (isEatingCultureCountdownActive()) {
             return DELAI_AVANT_MANGER_MS;
         }
@@ -1251,6 +1605,10 @@ public class EnemyUnit {
      * La valeur dépend donc du vrai comportement courant du lapin, et non d'un état UI artificiel.
      */
     public synchronized long getOverlayCountdownMs() {
+        if (enemyKind == EnemyKind.CAVE_MONSTER) {
+            return -1L;
+        }
+
         if (isEatingCultureCountdownActive()) {
             if (cultureWaitStartTime < 0L) {
                 return DELAI_AVANT_MANGER_MS;
@@ -1276,6 +1634,13 @@ public class EnemyUnit {
      * Fournit un libellé très simple pour résumer le comportement courant dans l'overlay.
      */
     public synchronized String getOverlayStatus() {
+        if (enemyKind == EnemyKind.CAVE_MONSTER) {
+            if (caveBehavior == CaveBehavior.PAUSE) {
+                return "En garde";
+            }
+            return "Patrouille";
+        }
+
         if (hasFled) {
             return "Disparu";
         }

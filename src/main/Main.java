@@ -152,12 +152,21 @@ public class Main {
         MovementModel grotteMovementModel = new MovementModel();
         Point grotteInitialOffset = grotteFieldPanel.getInitialPlayerOffset();
         Unit grottePlayerUnit = new Unit(grotteInitialOffset.x, grotteInitialOffset.y);
-        grottePlayerUnit.setFieldObstacleMap(new GrotteObstacleMap(grotteMap, grotteFieldPanel));
+        GrotteObstacleMap grotteObstacleMap = new GrotteObstacleMap(grotteMap, grotteFieldPanel);
+        grottePlayerUnit.setFieldObstacleMap(grotteObstacleMap);
         grotteMovementModel.setPlayerUnit(grottePlayerUnit);
+
+        EnemyModel caveEnemyModel = EnemyModel.createCaveModel(grotteMap);
+        caveEnemyModel.setPlayer(grottePlayerUnit);
+        caveEnemyModel.setMovementCollisionMap(grotteObstacleMap);
 
         MovementView grotteMovementView = new MovementView(grotteMovementModel, grotteFieldPanel);
         grotteMovementView.setAlignmentX(0.5f);
         grotteMovementView.setAlignmentY(0.5f);
+
+        EnemyView caveEnemyView = new EnemyView(caveEnemyModel, grotteFieldPanel);
+        caveEnemyView.setAlignmentX(0.5f);
+        caveEnemyView.setAlignmentY(0.5f);
 
         JPanel grotteFieldLayer = new JPanel(new BorderLayout());
         grotteFieldLayer.setOpaque(false);
@@ -168,6 +177,7 @@ public class Main {
         JPanel grotteGamePanel = createGamePanel();
         grotteGamePanel.setLayout(new OverlayLayout(grotteGamePanel));
         grotteGamePanel.add(grotteMovementView);
+        grotteGamePanel.add(caveEnemyView);
         grotteGamePanel.add(grotteFieldLayer);
 
         JPanel centerPanel = new JPanel(new CardLayout());
@@ -186,6 +196,7 @@ public class Main {
         PhysicsThread physicsThread = new PhysicsThread(model);
         PhysicsThread grottePhysicsThread = new PhysicsThread(grotteMovementModel);
         EnemyPhysicsThread enemyPhysicsThread = new EnemyPhysicsThread(enemyModel);
+        EnemyPhysicsThread caveEnemyPhysicsThread = new EnemyPhysicsThread(caveEnemyModel);
         RenderThread renderThread = new RenderThread(contentPanel);
         TreeThread treeThread = new TreeThread(treeManager, fieldObstacleMap, playerUnit, enemyModel);
         GameSession session = new GameSession(
@@ -194,6 +205,7 @@ public class Main {
                 physicsThread,
                 grottePhysicsThread,
                 enemyPhysicsThread,
+                caveEnemyPhysicsThread,
                 renderThread,
                 treeThread,
                 workshopConstructionManager
@@ -231,6 +243,7 @@ public class Main {
             centerLayout.show(centerPanel, FARM_CARD);
             centerPanel.putClientProperty("activeCard", FARM_CARD);
             actionSidebarPanel.setCaveMode(false);
+            caveEnemyModel.exitCave();
             grottePlayerUnit.exitCave();
             playerUnit.exitCave();
             movementView.requestFocusInWindow();
@@ -248,6 +261,7 @@ public class Main {
                 actionSidebarPanel.setCaveMode(true);
                 playerUnit.exitCave();
                 grottePlayerUnit.enterCave();
+                caveEnemyModel.enterCave();
                 grotteMovementView.requestFocusInWindow();
             } else {
                 returnToFarm.run();
@@ -278,6 +292,7 @@ public class Main {
         physicsThread.start();
         grottePhysicsThread.start();
         enemyPhysicsThread.start();
+        caveEnemyPhysicsThread.start();
         renderThread.start();
         treeThread.start();
 

@@ -12,7 +12,7 @@ public enum Type {
     ORCHIDEE(Categorie.FLEUR),
     CAROTTE(Categorie.LEGUME),
     TOMATE(Categorie.LEGUME),
-    POIVRON(Categorie.LEGUME),
+    CHOUFLEUR(Categorie.LEGUME),
     COURGETTE(Categorie.LEGUME);
 
     /** Petite catégorie embarquée pour éviter les anciens sous-types. */

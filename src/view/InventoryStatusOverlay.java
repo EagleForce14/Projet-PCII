@@ -32,7 +32,7 @@ public class InventoryStatusOverlay extends JPanel {
             Type.ORCHIDEE,
             Type.CAROTTE,
             Type.TOMATE,
-            Type.POIVRON,
+            Type.CHOUFLEUR,
             Type.COURGETTE
     };
     /*
@@ -240,12 +240,12 @@ public class InventoryStatusOverlay extends JPanel {
         int iconPixelSize = hasStock ? 5 : 4;
         FacilityType facilityType = getFacilityTypeForSlot(slotIndex);
         int iconArtWidth = slotIndex < INVENTORY_SEED_ORDER.length
-                ? 5 * iconPixelSize
+                ? ProductPixelArt.getSeedArtWidth(INVENTORY_SEED_ORDER[slotIndex], iconPixelSize)
                 : isWoodSlot(slotIndex)
                 ? ProductPixelArt.getWoodArtWidth(iconPixelSize)
                 : ProductPixelArt.getFacilityArtWidth(facilityType, iconPixelSize);
         int iconArtHeight = slotIndex < INVENTORY_SEED_ORDER.length
-                ? 5 * iconPixelSize
+                ? ProductPixelArt.getSeedArtHeight(INVENTORY_SEED_ORDER[slotIndex], iconPixelSize)
                 : isWoodSlot(slotIndex)
                 ? ProductPixelArt.getWoodArtHeight(iconPixelSize)
                 : ProductPixelArt.getFacilityArtHeight(facilityType, iconPixelSize);

@@ -20,6 +20,8 @@ import java.awt.RenderingHints;
 public final class ProductPixelArt {
     private static final int DEFAULT_ART_COLUMNS = 5;
     private static final int DEFAULT_ART_ROWS = 5;
+    private static final int CARROT_SEED_IMAGE_MAX_SIDE = 6;
+    private static final int CAULIFLOWER_SEED_IMAGE_MAX_SIDE = 6;
     private static final int FENCE_ART_COLUMNS = 9;
     private static final int FENCE_ART_ROWS = 7;
     private static final int PATH_ART_MAX_SIDE = 7;
@@ -32,11 +34,16 @@ public final class ProductPixelArt {
     private static final Image BRIDGE_IMAGE = ImageLoader.load("/assets/bridge.png");
     private static final Image WOOD_IMAGE = ImageLoader.load("/assets/wood.png");
     private static final Image COIN_IMAGE = ImageLoader.load("/assets/coin.png");
+    private static final Image CARROT_IMAGE = ImageLoader.load("/assets/carotte_mature.png");
+    private static final Image CAULIFLOWER_IMAGE = ImageLoader.load("/assets/choufleur_mature.png");
 
     // Le constructeur de la classe
     private ProductPixelArt() {}
 
     public static int getProductArtWidth(Product product, int pixelSize) {
+        if (product instanceof Seed) {
+            return getSeedArtWidth(((Seed) product).getType(), pixelSize);
+        }
         if (product instanceof Facility) {
             return getFacilityArtWidth(((Facility) product).getType(), pixelSize);
         }
@@ -44,8 +51,31 @@ public final class ProductPixelArt {
     }
 
     public static int getProductArtHeight(Product product, int pixelSize) {
+        if (product instanceof Seed) {
+            return getSeedArtHeight(((Seed) product).getType(), pixelSize);
+        }
         if (product instanceof Facility) {
             return getFacilityArtHeight(((Facility) product).getType(), pixelSize);
+        }
+        return DEFAULT_ART_ROWS * pixelSize;
+    }
+
+    public static int getSeedArtWidth(Type type, int pixelSize) {
+        if (type == Type.CAROTTE) {
+            return getScaledImageSize(CARROT_IMAGE, CARROT_SEED_IMAGE_MAX_SIDE * pixelSize).width;
+        }
+        if (type == Type.CHOUFLEUR) {
+            return getScaledImageSize(CAULIFLOWER_IMAGE, CAULIFLOWER_SEED_IMAGE_MAX_SIDE * pixelSize).width;
+        }
+        return DEFAULT_ART_COLUMNS * pixelSize;
+    }
+
+    public static int getSeedArtHeight(Type type, int pixelSize) {
+        if (type == Type.CAROTTE) {
+            return getScaledImageSize(CARROT_IMAGE, CARROT_SEED_IMAGE_MAX_SIDE * pixelSize).height;
+        }
+        if (type == Type.CHOUFLEUR) {
+            return getScaledImageSize(CAULIFLOWER_IMAGE, CAULIFLOWER_SEED_IMAGE_MAX_SIDE * pixelSize).height;
         }
         return DEFAULT_ART_ROWS * pixelSize;
     }
@@ -121,13 +151,13 @@ public final class ProductPixelArt {
                 drawOrchid(g2d, x, y, pixelSize);
                 break;
             case CAROTTE:
-                drawCarrot(g2d, x, y, pixelSize);
+                drawScaledImage(g2d, CARROT_IMAGE, x, y, CARROT_SEED_IMAGE_MAX_SIDE * pixelSize);
                 break;
             case TOMATE:
                 drawTomato(g2d, x, y, pixelSize);
                 break;
-            case POIVRON:
-                drawPepper(g2d, x, y, pixelSize);
+            case CHOUFLEUR:
+                drawScaledImage(g2d, CAULIFLOWER_IMAGE, x, y, CAULIFLOWER_SEED_IMAGE_MAX_SIDE * pixelSize);
                 break;
             case COURGETTE:
                 drawZucchini(g2d, x, y, pixelSize);
@@ -207,16 +237,6 @@ public final class ProductPixelArt {
         fillPixel(g2d, x + (4 * pixelSize), y + (2 * pixelSize), pixelSize, purple);
     }
 
-    private static void drawCarrot(Graphics2D g2d, int x, int y, int pixelSize) {
-        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(70, 155, 67));
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(92, 187, 85));
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(92, 187, 85));
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(239, 132, 45));
-        fillPixel(g2d, x + pixelSize, y + (3 * pixelSize), pixelSize, new Color(226, 115, 28));
-        fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, new Color(239, 132, 45));
-        fillPixel(g2d, x + pixelSize, y + (4 * pixelSize), pixelSize, new Color(202, 95, 19));
-    }
-
     private static void drawTomato(Graphics2D g2d, int x, int y, int pixelSize) {
         fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(76, 144, 55));
         fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(220, 64, 49));
@@ -225,16 +245,6 @@ public final class ProductPixelArt {
         fillPixel(g2d, x + pixelSize, y + (2 * pixelSize), pixelSize, new Color(220, 64, 49));
         fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(248, 112, 96));
         fillPixel(g2d, x + (3 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(220, 64, 49));
-    }
-
-    private static void drawPepper(Graphics2D g2d, int x, int y, int pixelSize) {
-        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(76, 144, 55));
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(226, 186, 57));
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(245, 214, 88));
-        fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, new Color(226, 186, 57));
-        fillPixel(g2d, x + pixelSize, y + (2 * pixelSize), pixelSize, new Color(226, 186, 57));
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(245, 214, 88));
-        fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, new Color(226, 186, 57));
     }
 
     private static void drawZucchini(Graphics2D g2d, int x, int y, int pixelSize) {

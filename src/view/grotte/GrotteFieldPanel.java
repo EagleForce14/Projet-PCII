@@ -306,6 +306,34 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * La statue du sanctuaire est décorative, mais elle doit aussi bloquer le passage.
+     * La hitbox reste volontairement un peu plus petite que le sprite
+     * pour garder une sensation naturelle autour du socle.
+     */
+    public Rectangle getShrineStatueCollisionBounds() {
+        Rectangle daisBounds = buildLogicalAreaBounds(grotteMap.getShrineDaisBounds());
+        if (daisBounds == null || daisBounds.width <= 0 || daisBounds.height <= 0) {
+            return null;
+        }
+
+        int tileSize = getLogicalTileSize();
+        Rectangle statueBounds = buildShrineStatueBounds(daisBounds, tileSize);
+        if (statueBounds == null) {
+            return null;
+        }
+
+        int collisionInsetX = Math.max(6, statueBounds.width / 6);
+        int collisionInsetTop = Math.max(8, statueBounds.height / 8);
+        int collisionInsetBottom = Math.max(8, statueBounds.height / 6);
+        return new Rectangle(
+                statueBounds.x + collisionInsetX,
+                statueBounds.y + collisionInsetTop,
+                Math.max(12, statueBounds.width - (collisionInsetX * 2)),
+                Math.max(14, statueBounds.height - collisionInsetTop - collisionInsetBottom)
+        );
+    }
+
     private void ensureStaticSceneCache() {
         if (getWidth() <= 0 || getHeight() <= 0) {
             staticSceneCache = null;
@@ -579,27 +607,27 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         if (daisBounds == null || daisBounds.width <= 0 || daisBounds.height <= 0) {
             return;
         }
-
-        int sourceWidth = shrineStatueImage.getWidth(null);
-        int sourceHeight = shrineStatueImage.getHeight(null);
-        if (sourceWidth <= 0 || sourceHeight <= 0) {
+        Rectangle statueBounds = buildShrineStatueBounds(daisBounds, tileSize);
+        if (statueBounds == null) {
             return;
         }
 
-        int drawHeight = Math.max(tileSize * 2, (int) Math.round(daisBounds.height * 0.82));
-        int drawWidth = Math.max((int) Math.round(tileSize * 1.5), (int) Math.round(drawHeight * (sourceWidth / (double) sourceHeight)));
-        int drawX = daisBounds.x + ((daisBounds.width - drawWidth) / 2);
-        int drawY = daisBounds.y + daisBounds.height - drawHeight + Math.max(2, tileSize / 10);
-
         g2.setColor(new Color(0, 0, 0, 62));
         g2.fillOval(
-                drawX + Math.max(4, drawWidth / 7),
+                statueBounds.x + Math.max(4, statueBounds.width / 7),
                 daisBounds.y + daisBounds.height - Math.max(10, tileSize / 3),
-                Math.max(14, drawWidth - Math.max(8, drawWidth / 3)),
+                Math.max(14, statueBounds.width - Math.max(8, statueBounds.width / 3)),
                 Math.max(8, tileSize / 3)
         );
 
-        g2.drawImage(shrineStatueImage, drawX, drawY, drawWidth, drawHeight, this);
+        g2.drawImage(
+                shrineStatueImage,
+                statueBounds.x,
+                statueBounds.y,
+                statueBounds.width,
+                statueBounds.height,
+                this
+        );
     }
 
     /**
@@ -695,6 +723,31 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
                 gridArea.width * tileSize,
                 gridArea.height * tileSize
         );
+    }
+
+    /**
+     * La statue doit être calculée une seule fois avec la même formule
+     * pour le rendu et pour la collision.
+     */
+    private Rectangle buildShrineStatueBounds(Rectangle daisBounds, int tileSize) {
+        if (shrineStatueImage == null || daisBounds == null || tileSize <= 0) {
+            return null;
+        }
+
+        int sourceWidth = shrineStatueImage.getWidth(null);
+        int sourceHeight = shrineStatueImage.getHeight(null);
+        if (sourceWidth <= 0 || sourceHeight <= 0) {
+            return null;
+        }
+
+        int drawHeight = Math.max(tileSize * 2, (int) Math.round(daisBounds.height * 0.82));
+        int drawWidth = Math.max(
+                (int) Math.round(tileSize * 1.5),
+                (int) Math.round(drawHeight * (sourceWidth / (double) sourceHeight))
+        );
+        int drawX = daisBounds.x + ((daisBounds.width - drawWidth) / 2);
+        int drawY = daisBounds.y + daisBounds.height - drawHeight + Math.max(2, tileSize / 10);
+        return new Rectangle(drawX, drawY, drawWidth, drawHeight);
     }
 
     private int getLogicalTileSize() {
