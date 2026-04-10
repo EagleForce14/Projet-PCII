@@ -47,7 +47,7 @@ public class Shop implements DayChangeListener {
         addSeed("Marguerite", 8, Type.MARGUERITE);
         addSeed("Orchidee", 8, Type.ORCHIDEE);
         addSeed("Carotte", 5, Type.CAROTTE);
-        addSeed("Tomate", 5, Type.TOMATE);
+        addSeed("Radis", 5, Type.RADIS);
         addSeed("Choufleur", 5, Type.CHOUFLEUR);
         addSeed("Courgette", 5, Type.COURGETTE);
         facilities.add(new Facility("Cloture", 50, 20, FacilityType.CLOTURE));

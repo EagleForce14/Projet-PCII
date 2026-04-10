@@ -21,6 +21,7 @@ public final class ProductPixelArt {
     private static final int DEFAULT_ART_COLUMNS = 5;
     private static final int DEFAULT_ART_ROWS = 5;
     private static final int CARROT_SEED_IMAGE_MAX_SIDE = 6;
+    private static final int RADISH_SEED_IMAGE_MAX_SIDE = 6;
     private static final int CAULIFLOWER_SEED_IMAGE_MAX_SIDE = 6;
     private static final int FENCE_ART_COLUMNS = 9;
     private static final int FENCE_ART_ROWS = 7;
@@ -35,6 +36,7 @@ public final class ProductPixelArt {
     private static final Image WOOD_IMAGE = ImageLoader.load("/assets/wood.png");
     private static final Image COIN_IMAGE = ImageLoader.load("/assets/coin.png");
     private static final Image CARROT_IMAGE = ImageLoader.load("/assets/carotte_mature.png");
+    private static final Image RADISH_IMAGE = ImageLoader.load("/assets/radis_mature.png");
     private static final Image CAULIFLOWER_IMAGE = ImageLoader.load("/assets/choufleur_mature.png");
 
     // Le constructeur de la classe
@@ -64,6 +66,9 @@ public final class ProductPixelArt {
         if (type == Type.CAROTTE) {
             return getScaledImageSize(CARROT_IMAGE, CARROT_SEED_IMAGE_MAX_SIDE * pixelSize).width;
         }
+        if (type == Type.RADIS) {
+            return getScaledImageSize(RADISH_IMAGE, RADISH_SEED_IMAGE_MAX_SIDE * pixelSize).width;
+        }
         if (type == Type.CHOUFLEUR) {
             return getScaledImageSize(CAULIFLOWER_IMAGE, CAULIFLOWER_SEED_IMAGE_MAX_SIDE * pixelSize).width;
         }
@@ -73,6 +78,9 @@ public final class ProductPixelArt {
     public static int getSeedArtHeight(Type type, int pixelSize) {
         if (type == Type.CAROTTE) {
             return getScaledImageSize(CARROT_IMAGE, CARROT_SEED_IMAGE_MAX_SIDE * pixelSize).height;
+        }
+        if (type == Type.RADIS) {
+            return getScaledImageSize(RADISH_IMAGE, RADISH_SEED_IMAGE_MAX_SIDE * pixelSize).height;
         }
         if (type == Type.CHOUFLEUR) {
             return getScaledImageSize(CAULIFLOWER_IMAGE, CAULIFLOWER_SEED_IMAGE_MAX_SIDE * pixelSize).height;
@@ -153,8 +161,8 @@ public final class ProductPixelArt {
             case CAROTTE:
                 drawScaledImage(g2d, CARROT_IMAGE, x, y, CARROT_SEED_IMAGE_MAX_SIDE * pixelSize);
                 break;
-            case TOMATE:
-                drawTomato(g2d, x, y, pixelSize);
+            case RADIS:
+                drawScaledImage(g2d, RADISH_IMAGE, x, y, RADISH_SEED_IMAGE_MAX_SIDE * pixelSize);
                 break;
             case CHOUFLEUR:
                 drawScaledImage(g2d, CAULIFLOWER_IMAGE, x, y, CAULIFLOWER_SEED_IMAGE_MAX_SIDE * pixelSize);
@@ -235,16 +243,6 @@ public final class ProductPixelArt {
         fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, lightPurple);
         fillPixel(g2d, x, y + (2 * pixelSize), pixelSize, purple);
         fillPixel(g2d, x + (4 * pixelSize), y + (2 * pixelSize), pixelSize, purple);
-    }
-
-    private static void drawTomato(Graphics2D g2d, int x, int y, int pixelSize) {
-        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(76, 144, 55));
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(220, 64, 49));
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(235, 89, 73));
-        fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, new Color(220, 64, 49));
-        fillPixel(g2d, x + pixelSize, y + (2 * pixelSize), pixelSize, new Color(220, 64, 49));
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(248, 112, 96));
-        fillPixel(g2d, x + (3 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(220, 64, 49));
     }
 
     private static void drawZucchini(Graphics2D g2d, int x, int y, int pixelSize) {

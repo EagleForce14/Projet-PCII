@@ -37,6 +37,10 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private static final double CARROT_INTERMEDIATE_MAP_SCALE = 0.68;
     private static final double CARROT_MATURE_MAP_SCALE = 0.78;
     private static final double CARROT_WILTED_MAP_SCALE = 0.72;
+    private static final double RADISH_YOUNG_MAP_SCALE = 0.92;
+    private static final double RADISH_INTERMEDIATE_MAP_SCALE = 0.80;
+    private static final double RADISH_MATURE_MAP_SCALE = 0.82;
+    private static final double RADISH_WILTED_MAP_SCALE = 0.80;
     private static final double CAULIFLOWER_YOUNG_MAP_SCALE = 0.88;
     private static final double CAULIFLOWER_INTERMEDIATE_MAP_SCALE = 0.90;
     private static final double CAULIFLOWER_MATURE_MAP_SCALE = 0.82;
@@ -141,6 +145,10 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private final Image carotteIntermediaireImage;
     private final Image carotteMatureImage;
     private final Image carotteFletrieImage;
+    private final Image radisJeuneImage;
+    private final Image radisIntermediaireImage;
+    private final Image radisMatureImage;
+    private final Image radisFletriImage;
     private final Image choufleurJeuneImage;
     private final Image choufleurIntermediaireImage;
     private final Image choufleurMatureImage;
@@ -196,6 +204,10 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         this.carotteIntermediaireImage = ImageLoader.load("/assets/carotte_intermediaire.png");
         this.carotteMatureImage = ImageLoader.load("/assets/carotte_mature.png");
         this.carotteFletrieImage = ImageLoader.load("/assets/carotte_fletrie.png");
+        this.radisJeuneImage = ImageLoader.load("/assets/radis_jeune.png");
+        this.radisIntermediaireImage = ImageLoader.load("/assets/radis_inter.png");
+        this.radisMatureImage = ImageLoader.load("/assets/radis_mature.png");
+        this.radisFletriImage = ImageLoader.load("/assets/radis_fletri.png");
         this.choufleurJeuneImage = ImageLoader.load("/assets/choufleur_jeune.png");
         this.choufleurIntermediaireImage = ImageLoader.load("/assets/choufleur_inter.png");
         this.choufleurMatureImage = ImageLoader.load("/assets/choufleur_mature.png");
@@ -869,6 +881,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         if (culture.getType() == Type.CAROTTE) {
             return getCarrotCultureImage(culture.getStadeCroissance());
         }
+        if (culture.getType() == Type.RADIS) {
+            return getRadishCultureImage(culture.getStadeCroissance());
+        }
         if (culture.getType() == Type.CHOUFLEUR) {
             return getCauliflowerCultureImage(culture.getStadeCroissance());
         }
@@ -901,6 +916,22 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         }
         if (stade == Stade.FLETRIE) {
             return choufleurFletriImage;
+        }
+        return null;
+    }
+
+    private Image getRadishCultureImage(Stade stade) {
+        if (stade == Stade.JEUNE_POUSSE) {
+            return radisJeuneImage;
+        }
+        if (stade == Stade.INTERMEDIAIRE) {
+            return radisIntermediaireImage;
+        }
+        if (stade == Stade.MATURE) {
+            return radisMatureImage;
+        }
+        if (stade == Stade.FLETRIE) {
+            return radisFletriImage;
         }
         return null;
     }
@@ -1221,6 +1252,8 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         );
         if (culture != null && culture.getType() == Type.CAROTTE) {
             scale *= getCarrotMapScale(culture.getStadeCroissance());
+        } else if (culture != null && culture.getType() == Type.RADIS) {
+            scale *= getRadishMapScale(culture.getStadeCroissance());
         } else if (culture != null && culture.getType() == Type.CHOUFLEUR) {
             scale *= getCauliflowerMapScale(culture.getStadeCroissance());
         }
@@ -1295,6 +1328,22 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
             return CARROT_WILTED_MAP_SCALE;
         }
         return CARROT_MATURE_MAP_SCALE;
+    }
+
+    private double getRadishMapScale(Stade stade) {
+        if (stade == Stade.JEUNE_POUSSE) {
+            return RADISH_YOUNG_MAP_SCALE;
+        }
+        if (stade == Stade.INTERMEDIAIRE) {
+            return RADISH_INTERMEDIATE_MAP_SCALE;
+        }
+        if (stade == Stade.MATURE) {
+            return RADISH_MATURE_MAP_SCALE;
+        }
+        if (stade == Stade.FLETRIE) {
+            return RADISH_WILTED_MAP_SCALE;
+        }
+        return RADISH_MATURE_MAP_SCALE;
     }
 
     private double getCauliflowerMapScale(Stade stade) {

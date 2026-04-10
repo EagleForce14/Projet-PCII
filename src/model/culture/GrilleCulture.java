@@ -31,7 +31,7 @@ public class GrilleCulture {
         Type.MARGUERITE, 10,
         Type.ORCHIDEE, 10,
         Type.CAROTTE, 20,
-        Type.TOMATE, 20,
+        Type.RADIS, 20,
         Type.CHOUFLEUR, 20,
         Type.COURGETTE, 20
     );
@@ -43,7 +43,7 @@ public class GrilleCulture {
         Type.MARGUERITE, 12,
         Type.ORCHIDEE, 25,
         Type.CAROTTE, 25,
-        Type.TOMATE, 30,
+        Type.RADIS, 30,
         Type.CHOUFLEUR, 35,
         Type.COURGETTE, 28
     );
@@ -55,7 +55,7 @@ public class GrilleCulture {
         Type.MARGUERITE, 5,
         Type.ORCHIDEE, 5,
         Type.CAROTTE, 10,
-        Type.TOMATE, 10,
+        Type.RADIS, 10,
         Type.CHOUFLEUR, 10,
         Type.COURGETTE, 10
     );

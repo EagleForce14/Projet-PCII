@@ -11,7 +11,7 @@ public enum Type {
     MARGUERITE(Categorie.FLEUR),
     ORCHIDEE(Categorie.FLEUR),
     CAROTTE(Categorie.LEGUME),
-    TOMATE(Categorie.LEGUME),
+    RADIS(Categorie.LEGUME),
     CHOUFLEUR(Categorie.LEGUME),
     COURGETTE(Categorie.LEGUME);
 

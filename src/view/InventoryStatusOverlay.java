@@ -31,7 +31,7 @@ public class InventoryStatusOverlay extends JPanel {
             Type.MARGUERITE,
             Type.ORCHIDEE,
             Type.CAROTTE,
-            Type.TOMATE,
+            Type.RADIS,
             Type.CHOUFLEUR,
             Type.COURGETTE
     };
