@@ -33,16 +33,15 @@ public final class Workshop {
         }
 
         Rectangle barnDrawBounds = new Rectangle(Barn.getDrawX(), Barn.Y, Barn.WIDTH, Barn.HEIGHT);
-        int targetHeight = Math.max(1, (int) Math.round(barnDrawBounds.height * HEIGHT_RATIO_TO_BARN));
-        double scale = (double) targetHeight / SPRITE_SIZE.height;
-        int drawWidth = Math.max(1, (int) Math.round(SPRITE_SIZE.width * scale));
-        int drawHeight = Math.max(1, (int) Math.round(SPRITE_SIZE.height * scale));
-        int gap = Math.max(18, (int) Math.round(barnDrawBounds.width * GAP_RATIO_TO_BARN_WIDTH));
-        int maxX = fieldLogicalBounds.x + fieldLogicalBounds.width - MIN_SCREEN_MARGIN - drawWidth;
-        int drawX = Math.min(maxX, barnDrawBounds.x + barnDrawBounds.width + gap);
-        int drawY = barnDrawBounds.y + barnDrawBounds.height - drawHeight;
-
-        return new Rectangle(drawX, drawY, drawWidth, drawHeight);
+        return BuildingGeometry.buildBarnSideBuildingDrawBounds(
+                fieldLogicalBounds,
+                barnDrawBounds,
+                SPRITE_SIZE,
+                HEIGHT_RATIO_TO_BARN,
+                GAP_RATIO_TO_BARN_WIDTH,
+                MIN_SCREEN_MARGIN,
+                false
+        );
     }
 
     public static Rectangle getCollisionBounds(Rectangle fieldLogicalBounds) {

@@ -2,6 +2,7 @@ package controller;
 
 import java.awt.Point;
 import java.awt.Component;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -648,6 +649,11 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             return;
         }
 
+        if (handleStallClick(e)) {
+            movementView.requestFocusInWindow();
+            return;
+        }
+
         if (handleBarnShopClick(e)) {
             movementView.requestFocusInWindow();
             return;
@@ -761,6 +767,16 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
 
         ouvrirMenuiserie();
         return true;
+    }
+
+    /**
+     * L'échoppe n'a pas encore d'overlay dédié.
+     * On consomme néanmoins le clic sur son sprite pour éviter des interactions "à travers" le bâtiment.
+     */
+    private boolean handleStallClick(MouseEvent event) {
+        Point pointInFieldPanel = getPointInFieldPanel(event);
+        Rectangle stallBounds = fieldPanel.getStallScreenBounds();
+        return pointInFieldPanel != null && stallBounds != null && stallBounds.contains(pointInFieldPanel);
     }
 
     /**

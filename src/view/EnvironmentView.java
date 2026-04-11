@@ -56,6 +56,7 @@ public class EnvironmentView extends JPanel {
     private final Money playerMoney;
     private final TopBarPanel topBarPanel;
     private final Image barnImage;
+    private final Image stallImage;
     private final Image workshopImage;
     private final Image bridgeImage;
     private final Image woodImage;
@@ -90,6 +91,7 @@ public class EnvironmentView extends JPanel {
         this.playerMoney = playerMoney;
         this.topBarPanel = topBarPanel;
         this.barnImage = ImageLoader.load("/assets/barn.png");
+        this.stallImage = ImageLoader.load("/assets/echoppe.png");
         this.workshopImage = ImageLoader.load("/assets/menuiserie.png");
         this.bridgeImage = ImageLoader.load("/assets/bridge.png");
         this.woodImage = ImageLoader.load("/assets/wood.png");
@@ -126,6 +128,21 @@ public class EnvironmentView extends JPanel {
         drawPlacedBridges(g2);
 
         Rectangle barnBounds = fieldPanel.getBarnScreenBounds();
+        if (stallImage != null) {
+            Rectangle stallBounds = fieldPanel.getStallScreenBounds();
+            if (stallBounds != null) {
+                g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+                g2.drawImage(
+                        stallImage,
+                        stallBounds.x,
+                        stallBounds.y,
+                        stallBounds.width,
+                        stallBounds.height,
+                        null
+                );
+            }
+        }
+
         if (workshopImage != null) {
             Rectangle workshopBounds = fieldPanel.getWorkshopScreenBounds();
             if (workshopBounds != null) {

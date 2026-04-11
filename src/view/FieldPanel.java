@@ -10,6 +10,7 @@ import model.environment.FieldObstacleMap;
 import model.environment.PredefinedFieldLayout;
 import model.environment.TreeManager;
 import model.movement.Barn;
+import model.movement.Stall;
 import model.movement.Unit;
 import model.movement.Workshop;
 
@@ -359,6 +360,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     public boolean isBridgePlacementCandidateCell(int gridX, int gridY) {
         return grilleCulture.canPlaceBridge(gridX, gridY)
                 && !isBlockedByBarn(gridX, gridY)
+                && !isBlockedByStall(gridX, gridY)
                 && !isBlockedByWorkshop(gridX, gridY)
                 && !isBlockedByStaticObstacle(gridX, gridY);
     }
@@ -470,6 +472,27 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
                 centerY + workshopBounds.y,
                 workshopBounds.width,
                 workshopBounds.height
+        );
+    }
+
+    /**
+     * L'échoppe partage le même repère logique que les autres bâtiments fixes.
+     * On peut donc la projeter à l'écran exactement comme la grange et la menuiserie.
+     */
+    public Rectangle getStallScreenBounds() {
+        Rectangle fieldBounds = getFieldBounds();
+        Rectangle stallBounds = getStallLogicalDrawBounds();
+        if (stallBounds == null) {
+            return null;
+        }
+
+        int centerX = fieldBounds.x + (fieldBounds.width / 2);
+        int centerY = fieldBounds.y + (fieldBounds.height / 2);
+        return new Rectangle(
+                centerX + stallBounds.x,
+                centerY + stallBounds.y,
+                stallBounds.width,
+                stallBounds.height
         );
     }
 
@@ -618,6 +641,10 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return cell != null && isBlockedByWorkshop(cell.x, cell.y);
     }
 
+    public boolean isBlockedByStall(Point cell) {
+        return cell != null && isBlockedByStall(cell.x, cell.y);
+    }
+
     /**
      * La menuiserie bloque seulement sa hitbox basse :
      * on garde ainsi un comportement cohérent avec ce que le joueur peut réellement heurter.
@@ -632,9 +659,24 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return workshopCollisionBounds != null && workshopCollisionBounds.intersects(logicalCellBounds);
     }
 
+    /**
+     * L'échoppe est elle aussi un obstacle fixe :
+     * seule sa partie basse solide doit empêcher le passage.
+     */
+    public boolean isBlockedByStall(int gridX, int gridY) {
+        Rectangle logicalCellBounds = getLogicalCellBounds(gridX, gridY);
+        if (logicalCellBounds == null) {
+            return false;
+        }
+
+        Rectangle stallCollisionBounds = getStallLogicalCollisionBounds();
+        return stallCollisionBounds != null && stallCollisionBounds.intersects(logicalCellBounds);
+    }
+
     public boolean isFarmableCell(Point cell) {
         return cell != null
                 && !isBlockedByBarn(cell)
+                && !isBlockedByStall(cell)
                 && !isBlockedByWorkshop(cell)
                 && !isBlockedByStaticObstacle(cell.x, cell.y);
     }
@@ -651,6 +693,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
 
         return grilleCulture.hasRiver(gridX, gridY)
                 || treeManager.hasTreeAt(gridX, gridY)
+                || isBlockedByStall(gridX, gridY)
                 || isBlockedByWorkshop(gridX, gridY)
                 || hasRightStoneExtensionAt(gridX, gridY)
                 || hasDecorativeBushAt(gridX, gridY);
@@ -813,6 +856,14 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
 
     public Rectangle getWorkshopLogicalCollisionBounds() {
         return Workshop.getCollisionBounds(getFieldLogicalBounds());
+    }
+
+    public Rectangle getStallLogicalDrawBounds() {
+        return Stall.getDrawBounds(getFieldLogicalBounds());
+    }
+
+    public Rectangle getStallLogicalCollisionBounds() {
+        return Stall.getCollisionBounds(getFieldLogicalBounds());
     }
 
     /**

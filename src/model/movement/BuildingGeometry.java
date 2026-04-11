@@ -17,6 +17,55 @@ public final class BuildingGeometry {
     private BuildingGeometry() {}
 
     /**
+     * Place un bâtiment latéral par rapport à la grange en conservant
+     * exactement le même niveau de sol et un léger écart horizontal.
+     *
+     * Le calcul est volontairement partagé entre les bâtiments de gauche et de droite
+     * pour éviter que chacun ne recopie sa propre logique de placement.
+     */
+    public static Rectangle buildBarnSideBuildingDrawBounds(
+            Rectangle fieldLogicalBounds,
+            Rectangle barnDrawBounds,
+            Dimension spriteSize,
+            double heightRatioToBarn,
+            double gapRatioToBarnWidth,
+            int minScreenMargin,
+            boolean placeOnLeft
+    ) {
+        if (fieldLogicalBounds == null
+                || fieldLogicalBounds.width <= 0
+                || fieldLogicalBounds.height <= 0
+                || barnDrawBounds == null
+                || spriteSize == null
+                || spriteSize.width <= 0
+                || spriteSize.height <= 0) {
+            return null;
+        }
+
+        int targetHeight = Math.max(1, (int) Math.round(barnDrawBounds.height * heightRatioToBarn));
+        double scale = (double) targetHeight / spriteSize.height;
+        int drawWidth = Math.max(1, (int) Math.round(spriteSize.width * scale));
+        int drawHeight = Math.max(1, (int) Math.round(spriteSize.height * scale));
+        int gap = Math.max(18, (int) Math.round(barnDrawBounds.width * gapRatioToBarnWidth));
+        int minX = fieldLogicalBounds.x + minScreenMargin;
+        int maxX = fieldLogicalBounds.x + fieldLogicalBounds.width - minScreenMargin - drawWidth;
+        if (minX > maxX) {
+            int centeredX = fieldLogicalBounds.x + Math.max(0, (fieldLogicalBounds.width - drawWidth) / 2);
+            minX = centeredX;
+            maxX = centeredX;
+        }
+
+        int preferredX = placeOnLeft
+                ? barnDrawBounds.x - gap - drawWidth
+                : barnDrawBounds.x + barnDrawBounds.width + gap;
+        int drawX = placeOnLeft ? Math.max(minX, preferredX) : Math.min(maxX, preferredX);
+        drawX = Math.max(minX, Math.min(drawX, maxX));
+        int drawY = barnDrawBounds.y + barnDrawBounds.height - drawHeight;
+
+        return new Rectangle(drawX, drawY, drawWidth, drawHeight);
+    }
+
+    /**
      * Construit une hitbox plus compacte que l'image affichée,
      * recentrée horizontalement et légèrement remontée depuis le bas du sprite.
      */

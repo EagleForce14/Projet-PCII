@@ -13,7 +13,7 @@ public final class PredefinedFieldLayout {
     private static final int DECORATIVE_RIVER_COLUMNS_LEFT_OF_BARN = 2;
     private static final int DECORATIVE_RIVER_FALLBACK_COLUMN = 4;
     private static final int TILLED_STRIP_WIDTH = 4;
-    private static final int FIRST_TILLED_ROW = 4;
+    private static final int FIRST_TILLED_ROW = 5;
     private static final int TILLED_STRIP_COUNT = 4;
     private static final int TILLED_ROW_STEP = 2;
     private static final int LEFT_TILLED_CLEARANCE_RADIUS = 1;
@@ -52,7 +52,7 @@ public final class PredefinedFieldLayout {
 
     /**
      * Prépare quatre bandes de 4 cases labourées à gauche de la rivière,
-     * sur les lignes 5, 7, 9 et 11 (comptage humain, donc 1-indexé).
+     * sur les lignes 6, 8, 10 et 12 (comptage humain, donc 1-indexé).
      */
     private static void installPredefinedTilledStrips(GrilleCulture grilleCulture, FieldPanel fieldPanel) {
         int riverColumn = resolveDecorativeRiverColumn(fieldPanel);

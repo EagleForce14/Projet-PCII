@@ -14,6 +14,7 @@ import java.awt.Rectangle;
  * Aujourd'hui cela couvre :
  * - les arbres,
  * - la rivière,
+ * - l'échoppe,
  * - la menuiserie,
  * - et toutes les validations géométriques nécessaires autour d'eux.
  *
@@ -111,6 +112,14 @@ public class FieldObstacleMap implements MovementCollisionMap {
             return false;
         }
 
+        Rectangle stallClearanceBounds = expand(
+                fieldPanel.getStallLogicalDrawBounds(),
+                Math.max(8, (int) Math.round(tileSize * TREE_TO_BARN_MARGIN_RATIO))
+        );
+        if (stallClearanceBounds != null && stallClearanceBounds.intersects(candidateBounds)) {
+            return false;
+        }
+
         int treeMargin = Math.max(6, (int) Math.round(tileSize * TREE_TO_TREE_MARGIN_RATIO));
         Rectangle protectedCandidateBounds = expand(candidateBounds, treeMargin);
         for (TreeInstance tree : treeManager.getTreesSnapshot()) {
@@ -148,6 +157,10 @@ public class FieldObstacleMap implements MovementCollisionMap {
         }
 
         if (intersectsWorkshop(entityBounds)) {
+            return false;
+        }
+
+        if (intersectsStall(entityBounds)) {
             return false;
         }
 
@@ -257,6 +270,10 @@ public class FieldObstacleMap implements MovementCollisionMap {
             return true;
         }
 
+        if (fieldPanel.isBlockedByStall(gridX, gridY)) {
+            return true;
+        }
+
         if (fieldPanel.hasDecorativeBushAt(gridX, gridY)) {
             return true;
         }
@@ -293,6 +310,11 @@ public class FieldObstacleMap implements MovementCollisionMap {
     private boolean intersectsWorkshop(Rectangle entityBounds) {
         Rectangle workshopBounds = fieldPanel.getWorkshopLogicalCollisionBounds();
         return workshopBounds != null && workshopBounds.intersects(entityBounds);
+    }
+
+    private boolean intersectsStall(Rectangle entityBounds) {
+        Rectangle stallBounds = fieldPanel.getStallLogicalCollisionBounds();
+        return stallBounds != null && stallBounds.intersects(entityBounds);
     }
 
     private boolean intersectsRightRiverUpperDecoration(Rectangle entityBounds) {
