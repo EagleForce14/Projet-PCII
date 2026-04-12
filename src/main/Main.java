@@ -76,6 +76,7 @@ public class Main {
         Money playerMoney = new Money(300);
         Inventaire inventaire = new Inventaire();
         Shop shop = new Shop();
+        shop.setGestionnaireObjectifs(jour.getGestionnaireObjectifs());
         WorkshopConstructionManager workshopConstructionManager = new WorkshopConstructionManager(inventaire);
         // Enregistrer shop pour qu'il recoive les notifications de changement de jour
         jour.addDayChangeListener(shop);

@@ -3,6 +3,7 @@ package model.shop;
 import model.culture.Type;
 import model.management.Inventaire;
 import model.management.Money;
+import model.objective.GestionnaireObjectifs;
 import model.runtime.DayChangeListener;
 
 import java.util.ArrayList;
@@ -28,6 +29,9 @@ public class Shop implements DayChangeListener {
     private int currentDay;
     private boolean compostRestockUnlocked;
 
+    /** Référence optionnelle vers le gestionnaire d'objectifs pour mettre à jour les objectifs de boutique */
+    private GestionnaireObjectifs gestionnaireObjectifs;
+
     // référence vers l'inventaire du joueur
 
 
@@ -39,6 +43,7 @@ public class Shop implements DayChangeListener {
         shoppingCard = new ArrayList<>();
         currentDay = 1;
         compostRestockUnlocked = false;
+        gestionnaireObjectifs = null;
 
 
         // Toutes les graines partagees avec l'inventaire sont visibles en boutique.
@@ -223,11 +228,13 @@ public class Shop implements DayChangeListener {
         }
 
         int totalPrice = 0;
+        int totalItemsAchetes = 0;
         int playerAmount = playerMoney.getAmount();
         boolean achatReussi = false;
         // calcul du prix total des produits dans le panier
         for (CartItem item : shoppingCard) {
             totalPrice += item.totalPrice();
+            totalItemsAchetes += item.getQuantity();
         }
 
         // cas d'achat réussi : le joueur a assez d'argent pour acheter les produits du panier
@@ -266,6 +273,10 @@ public class Shop implements DayChangeListener {
             }
             achatReussi = true;
 
+            if (gestionnaireObjectifs != null) {
+                gestionnaireObjectifs.mettreAJourObjectifsAcheterItems(totalItemsAchetes);
+            }
+
 
             // vider le panier après l'achat
             clearShoppingCard();
@@ -293,6 +304,11 @@ public class Shop implements DayChangeListener {
             }
         }
         return null;
+    }
+
+    /** Setter optionnel pour activer la mise à jour des objectifs liés aux achats */
+    public synchronized void setGestionnaireObjectifs(GestionnaireObjectifs gestionnaireObjectifs) {
+        this.gestionnaireObjectifs = gestionnaireObjectifs;
     }
 
     private void addSeed(String name, int price, Type type) {

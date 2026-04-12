@@ -45,7 +45,7 @@ public class SidebarPanel extends JPanel {
     private static final int ACTIONS_CONTENT_HEIGHT = 620;
     private static final int BUTTONS_GRID_HEIGHT = 170;
     // Largeur de wrapping des intitulés d'objectifs (retour à la ligne natif via JTextArea).
-    private static final int OBJECTIVE_TITLE_WRAP_WIDTH = 230;
+    private static final int OBJECTIVE_TITLE_WRAP_WIDTH = 270;
 
     // Le chemin pour accéder à la police personnalisée
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
@@ -991,7 +991,10 @@ public class SidebarPanel extends JPanel {
             @Override
             public Dimension getMaximumSize() {
                 Dimension preferred = getPreferredSize();
-                return new Dimension(Integer.MAX_VALUE, preferred.height);
+                // Garder la même largeur que celle utilisée pour le calcul du wrap,
+                // sinon Swing peut afficher le texte sur moins de lignes que prévu
+                // et laisser un blanc vertical inutile.
+                return new Dimension(OBJECTIVE_TITLE_WRAP_WIDTH, preferred.height);
             }
         };
         area.setOpaque(false);
