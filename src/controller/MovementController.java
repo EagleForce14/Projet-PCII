@@ -25,6 +25,7 @@ import model.movement.MovementModel;
 import model.movement.Unit;
 import model.management.Inventaire;
 import model.management.Money;
+import model.objective.GestionnaireObjectifs;
 import model.runtime.GamePauseController;
 import model.shop.FacilityType;
 import view.*;
@@ -366,6 +367,10 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         boolean treeFelled = treeManager.cutTree(interactableTree.getGridX(), interactableTree.getGridY());
         if (treeFelled) {
             inventaire.ajoutBois(treeManager.getWoodRewardQuantity());
+            GestionnaireObjectifs gestionnaireObjectifs = grilleCulture.getGestionnaireObjectifs();
+            if (gestionnaireObjectifs != null) {
+                gestionnaireObjectifs.mettreAJourObjectifsCouperArbres();
+            }
         }
 
         inventoryStatusOverlay.repaint();
