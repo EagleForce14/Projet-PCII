@@ -11,6 +11,9 @@ import model.runtime.Jour;
 /** Classe qui gère les objectifs */
 public class GestionnaireObjectifs {
 
+    /** Constante qui fixe le nombre maximal d'objectifs générés */
+    private static final int NOMBRE_OBJECTIFS_MAX = 5;
+
     /** Constante qui stocke la valeur de départ pour chaque type d'objectif */
     public static final Map<TypeObjectif, Integer> VALEUR_DEPART_OBJECTIFS = Map.ofEntries(
         Map.entry(TypeObjectif.PLANTER_CULTURES, 0),
@@ -50,9 +53,8 @@ public class GestionnaireObjectifs {
         // Vide les objectifs précédents pour générer de nouveaux objectifs pour le nouveau jour
         objectifs.clear();
         int nombreObjectifs = 3 + (int) (jour.getJour() * 0.4); // Nombre d'objectifs à générer en fonction du jour, augmente avec le temps pour rendre le jeu plus difficile
-        if (nombreObjectifs > TypeObjectif.values().length) {
-            nombreObjectifs = TypeObjectif.values().length; // Limite le nombre d'objectifs au nombre de types d'objectifs disponibles
-        }
+        nombreObjectifs = Math.min(nombreObjectifs, NOMBRE_OBJECTIFS_MAX);
+        nombreObjectifs = Math.min(nombreObjectifs, TypeObjectif.values().length); // Limite le nombre d'objectifs au nombre de types d'objectifs disponibles
         nombreObjectifsAValider = getNombreMinimumObjectifsAValider(); // Met à jour le nombre d'objectifs à valider pour le jour actuel
         for (TypeObjectif type : selectionnerNTypeObjectifs(nombreObjectifs)) {
             int valeurCible;
