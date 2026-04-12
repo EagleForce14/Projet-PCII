@@ -9,13 +9,18 @@ import model.environment.TreeInstance;
 import model.movement.MovementModel;
 import model.movement.Unit;
 import model.management.Inventaire;
+import model.objective.ObjectifJournalier;
+import model.objective.TypeObjectif;
+import model.runtime.Jour;
 import model.shop.FacilityType;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextArea;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridLayout;
@@ -25,13 +30,22 @@ import java.awt.Image;
 import java.awt.Insets;
 import java.awt.BorderLayout;
 import java.awt.Point;
+import java.awt.RenderingHints;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Sidebar d'actions placée à droite de l'interface.
  */
 public class SidebarPanel extends JPanel {
     public static final int SIDEBAR_WIDTH = 320;
-    private static final int ACTIONS_CONTENT_HEIGHT = 360;
+    private static final int ACTIONS_CONTENT_HEIGHT = 620;
+    private static final int BUTTONS_GRID_HEIGHT = 170;
+    // Largeur de wrapping des intitulés d'objectifs (retour à la ligne natif via JTextArea).
+    private static final int OBJECTIVE_TITLE_WRAP_WIDTH = 230;
 
     // Le chemin pour accéder à la police personnalisée
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
@@ -41,7 +55,7 @@ public class SidebarPanel extends JPanel {
     private final GrilleCulture grilleCulture;
     private final FieldPanel fieldPanel;
     private final Inventaire inventaire;
-
+    private final Jour jour;
 
     // Texture de fond en bois (chargée via la classe utilitaire du projet).
     private final Image woodBackground;
@@ -64,6 +78,20 @@ public class SidebarPanel extends JPanel {
     private final JPanel cutTreeActionRow;
     private final JPanel bridgeActionRow;
 
+    // Blocs UI dédiés à la zone objectifs et au bilan du jour.
+    private final JPanel objectivesContentPanel;
+    private final JPanel dayValidationContentPanel;
+    private final JPanel dayValidationCardPanel;
+
+    // Références directes vers les widgets objectifs pour mises à jour incrémentales.
+    private final Map<TypeObjectif, JTextArea> objectiveTitleLabelsByType;
+    private final Map<TypeObjectif, JLabel> objectiveProgressLabelsByType;
+
+    // Labels du panneau "Bilan du jour" réutilisés sans recréation.
+    private final JLabel dayValidationTitleLabel;
+    private final JLabel dayValidationProgressLabel;
+    private final JLabel dayValidationStatusLabel;
+
 
     // Petit cache local pour éviter d'appliquer setEnabled en boucle inutilement.
     private boolean currentLabourEnabledState;
@@ -84,14 +112,23 @@ public class SidebarPanel extends JPanel {
     private boolean currentLabourWarningVisibleState;
     private boolean caveMode;
 
+    // Cache de contenu objectifs pour éviter de redessiner inutilement et supprimer le clignotement.
+    private String currentObjectivesSnapshot;
+    private String currentObjectivesStructureSignature;
+    private boolean currentDayValidatedState;
+
     // Constructeur de la classe
     public SidebarPanel(MovementModel movementModel, GrilleCulture grilleCulture, FieldPanel fieldPanel,
-                        Inventaire inventaire) {
+                        Inventaire inventaire, Jour jour) {
         this.movementModel = movementModel;
         this.grilleCulture = grilleCulture;
         this.fieldPanel = fieldPanel;
         this.inventaire = inventaire;
+        this.jour = jour;
         this.woodBackground = ImageLoader.load("/assets/bois.png");
+        // Ces maps servent d'index rapide vers les widgets par type d'objectif.
+        this.objectiveTitleLabelsByType = new EnumMap<>(TypeObjectif.class);
+        this.objectiveProgressLabelsByType = new EnumMap<>(TypeObjectif.class);
 
         // Le panneau est transparent hors de sa zone peinte personnalisée.
         setOpaque(false);
@@ -102,8 +139,8 @@ public class SidebarPanel extends JPanel {
 
         setLayout(new BorderLayout());
 
-        // Le contenu utile garde la même hauteur que l'ancien overlay afin de
-        // préserver la taille visuelle des boutons, sans étirer la grille.
+        // Le contenu utile garde une organisation claire:
+        // actions ancrées en haut, objectifs dans la zone restante.
         JPanel contentPanel = new JPanel(new BorderLayout());
         contentPanel.setOpaque(false);
         contentPanel.setPreferredSize(new Dimension(SIDEBAR_WIDTH, ACTIONS_CONTENT_HEIGHT));
@@ -113,6 +150,7 @@ public class SidebarPanel extends JPanel {
         JPanel titleRow = new JPanel(new BorderLayout());
         titleRow.setOpaque(false);
         titleRow.setBorder(BorderFactory.createEmptyBorder(10, 16, 4, 8));
+        titleRow.setAlignmentX(LEFT_ALIGNMENT);
 
         JLabel titleLabel = new JLabel("Actions");
         titleLabel.setForeground(Color.WHITE);
@@ -126,13 +164,17 @@ public class SidebarPanel extends JPanel {
         JPanel buttonsGrid = new JPanel(new GridLayout(3, 2, 8, 8));
         buttonsGrid.setOpaque(false);
         buttonsGrid.setBorder(BorderFactory.createEmptyBorder(8, 16, 16, 16));
+        buttonsGrid.setAlignmentX(LEFT_ALIGNMENT);
+        buttonsGrid.setPreferredSize(new Dimension(SIDEBAR_WIDTH, BUTTONS_GRID_HEIGHT));
+        buttonsGrid.setMinimumSize(new Dimension(0, BUTTONS_GRID_HEIGHT));
+        buttonsGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, BUTTONS_GRID_HEIGHT));
 
         // On crée les boutons en appliquant le style visuel.
-        labourButton = createStyledButton("Labourer", new Color(124, 83, 48, 255), 12.5f);
-        plantButton = createStyledButton("Planter", new Color(139, 69, 19, 255), 12.5f);
-        harvestButton = createStyledButton("Recolter", new Color(160, 82, 45, 255), 12.5f);
-        waterButton = createStyledButton("Arroser", new Color(205, 133, 63, 255), 12.5f);
-        cleanButton = createStyledButton("Nettoyer", new Color(101, 67, 33, 255), 12.5f);
+        labourButton = createStyledButton("Labourer", new Color(124, 83, 48, 255), 13.5f);
+        plantButton = createStyledButton("Planter", new Color(139, 69, 19, 255), 13.5f);
+        harvestButton = createStyledButton("Recolter", new Color(160, 82, 45, 255), 13.5f);
+        waterButton = createStyledButton("Arroser", new Color(205, 133, 63, 255), 13.5f);
+        cleanButton = createStyledButton("Nettoyer", new Color(101, 67, 33, 255), 13.5f);
         // On ajoute les boutons
         buttonsGrid.add(labourButton);
         buttonsGrid.add(plantButton);
@@ -146,7 +188,7 @@ public class SidebarPanel extends JPanel {
          * il ne doit apparaitre que quand l'objet chemin est l'outil actif.
          * Ainsi, la barre principale reste sobre la plupart du temps.
          */
-        pathButton = createStyledButton("Poser chemin", new Color(91, 97, 112, 255), 12.0f);
+        pathButton = createStyledButton("Poser chemin", new Color(91, 97, 112, 255), 13.0f);
         pathActionRow = createSpecialActionRow(pathButton);
         pathActionRow.setVisible(false);
 
@@ -164,7 +206,7 @@ public class SidebarPanel extends JPanel {
          * on ne veut surtout pas l'afficher en permanence,
          * seulement quand le joueur est réellement au contact d'un arbre.
          */
-        cutTreeButton = createStyledButton("Couper l'arbre", new Color(120, 84, 45, 255), 11.5f);
+        cutTreeButton = createStyledButton("Couper l'arbre", new Color(120, 84, 45, 255), 12.5f);
         cutTreeActionRow = createSpecialActionRow(cutTreeButton);
         cutTreeActionRow.setVisible(false);
 
@@ -173,7 +215,7 @@ public class SidebarPanel extends JPanel {
          * on l'équipe d'abord dans l'inventaire,
          * puis on l'active via un bouton dédié uniquement quand cet outil est sélectionné.
          */
-        bridgeButton = createStyledButton("Poser pont", new Color(73, 105, 136, 255), 12.0f);
+        bridgeButton = createStyledButton("Poser pont", new Color(73, 105, 136, 255), 13.0f);
         bridgeActionRow = createSpecialActionRow(bridgeButton);
         bridgeActionRow.setVisible(false);
 
@@ -201,7 +243,8 @@ public class SidebarPanel extends JPanel {
         JPanel specialActionsPanel = new JPanel();
         specialActionsPanel.setOpaque(false);
         specialActionsPanel.setLayout(new BoxLayout(specialActionsPanel, BoxLayout.Y_AXIS));
-        specialActionsPanel.setBorder(BorderFactory.createEmptyBorder(0, 16, 16, 16));
+        specialActionsPanel.setBorder(BorderFactory.createEmptyBorder(0, 16, 8, 16));
+        specialActionsPanel.setAlignmentX(LEFT_ALIGNMENT);
         specialActionsPanel.add(pathActionRow);
         specialActionsPanel.add(compostActionRow);
         specialActionsPanel.add(bridgeActionRow);
@@ -210,10 +253,152 @@ public class SidebarPanel extends JPanel {
         specialActionsPanel.add(labourWarningLabel);
         specialActionsPanel.add(createSpecialActionRow(caveButton));
 
-        contentPanel.add(titleRow, BorderLayout.NORTH);
-        contentPanel.add(buttonsGrid, BorderLayout.CENTER);
-        contentPanel.add(specialActionsPanel, BorderLayout.SOUTH);
-        add(contentPanel, BorderLayout.NORTH);
+        // Titre de la section objectifs (même hiérarchie visuelle que "Actions").
+        JPanel objectivesTitleRow = new JPanel(new BorderLayout());
+        objectivesTitleRow.setOpaque(false);
+        objectivesTitleRow.setBorder(BorderFactory.createEmptyBorder(4, 16, 15, 8));
+        objectivesTitleRow.setAlignmentX(LEFT_ALIGNMENT);
+
+        JLabel objectivesTitleLabel = new JLabel("Objectifs");
+        objectivesTitleLabel.setForeground(Color.WHITE);
+        objectivesTitleLabel.setHorizontalAlignment(JLabel.LEFT);
+        objectivesTitleLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 18.0f));
+        objectivesTitleRow.add(objectivesTitleLabel, BorderLayout.WEST);
+
+        // Carte d'objectifs inspirée du popup de la top bar.
+        JPanel objectivesCardPanel = new JPanel(new BorderLayout(0, 6)) {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                Graphics2D g2d = (Graphics2D) graphics.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int width = getWidth();
+                int height = getHeight();
+                if (width <= 0 || height <= 0) {
+                    g2d.dispose();
+                    return;
+                }
+
+                g2d.setColor(new Color(0, 0, 0, 70));
+                g2d.fillRoundRect(4, 4, width - 8, height - 8, 16, 16);
+
+                g2d.setColor(new Color(57, 41, 24, 232));
+                g2d.fillRoundRect(0, 0, width - 8, height - 8, 16, 16);
+
+                g2d.setColor(new Color(230, 214, 157, 255));
+                g2d.drawRoundRect(0, 0, width - 9, height - 9, 16, 16);
+                g2d.dispose();
+            }
+        };
+        objectivesCardPanel.setOpaque(false);
+        objectivesCardPanel.setBorder(BorderFactory.createEmptyBorder(6, 10, 10, 14));
+        objectivesCardPanel.setAlignmentX(LEFT_ALIGNMENT);
+
+        // Panel contenant la liste des objectifs.
+        objectivesContentPanel = new JPanel();
+        objectivesContentPanel.setOpaque(false);
+        objectivesContentPanel.setLayout(new BoxLayout(objectivesContentPanel, BoxLayout.Y_AXIS));
+        objectivesContentPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 6, 2));
+        objectivesContentPanel.setAlignmentX(LEFT_ALIGNMENT);
+
+        objectivesCardPanel.add(objectivesContentPanel, BorderLayout.CENTER);
+
+        // Carte du bilan: style distinct + couleurs dynamiques selon validation du jour.
+        dayValidationCardPanel = new JPanel(new BorderLayout(0, 6)) {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                Graphics2D g2d = (Graphics2D) graphics.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int width = getWidth();
+                int height = getHeight();
+                if (width <= 0 || height <= 0) {
+                    g2d.dispose();
+                    return;
+                }
+
+                g2d.setColor(new Color(0, 0, 0, 70));
+                g2d.fillRoundRect(4, 4, width - 8, height - 8, 16, 16);
+
+                // Fond dédié "bilan" pour distinguer clairement cette bulle des objectifs standards.
+                g2d.setColor(new Color(46, 44, 24, 238));
+                g2d.fillRoundRect(0, 0, width - 8, height - 8, 16, 16);
+
+                // Bande supérieure qui change de couleur selon l'état de validation du jour.
+                Color dynamicBandColor = currentDayValidatedState
+                    ? new Color(72, 150, 83, 230)
+                    : new Color(166, 68, 68, 230);
+                g2d.setColor(dynamicBandColor);
+                g2d.fillRoundRect(0, 0, width - 8, 18, 16, 16);
+                g2d.fillRect(0, 8, width - 8, 10);
+
+                // Bordure dynamique verte (validé) ou rouge (non validé).
+                Color dynamicBorderColor = currentDayValidatedState
+                        ? new Color(96, 214, 126, 255)
+                        : new Color(232, 98, 98, 255);
+                g2d.setColor(dynamicBorderColor);
+                g2d.drawRoundRect(0, 0, width - 9, height - 9, 16, 16);
+                g2d.dispose();
+            }
+        };
+        dayValidationCardPanel.setOpaque(false);
+        dayValidationCardPanel.setBorder(BorderFactory.createEmptyBorder(6, 10, 10, 14));
+        dayValidationCardPanel.setAlignmentX(LEFT_ALIGNMENT);
+
+        // Conteneur texte du bilan avec padding haut pour décoller du bandeau coloré.
+        dayValidationContentPanel = new JPanel();
+        dayValidationContentPanel.setOpaque(false);
+        dayValidationContentPanel.setLayout(new BoxLayout(dayValidationContentPanel, BoxLayout.Y_AXIS));
+        dayValidationContentPanel.setBorder(BorderFactory.createEmptyBorder(16, 8, 6, 2));
+        dayValidationContentPanel.setAlignmentX(LEFT_ALIGNMENT);
+
+        // Labels persistants: mis à jour en place pour éviter les remove/add à chaque tick.
+        dayValidationTitleLabel = new JLabel("Bilan du jour");
+        dayValidationTitleLabel.setForeground(new Color(255, 247, 196));
+        dayValidationTitleLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 13.0f));
+
+        dayValidationProgressLabel = new JLabel("");
+        dayValidationProgressLabel.setForeground(new Color(255, 236, 170));
+        dayValidationProgressLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 12.0f));
+
+        dayValidationStatusLabel = new JLabel("");
+        dayValidationStatusLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 12.0f));
+
+        JPanel dayValidationRow = new JPanel();
+        dayValidationRow.setOpaque(false);
+        dayValidationRow.setLayout(new BoxLayout(dayValidationRow, BoxLayout.Y_AXIS));
+        dayValidationRow.setAlignmentX(LEFT_ALIGNMENT);
+        dayValidationRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        dayValidationTitleLabel.setAlignmentX(LEFT_ALIGNMENT);
+        dayValidationProgressLabel.setAlignmentX(LEFT_ALIGNMENT);
+        dayValidationStatusLabel.setAlignmentX(LEFT_ALIGNMENT);
+        dayValidationRow.add(dayValidationTitleLabel);
+        dayValidationRow.add(Box.createVerticalStrut(3));
+        dayValidationRow.add(dayValidationProgressLabel);
+        dayValidationRow.add(Box.createVerticalStrut(2));
+        dayValidationRow.add(dayValidationStatusLabel);
+
+        dayValidationContentPanel.add(dayValidationRow);
+
+        dayValidationCardPanel.add(dayValidationContentPanel, BorderLayout.CENTER);
+
+        // Ordonnancement final de la sidebar: actions -> objectifs -> bilan.
+        JPanel actionsSectionPanel = new JPanel();
+        actionsSectionPanel.setOpaque(false);
+        actionsSectionPanel.setLayout(new BoxLayout(actionsSectionPanel, BoxLayout.Y_AXIS));
+        actionsSectionPanel.add(titleRow);
+        actionsSectionPanel.add(buttonsGrid);
+        actionsSectionPanel.add(specialActionsPanel);
+        actionsSectionPanel.add(objectivesTitleRow);
+        actionsSectionPanel.add(objectivesCardPanel);
+        actionsSectionPanel.add(Box.createVerticalStrut(8));
+        actionsSectionPanel.add(dayValidationCardPanel);
+
+        contentPanel.add(actionsSectionPanel, BorderLayout.NORTH);
+        contentPanel.add(Box.createVerticalGlue(), BorderLayout.CENTER);
+        add(contentPanel, BorderLayout.CENTER);
+
+        refreshObjectivesDisplay();
 
         // Au démarrage, les boutons sont désactivés tant que l'unité déplaçable n'est pas
         // sur une case valide du champ.
@@ -264,8 +449,8 @@ public class SidebarPanel extends JPanel {
 
         // Bordure composée: contour + padding interne pour garder un style "jeu".
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(50, 30, 10), 2),
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+            BorderFactory.createLineBorder(new Color(50, 30, 10), 2),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
         button.setBorderPainted(true);
 
@@ -392,6 +577,8 @@ public class SidebarPanel extends JPanel {
                     shouldShowLabourWarning
             );
         }
+
+        refreshObjectivesDisplay();
     }
 
     /**
@@ -627,6 +814,206 @@ public class SidebarPanel extends JPanel {
         }
 
         return grilleCulture.getCulture(activeFieldCell.x, activeFieldCell.y);
+    }
+
+    /**
+     * Rafraîchit l'affichage des objectifs en limitant les opérations coûteuses:
+     * 1) rebuild structure uniquement si la liste de types a changé,
+     * 2) mise à jour incrémentale des textes/couleurs,
+     * 3) repaint ciblé de la carte bilan si son état change.
+     */
+    private void refreshObjectivesDisplay() {
+        Map<TypeObjectif, ObjectifJournalier> objectifsByType = jour.getGestionnaireObjectifs().getObjectifs();
+        List<TypeObjectif> orderedTypes = new ArrayList<>(objectifsByType.keySet());
+        orderedTypes.sort(Comparator.comparingInt(Enum::ordinal));
+
+        // Signature structurelle (types + ordre): permet d'éviter de recréer les composants.
+        String structureSignature = buildObjectivesStructureSignature(orderedTypes);
+        if (!structureSignature.equals(currentObjectivesStructureSignature)) {
+            rebuildObjectivesRows(orderedTypes);
+            currentObjectivesStructureSignature = structureSignature;
+        }
+
+        int minimumToValidate = jour.getGestionnaireObjectifs().getNombreMinimumObjectifsAValider();
+        int effectiveMinimum = Math.min(minimumToValidate, orderedTypes.size());
+        int validatedObjectivesForSnapshot = 0;
+
+        // Snapshot de contenu: si inchangé, on sort immédiatement pour éviter tout repaint inutile.
+        StringBuilder snapshotBuilder = new StringBuilder();
+        // Le snapshot encode progression + état atteint pour détecter toute vraie variation visuelle.
+        for (TypeObjectif type : orderedTypes) {
+            ObjectifJournalier objectif = objectifsByType.get(type);
+            String progression = objectif == null ? "Progression indisponible" : objectif.getProgressionString();
+            boolean isReached = objectif != null && objectif.estAtteint();
+            if (isReached) {
+                validatedObjectivesForSnapshot++;
+            }
+            snapshotBuilder
+                    .append(type.name())
+                    .append('|')
+                    .append(progression)
+                    .append('|')
+                    .append(isReached)
+                    .append(';');
+        }
+        snapshotBuilder
+                .append("DAY|")
+                .append(validatedObjectivesForSnapshot)
+                .append('/')
+                .append(effectiveMinimum);
+
+        String nextSnapshot = snapshotBuilder.toString();
+        if (nextSnapshot.equals(currentObjectivesSnapshot)) {
+            return;
+        }
+        currentObjectivesSnapshot = nextSnapshot;
+
+        // Mise à jour des lignes objectifs existantes (pas de recréation des widgets).
+        int validatedObjectives = 0;
+        for (TypeObjectif type : orderedTypes) {
+            ObjectifJournalier objectif = objectifsByType.get(type);
+            String progression = objectif == null ? "Progression indisponible" : objectif.getProgressionString();
+            boolean isReached = objectif != null && objectif.estAtteint();
+            if (isReached) {
+                validatedObjectives++;
+            }
+
+            JTextArea objectiveLabel = objectiveTitleLabelsByType.get(type);
+            JLabel progressionLabel = objectiveProgressLabelsByType.get(type);
+            if (objectiveLabel == null || progressionLabel == null) {
+                // Sécurité défensive: ne rien casser si la structure change en cours de frame.
+                continue;
+            }
+
+            objectiveLabel.setText(TypeObjectif.getIntitule(type));
+
+            String progressionWithState = progression + "   " + (isReached ? "Atteint" : "En cours");
+            progressionLabel.setText(progressionWithState);
+            progressionLabel.setForeground(isReached ? new Color(172, 227, 143) : new Color(236, 229, 212));
+        }
+
+        // Mise à jour du bilan du jour (texte + couleur d'état).
+        // Synthèse métier: le jour est validé si le seuil minimal est atteint.
+        boolean isDayValidated = validatedObjectives >= effectiveMinimum;
+        boolean shouldRepaintDayValidationCard = isDayValidated != currentDayValidatedState;
+        currentDayValidatedState = isDayValidated;
+
+        String dayValidationState = isDayValidated ? "Validee" : "En cours";
+        dayValidationProgressLabel.setText(
+                "Objectifs valides : " + validatedObjectives + " / " + effectiveMinimum
+        );
+        dayValidationStatusLabel.setText("Statut : " + dayValidationState);
+        dayValidationStatusLabel.setForeground(isDayValidated ? new Color(172, 227, 143) : new Color(255, 196, 118));
+
+        // Repaint minimal pour garder l'UI fluide sans clignotement.
+        // repaint (sans revalidate) suffit ici: la structure n'a pas changé, seul le contenu textuel évolue.
+        objectivesContentPanel.repaint();
+        dayValidationContentPanel.repaint();
+        if (shouldRepaintDayValidationCard) {
+            // Repaint de la carte seulement si ses couleurs dynamiques doivent changer.
+            dayValidationCardPanel.repaint();
+        }
+    }
+
+    /**
+     * Recrée la structure des lignes objectifs uniquement si la liste des types actifs change.
+     */
+    private void rebuildObjectivesRows(List<TypeObjectif> orderedTypes) {
+        // On reconstruit proprement les maps pour conserver la correspondance type -> widgets.
+        objectiveTitleLabelsByType.clear();
+        objectiveProgressLabelsByType.clear();
+        objectivesContentPanel.removeAll();
+
+        // Etat vide explicite: aucun objectif actif pour ce jour.
+        if (orderedTypes.isEmpty()) {
+            JLabel emptyLabel = new JLabel("Aucun objectif actif");
+            emptyLabel.setForeground(new Color(236, 229, 212));
+            emptyLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 12.5f));
+            objectivesContentPanel.add(emptyLabel);
+        } else {
+            for (TypeObjectif type : orderedTypes) {
+                // Intitulé multi-ligne natif Swing (sans HTML).
+                JTextArea objectiveLabel = createWrappedObjectiveTitleArea();
+                objectiveLabel.setForeground(new Color(255, 248, 220));
+                objectiveLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 12.5f));
+
+                // Ligne de progression/état (reste en JLabel simple).
+                JLabel progressionLabel = new JLabel("");
+                progressionLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 12.5f));
+
+                JPanel objectiveRow = new JPanel();
+                objectiveRow.setOpaque(false);
+                objectiveRow.setLayout(new BoxLayout(objectiveRow, BoxLayout.Y_AXIS));
+                objectiveRow.setAlignmentX(LEFT_ALIGNMENT);
+                objectiveRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+                objectiveRow.setBorder(BorderFactory.createEmptyBorder(1, 0, 1, 0));
+                objectiveLabel.setAlignmentX(LEFT_ALIGNMENT);
+                progressionLabel.setAlignmentX(LEFT_ALIGNMENT);
+                objectiveRow.add(objectiveLabel);
+                objectiveRow.add(Box.createVerticalStrut(2));
+                objectiveRow.add(progressionLabel);
+
+                // Séparateur visuel entre objectifs.
+                JPanel divider = new JPanel();
+                divider.setOpaque(true);
+                divider.setBackground(new Color(123, 90, 53, 120));
+                divider.setPreferredSize(new Dimension(1, 1));
+                divider.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+
+                objectivesContentPanel.add(objectiveRow);
+                objectivesContentPanel.add(Box.createVerticalStrut(4));
+                objectivesContentPanel.add(divider);
+                objectivesContentPanel.add(Box.createVerticalStrut(4));
+
+                // Enregistrement des références pour les updates incrémentaux futurs.
+                objectiveTitleLabelsByType.put(type, objectiveLabel);
+                objectiveProgressLabelsByType.put(type, progressionLabel);
+            }
+        }
+
+        objectivesContentPanel.revalidate();
+        objectivesContentPanel.repaint();
+    }
+
+    /**
+     * Crée un JTextArea non éditable configuré pour le retour à la ligne automatique.
+     */
+    private JTextArea createWrappedObjectiveTitleArea() {
+        JTextArea area = new JTextArea() {
+            @Override
+            public Dimension getPreferredSize() {
+                // Largeur fixée: la hauteur s'adapte selon le nombre de lignes nécessaires.
+                setSize(OBJECTIVE_TITLE_WRAP_WIDTH, Short.MAX_VALUE);
+                Dimension preferred = super.getPreferredSize();
+                return new Dimension(OBJECTIVE_TITLE_WRAP_WIDTH, preferred.height);
+            }
+
+            @Override
+            public Dimension getMaximumSize() {
+                Dimension preferred = getPreferredSize();
+                return new Dimension(Integer.MAX_VALUE, preferred.height);
+            }
+        };
+        area.setOpaque(false);
+        area.setEditable(false);
+        area.setFocusable(false);
+        area.setBorder(BorderFactory.createEmptyBorder());
+        // Wrap mot à mot pour éviter de couper brutalement au milieu d'un mot.
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setAlignmentX(LEFT_ALIGNMENT);
+        return area;
+    }
+
+    /**
+     * Génère une signature compacte de la structure objectifs (types + ordre).
+     */
+    private String buildObjectivesStructureSignature(List<TypeObjectif> orderedTypes) {
+        StringBuilder signature = new StringBuilder();
+        for (TypeObjectif type : orderedTypes) {
+            signature.append(type.name()).append(';');
+        }
+        return signature.toString();
     }
 
     public JButton getPlantButton() {
