@@ -70,7 +70,7 @@ public final class PredefinedFieldLayout {
             }
 
             for (int column = startColumn; column < endColumnExclusive; column++) {
-                grilleCulture.labourerCase(column, row);
+                grilleCulture.labourerCaseSansObjectif(column, row);
             }
         }
     }

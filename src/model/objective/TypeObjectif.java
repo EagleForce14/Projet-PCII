@@ -6,6 +6,7 @@ public enum TypeObjectif {
     PLANTER_TYPES_CULTURE,
     RECOLTER_CULTURES,
     RECOLTER_TYPES_CULTURE,
+    LABOURER_CHAMPS,
     ARROSER_CULTURES,
     COUPER_ARBRES,
     ACHETER_ITEMS_BOUTIQUE,
@@ -24,6 +25,8 @@ public enum TypeObjectif {
                 return "Récolter des cultures";
             case RECOLTER_TYPES_CULTURE:
                 return "Récolter différents types de cultures";
+            case LABOURER_CHAMPS:
+                return "Labourer des champs";
             case ARROSER_CULTURES:
                 return "Arroser des cultures";
             case COUPER_ARBRES:

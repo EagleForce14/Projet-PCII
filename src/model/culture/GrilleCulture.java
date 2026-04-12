@@ -369,6 +369,18 @@ public class GrilleCulture {
      * besoin de manipuler les objets ZoneCulture directement.
      */
     public void labourerCase(int x, int y) {
+        labourerCaseInterne(x, y, true);
+    }
+
+    /**
+     * Variante utilisée pendant l'initialisation du terrain.
+     * Les cases pré-labourées de départ ne doivent pas compter pour les objectifs joueurs.
+     */
+    public void labourerCaseSansObjectif(int x, int y) {
+        labourerCaseInterne(x, y, false);
+    }
+
+    private void labourerCaseInterne(int x, int y, boolean compterObjectif) {
         if (!estDansGrille(x, y)) {
             throw new IllegalStateException("Coordonnees hors de la grille.");
         }
@@ -388,7 +400,11 @@ public class GrilleCulture {
             throw new IllegalStateException("Impossible de labourer une case adjacente à une clôture.");
         }
 
+        boolean etaitLabouree = grille[x][y].isLabouree();
         grille[x][y].labourer();
+        if (compterObjectif && !etaitLabouree && gestionnaireObjectifs != null) {
+            gestionnaireObjectifs.mettreAJourObjectifsLabourer();
+        }
     }
 
     /**

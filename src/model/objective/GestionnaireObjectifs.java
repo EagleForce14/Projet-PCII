@@ -12,17 +12,18 @@ import model.runtime.Jour;
 public class GestionnaireObjectifs {
 
     /** Constante qui stocke la valeur de départ pour chaque type d'objectif */
-    public static final Map<TypeObjectif, Integer> VALEUR_DEPART_OBJECTIFS = Map.of(
-        TypeObjectif.PLANTER_CULTURES, 0,
-        TypeObjectif.PLANTER_TYPES_CULTURE, 1,
-        TypeObjectif.RECOLTER_CULTURES, 0,
-        TypeObjectif.RECOLTER_TYPES_CULTURE, 1,
-        TypeObjectif.ARROSER_CULTURES, 0,
-        TypeObjectif.COUPER_ARBRES, 0,
-        TypeObjectif.ACHETER_ITEMS_BOUTIQUE, 0,
-        TypeObjectif.TAUX_RECOLTE_CULTURES, 50,
-        TypeObjectif.CULTURES_MANGEES, 15,
-        TypeObjectif.REPOUSSER_LAPINS, 1
+    public static final Map<TypeObjectif, Integer> VALEUR_DEPART_OBJECTIFS = Map.ofEntries(
+        Map.entry(TypeObjectif.PLANTER_CULTURES, 0),
+        Map.entry(TypeObjectif.PLANTER_TYPES_CULTURE, 1),
+        Map.entry(TypeObjectif.RECOLTER_CULTURES, 0),
+        Map.entry(TypeObjectif.RECOLTER_TYPES_CULTURE, 1),
+        Map.entry(TypeObjectif.LABOURER_CHAMPS, 0),
+        Map.entry(TypeObjectif.ARROSER_CULTURES, 0),
+        Map.entry(TypeObjectif.COUPER_ARBRES, 0),
+        Map.entry(TypeObjectif.ACHETER_ITEMS_BOUTIQUE, 0),
+        Map.entry(TypeObjectif.TAUX_RECOLTE_CULTURES, 50),
+        Map.entry(TypeObjectif.CULTURES_MANGEES, 15),
+        Map.entry(TypeObjectif.REPOUSSER_LAPINS, 1)
     );
 
     /** Attribut qui stocke les objectifs */
@@ -192,6 +193,17 @@ public class GestionnaireObjectifs {
     public void mettreAJourObjectifsArroser() {
         for (ObjectifJournalier objectif : objectifs.values()) {
             if (objectif.getType() == TypeObjectif.ARROSER_CULTURES) {
+                ((ObjectifCompteur) objectif).mettreAJourProgression(1);
+                break;
+            }
+        }
+        afficherProgressionObjectifs();
+    }
+
+    /** Méthode qui met à jour les objectifs liés au labourage */
+    public void mettreAJourObjectifsLabourer() {
+        for (ObjectifJournalier objectif : objectifs.values()) {
+            if (objectif.getType() == TypeObjectif.LABOURER_CHAMPS) {
                 ((ObjectifCompteur) objectif).mettreAJourProgression(1);
                 break;
             }
