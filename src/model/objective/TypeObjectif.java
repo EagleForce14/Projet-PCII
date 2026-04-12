@@ -10,7 +10,6 @@ public enum TypeObjectif {
     ARROSER_CULTURES,
     COUPER_ARBRES,
     ACHETER_ITEMS_BOUTIQUE,
-    TAUX_RECOLTE_CULTURES,
     CULTURES_MANGEES,
     REPOUSSER_LAPINS;
 
@@ -33,8 +32,6 @@ public enum TypeObjectif {
                 return "Couper des arbres";
             case ACHETER_ITEMS_BOUTIQUE:
                 return "Acheter des items dans la boutique";
-            case TAUX_RECOLTE_CULTURES:
-                return "Taux de récolte des cultures";
             case CULTURES_MANGEES:
                 return "Cultures mangées";
             case REPOUSSER_LAPINS:

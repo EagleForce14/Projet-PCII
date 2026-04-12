@@ -21,7 +21,6 @@ public class GestionnaireObjectifs {
         Map.entry(TypeObjectif.ARROSER_CULTURES, 0),
         Map.entry(TypeObjectif.COUPER_ARBRES, 0),
         Map.entry(TypeObjectif.ACHETER_ITEMS_BOUTIQUE, 0),
-        Map.entry(TypeObjectif.TAUX_RECOLTE_CULTURES, 50),
         Map.entry(TypeObjectif.CULTURES_MANGEES, 15),
         Map.entry(TypeObjectif.REPOUSSER_LAPINS, 1)
     );
@@ -57,14 +56,7 @@ public class GestionnaireObjectifs {
         nombreObjectifsAValider = getNombreMinimumObjectifsAValider(); // Met à jour le nombre d'objectifs à valider pour le jour actuel
         for (TypeObjectif type : selectionnerNTypeObjectifs(nombreObjectifs)) {
             int valeurCible;
-            if (type == TypeObjectif.TAUX_RECOLTE_CULTURES) {
-                // Pour l'objectif TAUX_RECOLTE_CULTURES, la valeur cible augmente avec le temps pour encourager le joueur à améliorer son taux de récolte
-                valeurCible = jour.getJour() * 4 + VALEUR_DEPART_OBJECTIFS.get(type);
-                if (valeurCible > 100) {
-                    valeurCible = 100; // Assure que la valeur cible ne dépasse pas 100%
-                }
-                objectifs.put(type, new ObjectifTauxRecolte(type, valeurCible));
-            } else if (type == TypeObjectif.CULTURES_MANGEES) {
+            if (type == TypeObjectif.CULTURES_MANGEES) {
                 // Pour l'objectif CULTURES_MANGEES, la valeur cible diminue avec le temps pour encourager le joueur à mieux protéger ses cultures
                 valeurCible = VALEUR_DEPART_OBJECTIFS.get(TypeObjectif.CULTURES_MANGEES) - (jour.getJour() * 2); 
                 if (valeurCible < 0) {
@@ -159,9 +151,6 @@ public class GestionnaireObjectifs {
                 case PLANTER_TYPES_CULTURE:
                     ((ObjectifCompteurTypes) objectif).mettreAJourProgression(typeCulture);
                     break;
-                case TAUX_RECOLTE_CULTURES:
-                    ((ObjectifTauxRecolte) objectif).mettreAJourNombreCulturesPlantees();
-                    break;
                 default:
                     break;
             }
@@ -178,9 +167,6 @@ public class GestionnaireObjectifs {
                     break;
                 case RECOLTER_TYPES_CULTURE:
                     ((ObjectifCompteurTypes) objectif).mettreAJourProgression(typeCulture);
-                    break;
-                case TAUX_RECOLTE_CULTURES:
-                    ((ObjectifTauxRecolte) objectif).mettreAJourNombreCulturesRecoltees();
                     break;
                 default:
                     break;
