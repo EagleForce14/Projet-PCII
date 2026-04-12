@@ -17,6 +17,7 @@ public class GestionnaireObjectifs {
         TypeObjectif.PLANTER_TYPES_CULTURE, 1,
         TypeObjectif.RECOLTER_CULTURES, 0,
         TypeObjectif.RECOLTER_TYPES_CULTURE, 1,
+        TypeObjectif.ARROSER_CULTURES, 0,
         TypeObjectif.TAUX_RECOLTE_CULTURES, 50,
         TypeObjectif.CULTURES_MANGEES, 15,
         TypeObjectif.REPOUSSER_LAPINS, 1
@@ -183,6 +184,17 @@ public class GestionnaireObjectifs {
             }
         }
         afficherProgressionObjectifs(); // Affiche la progression de chaque objectif dans la console après la mise à jour
+    }
+
+    /** Méthode qui met à jour les objectifs liés à l'arrosage */
+    public void mettreAJourObjectifsArroser() {
+        for (ObjectifJournalier objectif : objectifs.values()) {
+            if (objectif.getType() == TypeObjectif.ARROSER_CULTURES) {
+                ((ObjectifCompteur) objectif).mettreAJourProgression(1);
+                break;
+            }
+        }
+        afficherProgressionObjectifs();
     }
 
     /** Méthode qui met à jour l'objectif lié aux cultures mangées */

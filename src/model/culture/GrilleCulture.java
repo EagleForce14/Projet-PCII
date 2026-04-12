@@ -750,6 +750,7 @@ public class GrilleCulture {
     public void arroserCulture(int x, int y) {
         if (estDansGrille(x, y)) {
             grille[x][y].arroserCulture();
+            gestionnaireObjectifs.mettreAJourObjectifsArroser();
         } else {
             throw new IllegalStateException("Coordonnées hors de la grille.");
         }
