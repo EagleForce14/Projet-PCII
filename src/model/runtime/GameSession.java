@@ -3,6 +3,7 @@ package model.runtime;
 import model.culture.GrilleCulture;
 import model.enemy.EnemyPhysicsThread;
 import model.environment.TreeThread;
+import model.grotte.ShrineHazardThread;
 import model.movement.PhysicsThread;
 import model.workshop.WorkshopConstructionManager;
 import view.RenderThread;
@@ -21,6 +22,7 @@ public final class GameSession {
     private final EnemyPhysicsThread caveEnemyPhysicsThread;
     private final RenderThread renderThread;
     private final TreeThread treeThread;
+    private final ShrineHazardThread shrineHazardThread;
     private final WorkshopConstructionManager workshopConstructionManager;
 
     public GameSession(Jour jour, GrilleCulture grilleCulture, PhysicsThread physicsThread,
@@ -29,6 +31,7 @@ public final class GameSession {
                        EnemyPhysicsThread caveEnemyPhysicsThread,
                        RenderThread renderThread,
                        TreeThread treeThread,
+                       ShrineHazardThread shrineHazardThread,
                        WorkshopConstructionManager workshopConstructionManager) {
         this.jour = jour;
         this.grilleCulture = grilleCulture;
@@ -38,6 +41,7 @@ public final class GameSession {
         this.caveEnemyPhysicsThread = caveEnemyPhysicsThread;
         this.renderThread = renderThread;
         this.treeThread = treeThread;
+        this.shrineHazardThread = shrineHazardThread;
         this.workshopConstructionManager = workshopConstructionManager;
     }
 
@@ -64,6 +68,9 @@ public final class GameSession {
         }
         renderThread.arreter();
         treeThread.arreter();
+        if (shrineHazardThread != null) {
+            shrineHazardThread.shutdown();
+        }
         if (workshopConstructionManager != null) {
             workshopConstructionManager.shutdown();
         }

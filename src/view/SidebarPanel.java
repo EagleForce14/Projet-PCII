@@ -293,6 +293,7 @@ public class SidebarPanel extends JPanel {
         objectivesCardPanel.setOpaque(false);
         objectivesCardPanel.setBorder(BorderFactory.createEmptyBorder(6, 10, 10, 14));
         objectivesCardPanel.setAlignmentX(LEFT_ALIGNMENT);
+        JPanel objectivesCardRow = createSidebarCardRow(objectivesCardPanel);
 
         // Panel contenant la liste des objectifs.
         objectivesContentPanel = new JPanel();
@@ -344,6 +345,7 @@ public class SidebarPanel extends JPanel {
         dayValidationCardPanel.setOpaque(false);
         dayValidationCardPanel.setBorder(BorderFactory.createEmptyBorder(6, 10, 10, 14));
         dayValidationCardPanel.setAlignmentX(LEFT_ALIGNMENT);
+        JPanel dayValidationCardRow = createSidebarCardRow(dayValidationCardPanel);
 
         // Conteneur texte du bilan avec padding haut pour décoller du bandeau coloré.
         dayValidationContentPanel = new JPanel();
@@ -390,9 +392,9 @@ public class SidebarPanel extends JPanel {
         actionsSectionPanel.add(buttonsGrid);
         actionsSectionPanel.add(specialActionsPanel);
         actionsSectionPanel.add(objectivesTitleRow);
-        actionsSectionPanel.add(objectivesCardPanel);
+        actionsSectionPanel.add(objectivesCardRow);
         actionsSectionPanel.add(Box.createVerticalStrut(8));
-        actionsSectionPanel.add(dayValidationCardPanel);
+        actionsSectionPanel.add(dayValidationCardRow);
 
         contentPanel.add(actionsSectionPanel, BorderLayout.NORTH);
         contentPanel.add(Box.createVerticalGlue(), BorderLayout.CENTER);
@@ -429,6 +431,19 @@ public class SidebarPanel extends JPanel {
         JPanel spacer = new JPanel();
         spacer.setOpaque(false);
         return spacer;
+    }
+
+    /**
+     * Ajoute un inset externe aux cartes pour aligner leur bordure visible
+     * avec le retrait du titre de section "Objectifs".
+     */
+    private JPanel createSidebarCardRow(JPanel cardPanel) {
+        JPanel cardRow = new JPanel(new BorderLayout());
+        cardRow.setOpaque(false);
+        cardRow.setBorder(BorderFactory.createEmptyBorder(0, 16, 0, 8));
+        cardRow.setAlignmentX(LEFT_ALIGNMENT);
+        cardRow.add(cardPanel, BorderLayout.CENTER);
+        return cardRow;
     }
 
     /**

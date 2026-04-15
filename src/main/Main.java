@@ -1,5 +1,6 @@
 package main;
 
+import controller.GameOverController;
 import controller.MovementController;
 import controller.grotte.GrotteController;
 
@@ -12,6 +13,8 @@ import model.environment.TreeManager;
 import model.environment.TreeThread;
 import model.grotte.GrotteMap;
 import model.grotte.GrotteObstacleMap;
+import model.grotte.ShrineHazardState;
+import model.grotte.ShrineHazardThread;
 import model.movement.Barn;
 import model.movement.MovementModel;
 import model.movement.PhysicsThread;
@@ -29,7 +32,6 @@ import view.shop.ShopOverlay;
 import view.workshop.WorkshopOverlay;
 
 import javax.swing.JFrame;
-import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.OverlayLayout;
 import java.awt.BorderLayout;
@@ -62,7 +64,7 @@ public class Main {
         return frame;
     }
 
-    private static void installNewGame(JFrame frame, boolean firstLaunch) {
+    public static void installNewGame(JFrame frame, boolean firstLaunch) {
         /*
          * Le contrôleur de pause est un singleton partagé entre les sessions.
          * On le remet donc explicitement en "lecture" avant d'installer la nouvelle
@@ -146,7 +148,8 @@ public class Main {
         gamePanel.add(hudPanel);
 
         GrotteMap grotteMap = new GrotteMap();
-        GrotteFieldPanel grotteFieldPanel = new GrotteFieldPanel(grotteMap);
+        ShrineHazardState shrineHazardState = new ShrineHazardState();
+        GrotteFieldPanel grotteFieldPanel = new GrotteFieldPanel(grotteMap, shrineHazardState);
         grotteFieldPanel.setAlignmentX(0.5f);
         grotteFieldPanel.setAlignmentY(0.5f);
 
@@ -195,11 +198,17 @@ public class Main {
         frame.setGlassPane(shopOverlay);
 
         PhysicsThread physicsThread = new PhysicsThread(model);
-        PhysicsThread grottePhysicsThread = new PhysicsThread(grotteMovementModel);
+        PhysicsThread grottePhysicsThread = new PhysicsThread(grotteMovementModel, false);
         EnemyPhysicsThread enemyPhysicsThread = new EnemyPhysicsThread(enemyModel);
-        EnemyPhysicsThread caveEnemyPhysicsThread = new EnemyPhysicsThread(caveEnemyModel);
+        EnemyPhysicsThread caveEnemyPhysicsThread = new EnemyPhysicsThread(caveEnemyModel, false);
         RenderThread renderThread = new RenderThread(contentPanel);
         TreeThread treeThread = new TreeThread(treeManager, fieldObstacleMap, playerUnit, enemyModel);
+        ShrineHazardThread shrineHazardThread = new ShrineHazardThread(
+                shrineHazardState,
+                grottePlayerUnit,
+                grotteFieldPanel,
+                jour
+        );
         GameSession session = new GameSession(
                 jour,
                 grilleCulture,
@@ -209,14 +218,15 @@ public class Main {
                 caveEnemyPhysicsThread,
                 renderThread,
                 treeThread,
+                shrineHazardThread,
                 workshopConstructionManager
         );
 
-        GameOverOverlay gameOverOverlay = new GameOverOverlay(jour);
-        gamePanel.add(gameOverOverlay);
-        gamePanel.setComponentZOrder(gameOverOverlay, 0);
+        GameOverOverlay farmGameOverOverlay = installGameOverOverlay(gamePanel, jour);
+        GameOverOverlay caveGameOverOverlay = installGameOverOverlay(grotteGamePanel, jour);
         gamePanel.setComponentZOrder(hudPanel, 1);
         gamePanel.setComponentZOrder(inventoryStatusOverlay, 2);
+        new GameOverController(frame, session, farmGameOverOverlay, caveGameOverOverlay);
 
         new MovementController(
                 model,
@@ -231,44 +241,25 @@ public class Main {
                 fieldPanel,
                 inventoryStatusOverlay,
                 shopOverlay,
-                workshopOverlay,
-                gameOverOverlay,
-                () -> restartCurrentGame(frame, session)
+                workshopOverlay
         );
 
-        CardLayout centerLayout = (CardLayout) centerPanel.getLayout();
-        JButton caveButton = actionSidebarPanel.getCaveButton();
-        Runnable returnToFarm = () -> {
-            stopUnitMovement(playerUnit);
-            stopUnitMovement(grottePlayerUnit);
-            centerLayout.show(centerPanel, FARM_CARD);
-            centerPanel.putClientProperty("activeCard", FARM_CARD);
-            actionSidebarPanel.setCaveMode(false);
-            caveEnemyModel.exitCave();
-            grottePlayerUnit.exitCave();
-            playerUnit.exitCave();
-            movementView.requestFocusInWindow();
-        };
-
-        new GrotteController(grotteMovementModel, grotteMovementView, grotteFieldPanel, returnToFarm);
-
-        caveButton.addActionListener(event -> {
-            boolean enteringCave = !GROTTE_CARD.equals(centerPanel.getClientProperty("activeCard"));
-            stopUnitMovement(playerUnit);
-            stopUnitMovement(grottePlayerUnit);
-            if (enteringCave) {
-                centerLayout.show(centerPanel, GROTTE_CARD);
-                centerPanel.putClientProperty("activeCard", GROTTE_CARD);
-                actionSidebarPanel.setCaveMode(true);
-                playerUnit.exitCave();
-                grottePlayerUnit.enterCave();
-                caveEnemyModel.enterCave();
-                grotteMovementView.requestFocusInWindow();
-            } else {
-                returnToFarm.run();
-            }
-        });
-        centerPanel.putClientProperty("activeCard", FARM_CARD);
+        new GrotteController(
+                grotteMovementModel,
+                movementView,
+                grotteMovementView,
+                grotteFieldPanel,
+                centerPanel,
+                FARM_CARD,
+                GROTTE_CARD,
+                actionSidebarPanel,
+                playerUnit,
+                grottePlayerUnit,
+                caveEnemyModel,
+                grottePhysicsThread,
+                caveEnemyPhysicsThread,
+                shrineHazardThread
+        );
 
         if (firstLaunch) {
             frame.pack();
@@ -296,6 +287,7 @@ public class Main {
         caveEnemyPhysicsThread.start();
         renderThread.start();
         treeThread.start();
+        shrineHazardThread.start();
 
         movementView.requestFocusInWindow();
     }
@@ -346,29 +338,10 @@ public class Main {
         return gamePanel;
     }
 
-    private static void stopUnitMovement(Unit unit) {
-        if (unit == null) {
-            return;
-        }
-
-        unit.setMoveUp(false);
-        unit.setMoveDown(false);
-        unit.setMoveLeft(false);
-        unit.setMoveRight(false);
-    }
-
-    private static void restartCurrentGame(JFrame frame, GameSession session) {
-        if (session == null) {
-            return;
-        }
-
-        /*
-         * L'idée du bouton est vraiment "comme si on relançait l'app",
-         * mais sans faire apparaître une deuxième fenêtre.
-         * On arrête donc tout ce qui appartient à l'ancienne session,
-         * puis on réinstalle un nouvel arbre de composants dans la même frame.
-         */
-        session.shutdown();
-        installNewGame(frame, false);
+    private static GameOverOverlay installGameOverOverlay(JPanel gamePanel, Jour jour) {
+        GameOverOverlay gameOverOverlay = new GameOverOverlay(jour);
+        gamePanel.add(gameOverOverlay);
+        gamePanel.setComponentZOrder(gameOverOverlay, 0);
+        return gameOverOverlay;
     }
 }

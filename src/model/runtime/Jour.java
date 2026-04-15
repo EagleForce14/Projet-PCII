@@ -18,6 +18,7 @@ public class Jour extends Thread {
     /** Attribut représentant l'état du thread */
     private boolean actif;
     private volatile boolean partieTerminee;
+    private volatile DefeatCause defeatCause;
     private volatile long elapsedInCurrentDayMs;
     private final GamePauseController pauseController;
 
@@ -32,6 +33,7 @@ public class Jour extends Thread {
         this.jour = 1; // Le jeu commence au jour 1
         this.actif = true;
         this.partieTerminee = false;
+        this.defeatCause = DefeatCause.NONE;
         this.elapsedInCurrentDayMs = 0L;
         this.pauseController = GamePauseController.getInstance();
         this.gestionnaireObjectifs = new GestionnaireObjectifs(this);
@@ -64,9 +66,7 @@ public class Jour extends Thread {
             notifyDayChangeListeners();
 
             if (!notifierChangementJour()) {
-                partieTerminee = true;
-                pauseController.setPaused(true);
-                arreter();
+                terminerPartie(DefeatCause.OBJECTIVES);
             }
         }  
     }
@@ -100,6 +100,26 @@ public class Jour extends Thread {
     /** Getter sur l'état de fin de partie */
     public boolean isPartieTerminee() {
         return partieTerminee;
+    }
+
+    public DefeatCause getDefeatCause() {
+        return defeatCause;
+    }
+
+    /**
+     * Permet à un danger hors du cycle normal des jours
+     * de déclencher une vraie défaite immédiatement.
+     */
+    public synchronized void terminerPartie(DefeatCause defeatCause) {
+        if (partieTerminee) {
+            return;
+        }
+
+        partieTerminee = true;
+        this.defeatCause = defeatCause == null ? DefeatCause.NONE : defeatCause;
+        pauseController.setPaused(true);
+        arreter();
+        interrupt();
     }
 
     /** Getter sur le gestionnaire d'objectifs */

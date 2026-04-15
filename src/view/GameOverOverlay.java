@@ -1,6 +1,7 @@
 package view;
 
 import model.objective.GestionnaireObjectifs;
+import model.runtime.DefeatCause;
 import model.runtime.Jour;
 import view.shop.ShopPixelButton;
 
@@ -91,11 +92,9 @@ public class GameOverOverlay extends JPanel {
         Font bodyFont = CustomFontLoader.loadFont(FONT_PATH, 13.0f);
         Font hintFont = CustomFontLoader.loadFont(FONT_PATH, 10.0f);
 
-        String title = "PARTIE PERDUE";
-        GestionnaireObjectifs gestionnaire = jour.getGestionnaireObjectifs();
-        int minimum = gestionnaire.getNombreObjectifsAValiderEffectif();
-        int atteints = gestionnaire.getNombreObjectifsAtteints();
-        String body = "Objectifs valides : " + atteints + " / " + minimum;
+        DefeatCause defeatCause = jour.getDefeatCause();
+        String title = defeatCause == DefeatCause.CAVE_SHRINE ? "MORT DANS LA GROTTE" : "PARTIE PERDUE";
+        String body = buildBodyText(defeatCause);
         String hint = "Lancez une nouvelle partie pour rejouer !";
 
         g2d.setColor(new Color(255, 225, 201));
@@ -144,6 +143,17 @@ public class GameOverOverlay extends JPanel {
         FontMetrics metrics = g2d.getFontMetrics();
         int x = (fullWidth - metrics.stringWidth(text)) / 2;
         g2d.drawString(text, x, baselineY);
+    }
+
+    private String buildBodyText(DefeatCause defeatCause) {
+        if (defeatCause == DefeatCause.CAVE_SHRINE) {
+            return "La statue du sanctuaire vous a foudroyé.";
+        }
+
+        GestionnaireObjectifs gestionnaire = jour.getGestionnaireObjectifs();
+        int minimum = gestionnaire.getNombreObjectifsAValiderEffectif();
+        int atteints = gestionnaire.getNombreObjectifsAtteints();
+        return "Objectifs valides : " + atteints + " / " + minimum;
     }
 
     /** Calcule la largeur de la carte centrale tout en gardant une marge confortable. */

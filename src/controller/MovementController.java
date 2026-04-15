@@ -54,8 +54,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
                               GrilleCulture grilleCulture, Money playerMoney, Inventaire inventaire,
                               TreeManager treeManager,
                               FieldPanel fieldPanel, InventoryStatusOverlay inventoryStatusOverlay, ShopOverlay shopOverlay,
-                              WorkshopOverlay workshopOverlay,
-                              GameOverOverlay gameOverOverlay, Runnable restartGameAction) {
+                              WorkshopOverlay workshopOverlay) {
         this.model = model;
         this.grilleCulture = grilleCulture;
         this.playerMoney = playerMoney;
@@ -105,8 +104,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         JButton bridgeButton = sidebarPanel.getBridgeButton();
         bridgeButton.addActionListener(this::poserPontCaseActive);
 
-        JButton replayButton = gameOverOverlay.getReplayButton();
-        replayButton.addActionListener(event -> relancerPartie(restartGameAction));
     }
 
     /**
@@ -406,17 +403,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         fieldPanel.clearCompostInfluenceHighlight();
         showOverlay(workshopOverlay);
         workshopOverlay.openWorkshop();
-    }
-
-    /**
-     * Le redémarrage n'est autorisé que quand le jeu est déjà figé.
-     * En pratique, cela correspond à l'écran de défaite où le bouton apparaît.
-     */
-    private void relancerPartie(Runnable restartGameAction) {
-        if (!pauseController.isPaused() || restartGameAction == null) {
-            return;
-        }
-        restartGameAction.run();
     }
 
     /**
@@ -721,10 +707,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             return;
         }
 
-        player.setMoveUp(false);
-        player.setMoveDown(false);
-        player.setMoveLeft(false);
-        player.setMoveRight(false);
+        player.stopMovement();
     }
 
     /**

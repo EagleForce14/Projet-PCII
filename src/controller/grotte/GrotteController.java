@@ -1,13 +1,22 @@
 package controller.grotte;
 
+import model.enemy.EnemyModel;
+import model.enemy.EnemyPhysicsThread;
+import model.grotte.ShrineHazardThread;
 import model.movement.MovementModel;
+import model.movement.PhysicsThread;
 import model.movement.Unit;
 import model.runtime.GamePauseController;
+import view.SidebarPanel;
 import view.MovementView;
 import view.grotte.GrotteFieldPanel;
 
+import javax.swing.JButton;
+import javax.swing.JPanel;
 import javax.swing.Timer;
+import java.awt.CardLayout;
 import java.awt.Point;
+import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
@@ -23,20 +32,54 @@ public final class GrotteController implements KeyListener {
     private final MovementModel movementModel;
     private final GamePauseController pauseController;
     private final GrotteFieldPanel grotteFieldPanel;
-    private final Runnable onFarmExit;
+    private final CardLayout centerLayout;
+    private final JPanel centerPanel;
+    private final SidebarPanel sidebarPanel;
+    private final Unit farmPlayerUnit;
+    private final Unit grottePlayerUnit;
+    private final EnemyModel caveEnemyModel;
+    private final PhysicsThread cavePhysicsThread;
+    private final EnemyPhysicsThread caveEnemyPhysicsThread;
+    private final ShrineHazardThread shrineHazardThread;
+    private final MovementView farmMovementView;
+    private final MovementView grotteMovementView;
+    private final String farmCardName;
+    private final String grotteCardName;
     private final Timer exitCheckTimer;
     private boolean exitTriggered;
 
     public GrotteController(
             MovementModel movementModel,
+            MovementView farmMovementView,
             MovementView movementView,
             GrotteFieldPanel grotteFieldPanel,
-            Runnable onFarmExit
+            JPanel centerPanel,
+            String farmCardName,
+            String grotteCardName,
+            SidebarPanel sidebarPanel,
+            Unit farmPlayerUnit,
+            Unit grottePlayerUnit,
+            EnemyModel caveEnemyModel,
+            PhysicsThread cavePhysicsThread,
+            EnemyPhysicsThread caveEnemyPhysicsThread,
+            ShrineHazardThread shrineHazardThread
     ) {
         this.movementModel = movementModel;
         this.pauseController = GamePauseController.getInstance();
+        this.farmMovementView = farmMovementView;
+        this.grotteMovementView = movementView;
         this.grotteFieldPanel = grotteFieldPanel;
-        this.onFarmExit = onFarmExit;
+        this.centerPanel = centerPanel;
+        this.centerLayout = centerPanel == null ? null : (CardLayout) centerPanel.getLayout();
+        this.farmCardName = farmCardName;
+        this.grotteCardName = grotteCardName;
+        this.sidebarPanel = sidebarPanel;
+        this.farmPlayerUnit = farmPlayerUnit;
+        this.grottePlayerUnit = grottePlayerUnit;
+        this.caveEnemyModel = caveEnemyModel;
+        this.cavePhysicsThread = cavePhysicsThread;
+        this.caveEnemyPhysicsThread = caveEnemyPhysicsThread;
+        this.shrineHazardThread = shrineHazardThread;
         movementView.addKeyListener(this);
         movementView.addMouseListener(new MouseAdapter() {
             @Override
@@ -44,6 +87,8 @@ public final class GrotteController implements KeyListener {
                 movementView.requestFocusInWindow();
             }
         });
+        bindCaveButton();
+        markActiveCard(farmCardName);
 
         this.exitCheckTimer = new Timer(35, event -> checkFarmExit());
         this.exitCheckTimer.start();
@@ -116,10 +161,33 @@ public final class GrotteController implements KeyListener {
     }
 
     private void stopPlayerMovement(Unit player) {
-        player.setMoveUp(false);
-        player.setMoveDown(false);
-        player.setMoveLeft(false);
-        player.setMoveRight(false);
+        player.stopMovement();
+    }
+
+    private void bindCaveButton() {
+        if (sidebarPanel == null) {
+            return;
+        }
+
+        JButton caveButton = sidebarPanel.getCaveButton();
+        if (caveButton != null) {
+            caveButton.addActionListener(this::toggleCaveScene);
+        }
+    }
+
+    private void toggleCaveScene(ActionEvent event) {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
+        stopPlayerMovement(farmPlayerUnit);
+        stopPlayerMovement(grottePlayerUnit);
+        if (isCaveSceneActive()) {
+            returnToFarm();
+            return;
+        }
+
+        showCave();
     }
 
     private void checkFarmExit() {
@@ -150,8 +218,80 @@ public final class GrotteController implements KeyListener {
         stopPlayerMovement(player);
         Point spawnOffset = grotteFieldPanel.getInitialPlayerOffset();
         player.setPosition(spawnOffset.x, spawnOffset.y);
-        if (onFarmExit != null) {
-            onFarmExit.run();
+        returnToFarm();
+    }
+
+    private void showCave() {
+        if (centerLayout == null || centerPanel == null) {
+            return;
+        }
+
+        centerLayout.show(centerPanel, grotteCardName);
+        markActiveCard(grotteCardName);
+        if (sidebarPanel != null) {
+            sidebarPanel.setCaveMode(true);
+        }
+
+        if (farmPlayerUnit != null) {
+            farmPlayerUnit.exitCave();
+        }
+        if (grottePlayerUnit != null) {
+            grottePlayerUnit.enterCave();
+        }
+        if (caveEnemyModel != null) {
+            caveEnemyModel.enterCave();
+        }
+        setCaveThreadsActive(true);
+        if (grotteMovementView != null) {
+            grotteMovementView.requestFocusInWindow();
+        }
+    }
+
+    private void returnToFarm() {
+        if (centerLayout == null || centerPanel == null) {
+            return;
+        }
+
+        centerLayout.show(centerPanel, farmCardName);
+        markActiveCard(farmCardName);
+        if (sidebarPanel != null) {
+            sidebarPanel.setCaveMode(false);
+        }
+
+        setCaveThreadsActive(false);
+        if (caveEnemyModel != null) {
+            caveEnemyModel.exitCave();
+        }
+        if (grottePlayerUnit != null) {
+            grottePlayerUnit.exitCave();
+        }
+        if (farmPlayerUnit != null) {
+            farmPlayerUnit.exitCave();
+        }
+        if (farmMovementView != null) {
+            farmMovementView.requestFocusInWindow();
+        }
+    }
+
+    private void setCaveThreadsActive(boolean active) {
+        if (cavePhysicsThread != null) {
+            cavePhysicsThread.setThreadActive(active);
+        }
+        if (caveEnemyPhysicsThread != null) {
+            caveEnemyPhysicsThread.setThreadActive(active);
+        }
+        if (shrineHazardThread != null) {
+            shrineHazardThread.setThreadActive(active);
+        }
+    }
+
+    private boolean isCaveSceneActive() {
+        return grotteCardName != null && grotteCardName.equals(centerPanel.getClientProperty("activeCard"));
+    }
+
+    private void markActiveCard(String cardName) {
+        if (centerPanel != null) {
+            centerPanel.putClientProperty("activeCard", cardName);
         }
     }
 }

@@ -89,6 +89,18 @@ public class Unit {
         this.y = y;
     }
 
+    /**
+     * Coupe immédiatement tout déplacement en cours.
+     * On évite ainsi de recopier les quatre mêmes affectations
+     * partout où le jeu doit figer le joueur.
+     */
+    public void stopMovement() {
+        moveUp = false;
+        moveDown = false;
+        moveLeft = false;
+        moveRight = false;
+    }
+
     // Force l'unité à rester dans les bornes visibles de la fenêtre.
     public synchronized void clampPosition(int minX, int maxX, int minY, int maxY) {
         x = Math.max(minX, Math.min(x, maxX));

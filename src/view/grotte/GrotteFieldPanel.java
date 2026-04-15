@@ -1,13 +1,18 @@
 package view.grotte;
 
 import model.grotte.GrotteMap;
+import model.grotte.ShrineHazardState;
 import model.movement.Unit;
 import view.PlayableMapPanel;
+import view.CustomFontLoader;
+import view.HudProgressBarPainter;
 
 import javax.swing.JPanel;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
@@ -26,6 +31,7 @@ import java.util.Objects;
  * et la surbrillance de la case active.
  */
 public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
+    private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
     private static final int PREF_WIDTH = 1180;
     private static final int PREF_HEIGHT = 850;
 
@@ -35,8 +41,19 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
     private static final Color WALL_SHADOW = new Color(7, 6, 10, 118);
     private static final Color EDGE_LIGHT = new Color(255, 198, 128, 34);
     private static final Color VIGNETTE = new Color(0, 0, 0, 48);
+    private static final Color SHRINE_WARNING_FILL_ON = new Color(206, 36, 36, 126);
+    private static final Color SHRINE_WARNING_FILL_OFF = new Color(128, 24, 24, 48);
+    private static final Color SHRINE_WARNING_BORDER_ON = new Color(255, 126, 126, 220);
+    private static final Color SHRINE_WARNING_BORDER_OFF = new Color(168, 70, 70, 118);
+    private static final Color SHRINE_BAR_FRAME = new Color(214, 106, 106, 248);
+    private static final Color SHRINE_BAR_BACKGROUND = new Color(38, 10, 12, 228);
+    private static final Color SHRINE_BAR_FILL = new Color(202, 42, 42, 248);
+    private static final Color SHRINE_BAR_HIGHLIGHT = new Color(255, 184, 184, 210);
+    private static final Color SHRINE_BAR_LABEL = new Color(255, 223, 223);
+    private static final Color SHRINE_BAR_LABEL_SHADOW = new Color(60, 10, 10, 220);
 
     private final GrotteMap grotteMap;
+    private final ShrineHazardState shrineHazardState;
     private final Image[] rockTiles;
     private final Image[] roomFloorTiles;
     private final Image[] pathTiles;
@@ -44,6 +61,8 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
     private final Image verticalWallTile;
     private final Image shrineStatueImage;
     private final Image caveChestImage;
+    private final Font shrineHazardTitleFont;
+    private final Font shrineHazardTimerFont;
 
     private Point highlightedCell;
     private BufferedImage staticSceneCache;
@@ -56,8 +75,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
     private int cachedVerticalWallTileSize = -1;
     private int cachedVerticalWallTileWidth = -1;
 
-    public GrotteFieldPanel(GrotteMap grotteMap) {
+    public GrotteFieldPanel(GrotteMap grotteMap, ShrineHazardState shrineHazardState) {
         this.grotteMap = grotteMap;
+        this.shrineHazardState = shrineHazardState;
         this.rockTiles = GrotteTileFactory.createRockTiles();
         this.roomFloorTiles = GrotteTileFactory.createRoomFloorTiles();
         this.pathTiles = GrotteTileFactory.createPathTiles();
@@ -65,6 +85,8 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         this.verticalWallTile = GrotteTileFactory.createVerticalWallTile();
         this.shrineStatueImage = GrotteTileFactory.createShrineStatueImage();
         this.caveChestImage = GrotteTileFactory.createCaveChestImage();
+        this.shrineHazardTitleFont = CustomFontLoader.loadFont(FONT_PATH, 10.5f);
+        this.shrineHazardTimerFont = CustomFontLoader.loadFont(FONT_PATH, 9.0f);
         setPreferredSize(new Dimension(PREF_WIDTH, PREF_HEIGHT));
         setOpaque(false);
     }
@@ -825,6 +847,97 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         g2.drawRect(cellBounds.x + 1, cellBounds.y + 1, cellBounds.width - 3, cellBounds.height - 3);
     }
 
+    /**
+     * Les cases touchées par la prochaine onde létale deviennent progressivement lisibles
+     * pendant la fenêtre d'alerte, avec un clignotement franc sur les 10 dernières secondes.
+     */
+    private void drawShrineWarningCells(Graphics2D g2, Rectangle fieldBounds, int tileSize) {
+        if (shrineHazardState == null || shrineHazardState.isWarningPhase()) {
+            return;
+        }
+
+        boolean blinkVisible = shrineHazardState.isWarningBlinkVisible();
+        Color fillColor = blinkVisible ? SHRINE_WARNING_FILL_ON : SHRINE_WARNING_FILL_OFF;
+        Color borderColor = blinkVisible ? SHRINE_WARNING_BORDER_ON : SHRINE_WARNING_BORDER_OFF;
+
+        for (Point dangerCell : grotteMap.getShrineDangerCells()) {
+            Rectangle cellBounds = buildCellBounds(fieldBounds, tileSize, dangerCell.x, dangerCell.y);
+            g2.setColor(fillColor);
+            g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height);
+
+            g2.setColor(borderColor);
+            g2.drawRect(cellBounds.x, cellBounds.y, cellBounds.width - 1, cellBounds.height - 1);
+        }
+    }
+
+    /**
+     * Barre rouge placée directement au niveau de la statue pour annoncer la prochaine onde.
+     * On réutilise le painter HUD partagé afin de garder un rendu homogène.
+     */
+    private void drawShrineCountdownBar(Graphics2D g2, Rectangle fieldBounds, int tileSize) {
+        if (shrineHazardState == null) {
+            return;
+        }
+
+        Rectangle shrineRoomBounds = buildAreaBounds(fieldBounds, tileSize, grotteMap.getShrineRoomBounds());
+        Rectangle daisBounds = buildAreaBounds(fieldBounds, tileSize, grotteMap.getShrineDaisBounds());
+        if (shrineRoomBounds == null || daisBounds == null) {
+            return;
+        }
+
+        Rectangle statueBounds = buildShrineStatueBounds(daisBounds, tileSize);
+        if (statueBounds == null) {
+            return;
+        }
+
+        FontMetrics titleMetrics = g2.getFontMetrics(shrineHazardTitleFont);
+        FontMetrics timerMetrics = g2.getFontMetrics(shrineHazardTimerFont);
+        int labelSpacing = 4;
+        int labelBlockHeight = titleMetrics.getHeight() + timerMetrics.getHeight() + labelSpacing;
+        int barWidth = Math.max(124, Math.min(shrineRoomBounds.width - 16, Math.max(statueBounds.width + tileSize, tileSize * 3)));
+        int barHeight = Math.max(16, tileSize / 3);
+        int barX = shrineRoomBounds.x + ((shrineRoomBounds.width - barWidth) / 2);
+        int barY = Math.max(shrineRoomBounds.y + 12 + labelBlockHeight, statueBounds.y - barHeight - 12);
+        int textTopY = barY - labelBlockHeight - 5;
+        int titleBaselineY = textTopY + titleMetrics.getAscent();
+        int timerBaselineY = textTopY + titleMetrics.getHeight() + labelSpacing + timerMetrics.getAscent();
+
+        g2.setColor(new Color(0, 0, 0, 85));
+        g2.fillRoundRect(barX + 2, barY + 2, barWidth, barHeight, barHeight + 4, barHeight + 4);
+
+        HudProgressBarPainter.paint(
+                g2,
+                barX,
+                barY,
+                barWidth,
+                barHeight,
+                shrineHazardState.getRemainingRatio(),
+                SHRINE_BAR_FRAME,
+                SHRINE_BAR_BACKGROUND,
+                SHRINE_BAR_FILL,
+                SHRINE_BAR_HIGHLIGHT
+        );
+
+        String title = "Onde létale";
+        String remainingText = shrineHazardState.getRemainingSeconds() + "s";
+        drawShadowedCenteredText(g2, title, barX, titleBaselineY, barWidth, shrineHazardTitleFont);
+        drawShadowedCenteredText(g2, remainingText, barX, timerBaselineY, barWidth, shrineHazardTimerFont);
+    }
+
+    private void drawShadowedCenteredText(Graphics2D g2, String text, int x, int baselineY, int width, Font font) {
+        if (text == null || text.isEmpty() || font == null) {
+            return;
+        }
+
+        g2.setFont(font);
+        FontMetrics metrics = g2.getFontMetrics(font);
+        int textX = x + ((width - metrics.stringWidth(text)) / 2);
+        g2.setColor(SHRINE_BAR_LABEL_SHADOW);
+        g2.drawString(text, textX + 1, baselineY + 1);
+        g2.setColor(SHRINE_BAR_LABEL);
+        g2.drawString(text, textX, baselineY);
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -835,12 +948,18 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
             g2.drawImage(staticSceneCache, 0, 0, this);
         }
 
+        Rectangle fieldBounds = getFieldBounds();
+        int tileSize = getTileSize(fieldBounds);
+
         if (highlightedCell != null && isFarmableCell(highlightedCell)) {
             Rectangle highlightedBounds = getCellBounds(highlightedCell.x, highlightedCell.y);
             if (highlightedBounds != null) {
                 drawHighlight(g2, highlightedBounds);
             }
         }
+
+        drawShrineWarningCells(g2, fieldBounds, tileSize);
+        drawShrineCountdownBar(g2, fieldBounds, tileSize);
 
         g2.dispose();
     }

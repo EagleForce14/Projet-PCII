@@ -36,15 +36,21 @@ public final class GrotteMap {
     private static final Rectangle RIGHT_ROOM_ENTRY = new Rectangle(17, 15, 6, 3);
     private static final Rectangle SHRINE_DAIS = new Rectangle(13, 3, 5, 4);
     private static final Point FARM_EXIT_CELL = new Point(15, 20);
+    private static final double SHRINE_HAZARD_HALF_WIDTH_TILES = 2.75;
+    private static final double SHRINE_HAZARD_FORWARD_REACH_TILES = 4.9;
+    private static final double SHRINE_HAZARD_FRONT_OFFSET_TILES = 0.2;
 
     private final TileType[][] tiles;
     private final List<Point> blockedCells;
+    private final List<Point> shrineDangerCells;
 
     public GrotteMap() {
         this.tiles = new TileType[HEIGHT][WIDTH];
         this.blockedCells = new ArrayList<>();
+        this.shrineDangerCells = new ArrayList<>();
         buildLayout();
         cacheBlockedCells();
+        cacheShrineDangerCells();
     }
 
     public int getWidth() {
@@ -123,6 +129,23 @@ public final class GrotteMap {
         return Collections.unmodifiableList(blockedCells);
     }
 
+    /**
+     * Les cases touchées par l'onde de la statue sont pré-calculées une seule fois.
+     * Toute la logique de rendu et de danger réutilise ensuite exactement cette liste.
+     */
+    public List<Point> getShrineDangerCells() {
+        return Collections.unmodifiableList(shrineDangerCells);
+    }
+
+    public boolean isShrineDangerCell(int column, int row) {
+        for (Point dangerCell : shrineDangerCells) {
+            if (dangerCell.x == column && dangerCell.y == row) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void buildLayout() {
         fillWith(TileType.ROCK);
 
@@ -189,6 +212,43 @@ public final class GrotteMap {
             for (int column = 0; column < WIDTH; column++) {
                 if (isWallCell(column, row)) {
                     blockedCells.add(new Point(column, row));
+                }
+            }
+        }
+    }
+
+    /**
+     * La zone létale doit surtout vivre devant la statue :
+     * derrière, la hitbox bloque déjà naturellement le joueur.
+     *
+     * On construit donc une demi-ellipse projetée vers l'avant du sanctuaire,
+     * plus concentrée et beaucoup plus lisible en gameplay.
+     */
+    private void cacheShrineDangerCells() {
+        shrineDangerCells.clear();
+
+        double statueCenterX = SHRINE_DAIS.getCenterX();
+        double statueFrontY = SHRINE_DAIS.y + SHRINE_DAIS.height - SHRINE_HAZARD_FRONT_OFFSET_TILES;
+
+        for (int row = 0; row < HEIGHT; row++) {
+            for (int column = 0; column < WIDTH; column++) {
+                if (!isWalkableCell(column, row)) {
+                    continue;
+                }
+
+                double cellCenterX = column + 0.5;
+                double cellCenterY = row + 0.5;
+                double forwardDistance = cellCenterY - statueFrontY;
+                if (forwardDistance < 0.0 || forwardDistance > SHRINE_HAZARD_FORWARD_REACH_TILES) {
+                    continue;
+                }
+
+                double lateralDistance = cellCenterX - statueCenterX;
+                double normalizedLateral = lateralDistance / SHRINE_HAZARD_HALF_WIDTH_TILES;
+                double normalizedForward = forwardDistance / SHRINE_HAZARD_FORWARD_REACH_TILES;
+                double forwardEllipseValue = (normalizedLateral * normalizedLateral) + (normalizedForward * normalizedForward);
+                if (forwardEllipseValue <= 1.0) {
+                    shrineDangerCells.add(new Point(column, row));
                 }
             }
         }
