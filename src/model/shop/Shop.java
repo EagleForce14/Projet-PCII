@@ -24,6 +24,7 @@ public class Shop implements DayChangeListener {
      **/
     private final ArrayList<Seed> seeds; // liste des graines disponibles dans le magasin
     private final ArrayList<Facility> facilities; // liste des installations disponibles dans le magasin
+    private final ShopKind kind;
     // panier avec des item différents du stock pour éviter de modifier les quantités du stock avant l'achat
     private ArrayList<CartItem> shoppingCard; // liste des produits que le joueur souhaite acheter
     private int currentDay;
@@ -36,29 +37,16 @@ public class Shop implements DayChangeListener {
 
 
     //Constructeur
-    public Shop() {
+    public Shop(ShopKind kind) {
 
+        this.kind = kind == null ? ShopKind.MAIN : kind;
         seeds = new ArrayList<>();
         facilities = new ArrayList<>();
         shoppingCard = new ArrayList<>();
         currentDay = 1;
         compostRestockUnlocked = false;
         gestionnaireObjectifs = null;
-
-
-        // Toutes les graines partagees avec l'inventaire sont visibles en boutique.
-        addSeed("Tulipe", 8, Type.TULIPE);
-        addSeed("Rose", 8, Type.ROSE);
-        addSeed("Marguerite", 8, Type.MARGUERITE);
-        addSeed("Orchidee", 8, Type.ORCHIDEE);
-        addSeed("Carotte", 5, Type.CAROTTE);
-        addSeed("Radis", 5, Type.RADIS);
-        addSeed("Choufleur", 5, Type.CHOUFLEUR);
-        addSeed("Courgette", 5, Type.COURGETTE);
-        facilities.add(new Facility("Cloture", 50, 20, FacilityType.CLOTURE));
-        facilities.add(new Facility("Chemin", 12, 200, FacilityType.CHEMIN));
-        facilities.add(new Facility("Compost", 80, INITIAL_COMPOST_STOCK, FacilityType.COMPOST));
-        facilities.add(new Facility("Jardinier", 100, 10, FacilityType.JARDINIER));
+        installCatalog();
     }
 
     // getter et setter
@@ -82,6 +70,10 @@ public class Shop implements DayChangeListener {
      **/
     public ArrayList<Facility> getFacilities() {
         return facilities;
+    }
+
+    public String getDisplayName() {
+        return kind.getDisplayName();
     }
 
     /**
@@ -311,8 +303,37 @@ public class Shop implements DayChangeListener {
         this.gestionnaireObjectifs = gestionnaireObjectifs;
     }
 
+    private void installCatalog() {
+        for (Type type : Type.values()) {
+            if (shouldSellSeed(type)) {
+                addSeed(type.getDisplayName(), getInitialSeedPrice(type), type);
+            }
+        }
+
+        if (!kind.sellsFacilities()) {
+            return;
+        }
+
+        facilities.add(new Facility("Cloture", 50, 20, FacilityType.CLOTURE));
+        facilities.add(new Facility("Chemin", 12, 200, FacilityType.CHEMIN));
+        facilities.add(new Facility("Compost", 80, INITIAL_COMPOST_STOCK, FacilityType.COMPOST));
+        facilities.add(new Facility("Jardinier", 100, 10, FacilityType.JARDINIER));
+    }
+
     private void addSeed(String name, int price, Type type) {
         seeds.add(new Seed(name, price, 100, type));
+    }
+
+    private boolean shouldSellSeed(Type type) {
+        if (type == null) {
+            return false;
+        }
+
+        return kind == ShopKind.MAIN ? type.isSoldInMainShop() : type.isSoldInStallShop();
+    }
+
+    private int getInitialSeedPrice(Type type) {
+        return type != null && type.isFleur() ? 8 : 5;
     }
 
     /**

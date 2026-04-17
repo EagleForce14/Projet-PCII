@@ -25,6 +25,7 @@ import model.management.Inventaire;
 import model.management.Money;
 import model.runtime.GameSession;
 import model.shop.Shop;
+import model.shop.ShopKind;
 import model.workshop.WorkshopConstructionManager;
 import view.*;
 import view.grotte.GrotteFieldPanel;
@@ -77,11 +78,14 @@ public class Main {
         TreeManager treeManager = new TreeManager(grilleCulture);
         Money playerMoney = new Money(300);
         Inventaire inventaire = new Inventaire();
-        Shop shop = new Shop();
+        Shop shop = new Shop(ShopKind.MAIN);
+        Shop stallShop = new Shop(ShopKind.STALL);
         shop.setGestionnaireObjectifs(jour.getGestionnaireObjectifs());
+        stallShop.setGestionnaireObjectifs(jour.getGestionnaireObjectifs());
         WorkshopConstructionManager workshopConstructionManager = new WorkshopConstructionManager(inventaire);
         // Enregistrer shop pour qu'il recoive les notifications de changement de jour
         jour.addDayChangeListener(shop);
+        jour.addDayChangeListener(stallShop);
         FieldPanel fieldPanel = new FieldPanel(grilleCulture, treeManager);
         FieldObstacleMap fieldObstacleMap = new FieldObstacleMap(treeManager, fieldPanel);
         fieldPanel.setFieldObstacleMap(fieldObstacleMap);
@@ -194,6 +198,7 @@ public class Main {
         frame.setContentPane(contentPanel);
 
         ShopOverlay shopOverlay = new ShopOverlay(shop, playerMoney, inventaire, movementView);
+        ShopOverlay stallShopOverlay = new ShopOverlay(stallShop, playerMoney, inventaire, movementView);
         WorkshopOverlay workshopOverlay = new WorkshopOverlay(inventaire, workshopConstructionManager, movementView);
         frame.setGlassPane(shopOverlay);
 
@@ -241,6 +246,7 @@ public class Main {
                 fieldPanel,
                 inventoryStatusOverlay,
                 shopOverlay,
+                stallShopOverlay,
                 workshopOverlay
         );
 

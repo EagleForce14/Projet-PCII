@@ -1,8 +1,10 @@
 package view;
 
+import model.culture.FieldZone;
 import model.culture.Type;
 import model.management.Inventaire;
 import model.movement.MovementModel;
+import model.movement.Unit;
 import model.shop.FacilityType;
 
 import javax.swing.JPanel;
@@ -17,28 +19,36 @@ import java.awt.RenderingHints;
 
 /**
  * Vue dédiée à l'inventaire affiché en bas de l'écran.
+ *
+ * L'inventaire est volontairement découpé en trois petits blocs visuels :
+ * - les graines du champ principal,
+ * - les graines du côté gauche de la rivière,
+ * - puis les ressources et objets de pose.
+ *
+ * Le modèle métier ne change pas :
+ * ce panneau ne fait que présenter différemment les mêmes slots logiques.
  */
 public class InventoryStatusOverlay extends JPanel {
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
     private static final int SLOT_SIZE = 48;
     private static final int SLOT_GAP = 6;
+    private static final int GROUP_GAP = 12;
     private static final int OUTER_PADDING = 10;
+    private static final Color LOCKED_SEED_OVERLAY = new Color(22, 18, 14, 148);
+    private static final Color LOCKED_SEED_BORDER = new Color(150, 132, 112, 185);
 
-    // L'ordre d'affichage reste fixe pour que le joueur se fabrique vite des repères.
-    private static final Type[] INVENTORY_SEED_ORDER = {
+    private static final Type[] MAIN_ZONE_SEED_ORDER = {
             Type.TULIPE,
             Type.ROSE,
             Type.MARGUERITE,
             Type.ORCHIDEE,
             Type.CAROTTE,
             Type.RADIS,
-            Type.CHOUFLEUR,
-            Type.COURGETTE
+            Type.CHOUFLEUR
     };
-    /*
-     * Les installations sont maintenant listées explicitement dans l'ordre voulu.
-     * Cela evite de coder des "cas speciaux" partout des qu'un nouvel objet apparait.
-     */
+    private static final Type[] LEFT_ZONE_SEED_ORDER = {
+            Type.NENUPHAR
+    };
     private static final FacilityType[] INVENTORY_FACILITY_ORDER = {
             FacilityType.CLOTURE,
             FacilityType.CHEMIN,
@@ -46,26 +56,23 @@ public class InventoryStatusOverlay extends JPanel {
             FacilityType.PONT
     };
 
-    // Le FieldPanel nous sert uniquement de point d'ancrage géométrique:
     private final FieldPanel fieldPanel;
-    // Pour alimenter le contenu de la barre
     private final Inventaire inventaire;
     private final MovementModel movementModel;
     private final Font quantityFont;
 
-    // Le constructeur de la classe
     public InventoryStatusOverlay(FieldPanel fieldPanel, Inventaire inventaire, MovementModel movementModel) {
         this.fieldPanel = fieldPanel;
         this.inventaire = inventaire;
         this.movementModel = movementModel;
         this.quantityFont = CustomFontLoader.loadFont(FONT_PATH, 8.0f);
-        this.setOpaque(false);
-        this.setDoubleBuffered(true);
+        setOpaque(false);
+        setDoubleBuffered(true);
     }
 
     /**
      * Recalcule les bornes visibles du champ dans le repère de cette couche.
-     * Cela nous permet ensuite de garder un petit espace de sécurité entre la grille et la barre.
+     * Cela nous permet ensuite de garder un petit espace de sécurité entre la grille et les barres.
      */
     private Rectangle getFieldBoundsInView() {
         return SwingUtilities.convertRectangle(fieldPanel, fieldPanel.getFieldBounds(), this);
@@ -73,12 +80,17 @@ public class InventoryStatusOverlay extends JPanel {
 
     /**
      * L'overlay couvre tout l'écran pour le rendu, mais il ne doit capturer
-     * les clics que sur la barre visible d'inventaire.
+     * les clics que sur les trois barres visibles.
      */
     @Override
     public boolean contains(int x, int y) {
-        Rectangle barBounds = getInventoryBarBounds(getFieldBoundsInView(), getWidth(), getHeight());
-        return barBounds.contains(x, y);
+        Rectangle[] groupBounds = getInventoryGroupBounds(getFieldBoundsInView(), getWidth(), getHeight());
+        for (Rectangle groupBoundsItem : groupBounds) {
+            if (groupBoundsItem.contains(x, y)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -92,44 +104,44 @@ public class InventoryStatusOverlay extends JPanel {
     }
 
     /**
-     * Dessine la barre complète d'inventaire.
-     * On la maintient centrée tout en bas de l'écran.
+     * Dessine les trois blocs d'inventaire côte à côte.
+     * On garde tout centré en bas de l'écran comme avant,
+     * mais chaque famille d'objets a maintenant sa propre coque visuelle.
      */
     private void paintInventory(Graphics2D g2d, Rectangle fieldBounds, int viewWidth, int viewHeight) {
         if (inventaire == null || viewWidth <= 0 || viewHeight <= 0) {
             return;
         }
 
-        Rectangle barBounds = getInventoryBarBounds(fieldBounds, viewWidth, viewHeight);
+        Rectangle[] groupBounds = getInventoryGroupBounds(fieldBounds, viewWidth, viewHeight);
+        for (Rectangle groupBoundsItem : groupBounds) {
+            drawInventoryShell(g2d, groupBoundsItem.x, groupBoundsItem.y, groupBoundsItem.width, groupBoundsItem.height);
+        }
 
-        drawInventoryShell(g2d, barBounds.x, barBounds.y, barBounds.width, barBounds.height);
-
-        for (int index = 0; index < getInventorySlotCount(); index++) {
-            Rectangle slotBounds = getSlotBounds(index, barBounds);
+        for (int slotIndex = 0; slotIndex < getInventorySlotCount(); slotIndex++) {
+            Rectangle slotBounds = getSlotBounds(slotIndex, groupBounds);
             if (slotBounds != null) {
-                drawSlot(g2d, index, slotBounds.x, slotBounds.y, slotBounds.width);
+                drawSlot(g2d, slotIndex, slotBounds.x, slotBounds.y, slotBounds.width);
             }
         }
     }
 
     /**
-     * Géométrie partagée de la barre d'inventaire.
-     * On l'expose en statique pour que d'autres composants puissent respecter
-     * la même limite visuelle sans recopier les calculs.
+     * Géométrie globale de l'inventaire.
+     * Les autres composants n'ont pas besoin de connaître les trois blocs :
+     * pour eux, une enveloppe commune suffit.
      */
     public static Rectangle computeInventoryBarBounds(Rectangle fieldBounds, int viewWidth, int viewHeight) {
-        int slotCount = getInventorySlotCount();
-        int barWidth = (slotCount * SLOT_SIZE) + ((slotCount - 1) * SLOT_GAP) + (OUTER_PADDING * 2);
-        int barHeight = SLOT_SIZE + (OUTER_PADDING * 2);
-        int barX = (viewWidth - barWidth) / 2;
+        Rectangle[] groupBounds = computeInventoryGroupBounds(fieldBounds, viewWidth, viewHeight);
+        if (groupBounds.length == 0) {
+            return new Rectangle();
+        }
 
-        // La barre reste basse avec un petit padding inférieur,
-        // tout en évitant de remonter au-dessus de la grille si la fenêtre est serrée.
-        int desiredY = viewHeight - barHeight - 10;
-        int minimumClearY = fieldBounds == null ? desiredY : fieldBounds.y + fieldBounds.height + 12;
-        int barY = Math.max(desiredY, minimumClearY);
-        barY = Math.min(barY, viewHeight - barHeight - 10);
-        return new Rectangle(barX, barY, barWidth, barHeight);
+        Rectangle union = new Rectangle(groupBounds[0]);
+        for (int index = 1; index < groupBounds.length; index++) {
+            union = union.union(groupBounds[index]);
+        }
+        return union;
     }
 
     /**
@@ -141,27 +153,68 @@ public class InventoryStatusOverlay extends JPanel {
             return null;
         }
 
-        Rectangle barBounds = computeInventoryBarBounds(fieldBounds, viewWidth, viewHeight);
-        int slotX = barBounds.x + OUTER_PADDING + (slotIndex * (SLOT_SIZE + SLOT_GAP));
-        int slotY = barBounds.y + OUTER_PADDING;
-        return new Rectangle(slotX, slotY, SLOT_SIZE, SLOT_SIZE);
+        return computeSlotBounds(slotIndex, computeInventoryGroupBounds(fieldBounds, viewWidth, viewHeight));
     }
 
     public static int getWoodSlotIndex() {
-        return INVENTORY_SEED_ORDER.length;
+        return getTotalSeedSlotCount();
     }
 
-    private Rectangle getInventoryBarBounds(Rectangle fieldBounds, int viewWidth, int viewHeight) {
-        return computeInventoryBarBounds(fieldBounds, viewWidth, viewHeight);
+    private Rectangle[] getInventoryGroupBounds(Rectangle fieldBounds, int viewWidth, int viewHeight) {
+        return computeInventoryGroupBounds(fieldBounds, viewWidth, viewHeight);
     }
 
-    private Rectangle getSlotBounds(int slotIndex, Rectangle barBounds) {
-        if (slotIndex < 0 || slotIndex >= getInventorySlotCount() || barBounds == null) {
+    /**
+     * Calcule les trois barres sur une seule ligne.
+     * On affiche d'abord la zone gauche, puis la zone principale, puis les objets.
+     */
+    private static Rectangle[] computeInventoryGroupBounds(Rectangle fieldBounds, int viewWidth, int viewHeight) {
+        int[] groupSlotCounts = getInventoryGroupSlotCounts();
+        int[] groupWidths = new int[groupSlotCounts.length];
+        int totalWidth = 0;
+
+        for (int index = 0; index < groupSlotCounts.length; index++) {
+            groupWidths[index] = computeGroupWidth(groupSlotCounts[index]);
+            totalWidth += groupWidths[index];
+        }
+        totalWidth += GROUP_GAP * Math.max(0, groupWidths.length - 1);
+
+        int barHeight = SLOT_SIZE + (OUTER_PADDING * 2);
+        int startX = (viewWidth - totalWidth) / 2;
+
+        int desiredY = viewHeight - barHeight - 10;
+        int minimumClearY = fieldBounds == null ? desiredY : fieldBounds.y + fieldBounds.height + 12;
+        int barY = Math.max(desiredY, minimumClearY);
+        barY = Math.min(barY, viewHeight - barHeight - 10);
+
+        Rectangle[] groupBounds = new Rectangle[groupWidths.length];
+        int currentX = startX;
+        for (int index = 0; index < groupWidths.length; index++) {
+            groupBounds[index] = new Rectangle(currentX, barY, groupWidths[index], barHeight);
+            currentX += groupWidths[index] + GROUP_GAP;
+        }
+
+        return groupBounds;
+    }
+
+    private Rectangle getSlotBounds(int slotIndex, Rectangle[] groupBounds) {
+        return computeSlotBounds(slotIndex, groupBounds);
+    }
+
+    private static Rectangle computeSlotBounds(int slotIndex, Rectangle[] groupBounds) {
+        if (slotIndex < 0 || slotIndex >= getInventorySlotCount() || groupBounds == null || groupBounds.length == 0) {
             return null;
         }
 
-        int slotX = barBounds.x + OUTER_PADDING + (slotIndex * (SLOT_SIZE + SLOT_GAP));
-        int slotY = barBounds.y + OUTER_PADDING;
+        int groupIndex = getGroupIndexForSlot(slotIndex);
+        int slotIndexInGroup = getSlotIndexInGroup(slotIndex);
+        if (groupIndex < 0 || groupIndex >= groupBounds.length || slotIndexInGroup < 0) {
+            return null;
+        }
+
+        Rectangle groupBoundsForSlot = groupBounds[groupIndex];
+        int slotX = groupBoundsForSlot.x + OUTER_PADDING + (slotIndexInGroup * (SLOT_SIZE + SLOT_GAP));
+        int slotY = groupBoundsForSlot.y + OUTER_PADDING;
         return new Rectangle(slotX, slotY, SLOT_SIZE, SLOT_SIZE);
     }
 
@@ -174,13 +227,9 @@ public class InventoryStatusOverlay extends JPanel {
             return -1;
         }
 
-        Rectangle barBounds = getInventoryBarBounds(getFieldBoundsInView(), getWidth(), getHeight());
-        if (!barBounds.contains(point)) {
-            return -1;
-        }
-
+        Rectangle[] groupBounds = getInventoryGroupBounds(getFieldBoundsInView(), getWidth(), getHeight());
         for (int slotIndex = 0; slotIndex < getInventorySlotCount(); slotIndex++) {
-            Rectangle slotBounds = getSlotBounds(slotIndex, barBounds);
+            Rectangle slotBounds = getSlotBounds(slotIndex, groupBounds);
             if (slotBounds != null && slotBounds.contains(point)) {
                 return slotIndex;
             }
@@ -190,7 +239,7 @@ public class InventoryStatusOverlay extends JPanel {
     }
 
     /**
-     * Dessine le fond général de la barre.
+     * Dessine le fond d'un bloc d'inventaire.
      */
     private void drawInventoryShell(Graphics2D g2d, int x, int y, int width, int height) {
         g2d.setColor(new Color(0, 0, 0, 90));
@@ -213,6 +262,8 @@ public class InventoryStatusOverlay extends JPanel {
         int quantity = getQuantityForSlot(slotIndex);
         boolean hasStock = quantity > 0;
         boolean selected = isSlotSelected(slotIndex);
+        Type seedType = getSeedTypeForSlot(slotIndex);
+        boolean seedLockedForCurrentZone = seedType != null && hasStock && !isSeedUsableInCurrentZone(seedType);
 
         Color slotFill = selected
                 ? new Color(108, 74, 37, 248)
@@ -223,7 +274,9 @@ public class InventoryStatusOverlay extends JPanel {
         Color slotBorder = selected
                 ? new Color(255, 230, 132)
                 : hasStock ? new Color(241, 220, 154) : new Color(126, 106, 81);
-        Color quantityFill = hasStock ? new Color(255, 249, 228) : new Color(185, 175, 161);
+        Color quantityFill = seedLockedForCurrentZone
+                ? new Color(218, 207, 190)
+                : hasStock ? new Color(255, 249, 228) : new Color(185, 175, 161);
 
         g2d.setColor(slotFill);
         g2d.fillRoundRect(x, y, size, size, 10, 10);
@@ -239,20 +292,20 @@ public class InventoryStatusOverlay extends JPanel {
 
         int iconPixelSize = hasStock ? 5 : 4;
         FacilityType facilityType = getFacilityTypeForSlot(slotIndex);
-        int iconArtWidth = slotIndex < INVENTORY_SEED_ORDER.length
-                ? ProductPixelArt.getSeedArtWidth(INVENTORY_SEED_ORDER[slotIndex], iconPixelSize)
+        int iconArtWidth = seedType != null
+                ? ProductPixelArt.getSeedArtWidth(seedType, iconPixelSize)
                 : isWoodSlot(slotIndex)
                 ? ProductPixelArt.getWoodArtWidth(iconPixelSize)
                 : ProductPixelArt.getFacilityArtWidth(facilityType, iconPixelSize);
-        int iconArtHeight = slotIndex < INVENTORY_SEED_ORDER.length
-                ? ProductPixelArt.getSeedArtHeight(INVENTORY_SEED_ORDER[slotIndex], iconPixelSize)
+        int iconArtHeight = seedType != null
+                ? ProductPixelArt.getSeedArtHeight(seedType, iconPixelSize)
                 : isWoodSlot(slotIndex)
                 ? ProductPixelArt.getWoodArtHeight(iconPixelSize)
                 : ProductPixelArt.getFacilityArtHeight(facilityType, iconPixelSize);
         int iconX = x + ((size - iconArtWidth) / 2);
         int iconY = y + ((size - iconArtHeight) / 2) + 1;
-        if (slotIndex < INVENTORY_SEED_ORDER.length) {
-            ProductPixelArt.drawSeed(g2d, INVENTORY_SEED_ORDER[slotIndex], iconX, iconY, iconPixelSize);
+        if (seedType != null) {
+            ProductPixelArt.drawSeed(g2d, seedType, iconX, iconY, iconPixelSize);
         } else if (isWoodSlot(slotIndex)) {
             ProductPixelArt.drawWoodResource(g2d, iconX, iconY, iconPixelSize);
         } else {
@@ -276,26 +329,83 @@ public class InventoryStatusOverlay extends JPanel {
             textX = x + size - 17;
         }
         g2d.drawString(quantityText, textX, textY);
+
+        if (seedLockedForCurrentZone) {
+            drawLockedSeedVeil(g2d, x, y, size);
+        }
     }
 
     private static int getInventorySlotCount() {
-        return INVENTORY_SEED_ORDER.length + 1 + INVENTORY_FACILITY_ORDER.length;
+        return getTotalSeedSlotCount() + getResourceGroupSlotCount();
+    }
+
+    private static int getTotalSeedSlotCount() {
+        return MAIN_ZONE_SEED_ORDER.length + LEFT_ZONE_SEED_ORDER.length;
+    }
+
+    private static int getResourceGroupSlotCount() {
+        return 1 + INVENTORY_FACILITY_ORDER.length;
+    }
+
+    private static int[] getInventoryGroupSlotCounts() {
+        return new int[] {
+                LEFT_ZONE_SEED_ORDER.length,
+                MAIN_ZONE_SEED_ORDER.length,
+                getResourceGroupSlotCount()
+        };
+    }
+
+    private static int computeGroupWidth(int slotCount) {
+        return (slotCount * SLOT_SIZE) + ((slotCount - 1) * SLOT_GAP) + (OUTER_PADDING * 2);
+    }
+
+    private static int getGroupIndexForSlot(int slotIndex) {
+        if (slotIndex < 0 || slotIndex >= getInventorySlotCount()) {
+            return -1;
+        }
+        if (slotIndex < MAIN_ZONE_SEED_ORDER.length) {
+            return 1;
+        }
+        if (slotIndex < getTotalSeedSlotCount()) {
+            return 0;
+        }
+        return 2;
+    }
+
+    private static int getSlotIndexInGroup(int slotIndex) {
+        int groupIndex = getGroupIndexForSlot(slotIndex);
+        if (groupIndex == 0) {
+            return slotIndex - MAIN_ZONE_SEED_ORDER.length;
+        }
+        if (groupIndex == 1) {
+            return slotIndex;
+        }
+        if (groupIndex == 2) {
+            return slotIndex - getTotalSeedSlotCount();
+        }
+        return -1;
     }
 
     private boolean isSeedSlot(int slotIndex) {
-        return slotIndex >= 0 && slotIndex < INVENTORY_SEED_ORDER.length;
+        return slotIndex >= 0 && slotIndex < getTotalSeedSlotCount();
     }
 
     private boolean isWoodSlot(int slotIndex) {
-        return slotIndex == INVENTORY_SEED_ORDER.length;
+        return slotIndex == getWoodSlotIndex();
     }
 
     public Type getSeedTypeForSlot(int slotIndex) {
-        return isSeedSlot(slotIndex) ? INVENTORY_SEED_ORDER[slotIndex] : null;
+        if (!isSeedSlot(slotIndex)) {
+            return null;
+        }
+        if (slotIndex < MAIN_ZONE_SEED_ORDER.length) {
+            return MAIN_ZONE_SEED_ORDER[slotIndex];
+        }
+        return LEFT_ZONE_SEED_ORDER[slotIndex - MAIN_ZONE_SEED_ORDER.length];
     }
 
     public FacilityType getFacilityTypeForSlot(int slotIndex) {
-        int facilityIndex = slotIndex - INVENTORY_SEED_ORDER.length - 1;
+        int facilityIndex = slotIndex - getTotalSeedSlotCount() - 1;
         if (facilityIndex < 0 || facilityIndex >= INVENTORY_FACILITY_ORDER.length) {
             return null;
         }
@@ -307,7 +417,8 @@ public class InventoryStatusOverlay extends JPanel {
             return false;
         }
         if (isSeedSlot(slotIndex)) {
-            return getSeedTypeForSlot(slotIndex) == movementModel.getSelectedSeedType();
+            Type seedType = getSeedTypeForSlot(slotIndex);
+            return seedType == movementModel.getSelectedSeedType() && isSeedUsableInCurrentZone(seedType);
         }
         if (isWoodSlot(slotIndex)) {
             return false;
@@ -319,13 +430,71 @@ public class InventoryStatusOverlay extends JPanel {
      * Lit directement la quantité depuis le modèle.
      */
     private int getQuantityForSlot(int slotIndex) {
-        if (slotIndex < INVENTORY_SEED_ORDER.length) {
-            return inventaire.getQuantiteGraine(INVENTORY_SEED_ORDER[slotIndex]);
+        if (isSeedSlot(slotIndex)) {
+            Type seedType = getSeedTypeForSlot(slotIndex);
+            return seedType == null ? 0 : inventaire.getQuantiteGraine(seedType);
         }
         if (isWoodSlot(slotIndex)) {
             return inventaire.getQuantiteBois();
         }
         FacilityType facilityType = getFacilityTypeForSlot(slotIndex);
         return facilityType == null ? 0 : inventaire.getQuantiteInstallation(facilityType);
+    }
+
+    /**
+     * Une graine peut être visible dans l'inventaire sans être utilisable
+     * sur le côté du champ où se trouve actuellement le joueur.
+     */
+    private boolean isSeedUsableInCurrentZone(Type seedType) {
+        FieldZone currentFieldZone = getCurrentFieldZone();
+        return currentFieldZone == null || seedType.canBePlantedIn(currentFieldZone);
+    }
+
+    /**
+     * Le contrôleur s'appuie dessus pour refuser le clic
+     * sur une graine verrouillée par la zone actuelle.
+     */
+    public boolean isSeedSelectableInCurrentZone(Type seedType) {
+        return seedType != null && isSeedUsableInCurrentZone(seedType);
+    }
+
+    private FieldZone getCurrentFieldZone() {
+        if (movementModel == null || fieldPanel == null || fieldPanel.getGrilleCulture() == null) {
+            return null;
+        }
+
+        Unit playerUnit = movementModel.getPlayerUnit();
+        if (playerUnit == null) {
+            return null;
+        }
+
+        Rectangle fieldBounds = getFieldBoundsInView();
+        int playerCenterX = fieldBounds.x + (fieldBounds.width / 2) + playerUnit.getX();
+        int playerCenterY = fieldBounds.y + (fieldBounds.height / 2) + playerUnit.getY();
+        Point playerCenterInField = SwingUtilities.convertPoint(this, playerCenterX, playerCenterY, fieldPanel);
+        Point playerCell = fieldPanel.getGridPositionAt(playerCenterInField.x, playerCenterInField.y);
+        if (playerCell == null) {
+            return null;
+        }
+
+        /*
+         * Ici on suit le centre du joueur et non la case de gameplay active.
+         * Ainsi, le bloc du mauvais côté reste bien verrouillé
+         * dès que le personnage a changé de zone, même hors d'une case plantable valide.
+         */
+        return fieldPanel.getGrilleCulture().getFieldZoneAt(playerCell.x, playerCell.y);
+    }
+
+    /**
+     * Le voile signale qu'une graine est bien possédée, mais inutilisable
+     * sur le côté actuel du champ.
+     */
+    private void drawLockedSeedVeil(Graphics2D g2d, int x, int y, int size) {
+        g2d.setColor(LOCKED_SEED_OVERLAY);
+        g2d.fillRoundRect(x + 2, y + 2, size - 4, size - 4, 8, 8);
+
+        g2d.setColor(LOCKED_SEED_BORDER);
+        g2d.drawLine(x + 8, y + 8, x + size - 9, y + size - 9);
+        g2d.drawLine(x + 8, y + size - 9, x + size - 9, y + 8);
     }
 }

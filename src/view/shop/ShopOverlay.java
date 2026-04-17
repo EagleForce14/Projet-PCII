@@ -249,7 +249,7 @@ public class ShopOverlay extends JPanel {
         header.setOpaque(false);
 
         JLabel title = createPrimaryLabel(titleFont);
-        title.setText("Boutique");
+        title.setText(shop.getDisplayName());
 
         // Le bouton de fermeture reste compact:
         // il doit etre evident, pas devenir un gros call-to-action.

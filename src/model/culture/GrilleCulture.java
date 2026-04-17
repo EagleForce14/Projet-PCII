@@ -30,10 +30,10 @@ public class GrilleCulture {
         Type.ROSE, 10,
         Type.MARGUERITE, 10,
         Type.ORCHIDEE, 10,
+        Type.NENUPHAR, 10,
         Type.CAROTTE, 20,
         Type.RADIS, 20,
-        Type.CHOUFLEUR, 20,
-        Type.COURGETTE, 20
+        Type.CHOUFLEUR, 20
     );
 
     /** Constante représentant le prix de vente de chaque culture */
@@ -42,10 +42,10 @@ public class GrilleCulture {
         Type.ROSE, 20,
         Type.MARGUERITE, 12,
         Type.ORCHIDEE, 25,
+        Type.NENUPHAR, 15,
         Type.CAROTTE, 25,
         Type.RADIS, 30,
-        Type.CHOUFLEUR, 35,
-        Type.COURGETTE, 28
+        Type.CHOUFLEUR, 35
     );
 
     /** SERA UTILISE PROCHAINEMENT. Constante représentant le delai de croissance de chaque culture */
@@ -54,10 +54,10 @@ public class GrilleCulture {
         Type.ROSE, 5,
         Type.MARGUERITE, 5,
         Type.ORCHIDEE, 5,
+        Type.NENUPHAR, 5,
         Type.CAROTTE, 10,
         Type.RADIS, 10,
-        Type.CHOUFLEUR, 10,
-        Type.COURGETTE, 10
+        Type.CHOUFLEUR, 10
     );
 
     /** Attribut représentant la grille de culture */
@@ -718,6 +718,42 @@ public class GrilleCulture {
         return false;
     }
 
+    /**
+     * La rivière décorative découpe la ferme en deux zones de plantation.
+     * Toute graine connaît sa zone autorisée, et la grille expose ici
+     * la zone d'une case pour éviter de refaire ce calcul côté vue.
+     */
+    public FieldZone getFieldZoneAt(int x, int y) {
+        if (!estDansGrille(x, y)) {
+            return null;
+        }
+
+        int riverColumn = findDecorativeRiverColumn();
+        if (riverColumn < 0) {
+            return FieldZone.RIGHT_OF_RIVER;
+        }
+
+        return x < riverColumn ? FieldZone.LEFT_OF_RIVER : FieldZone.RIGHT_OF_RIVER;
+    }
+
+    /**
+     * Point d'entrée unique pour la règle "quelle graine peut être plantée où ?".
+     * Le contrôleur et la sidebar l'utilisent directement pour rester alignés
+     * avec la validation finale de planterCulture.
+     */
+    public boolean canPlantCulture(int x, int y, Type type, Inventaire inventaire) {
+        return type != null
+                && inventaire != null
+                && inventaire.possedeGraine(type)
+                && estDansGrille(x, y)
+                && !hasPath(x, y)
+                && !hasRiver(x, y)
+                && !hasBridgeAnchorAt(x, y)
+                && isLabouree(x, y)
+                && getCulture(x, y) == null
+                && type.canBePlantedIn(getFieldZoneAt(x, y));
+    }
+
     /** Méthode qui plante une culture dans la grille */
     public void planterCulture(int x, int y, Type type, Inventaire inventaire) {
         if (!inventaire.possedeGraine(type)) {
@@ -735,6 +771,9 @@ public class GrilleCulture {
         }
         if (hasBridgeAnchorAt(x, y)) {
             throw new IllegalStateException("Impossible de planter sur une case occupée par un pont.");
+        }
+        if (!type.canBePlantedIn(getFieldZoneAt(x, y))) {
+            throw new IllegalStateException("Cette graine ne peut pas être plantée dans cette zone du champ.");
         }
 
         if (grille[x][y].planterCulture(type, () -> isCellBoostedByRiver(x, y))) {
@@ -778,6 +817,18 @@ public class GrilleCulture {
             return grille[x][y].getCulture();
         }
         return null;
+    }
+
+    private int findDecorativeRiverColumn() {
+        for (int x = 0; x < LARGEUR_GRILLE; x++) {
+            for (int y = 0; y < HAUTEUR_GRILLE; y++) {
+                if (decorativeRiverCells[x][y]) {
+                    return x;
+                }
+            }
+        }
+
+        return -1;
     }
 
     /** Méthode qui mange la culture à une position donnée */

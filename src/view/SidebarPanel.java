@@ -683,14 +683,12 @@ public class SidebarPanel extends JPanel {
         Type selectedSeedType = movementModel.getSelectedSeedType();
         if (activeFieldCell == null
                 || !fieldPanel.isFarmableCell(activeFieldCell)
-                || !grilleCulture.isLabouree(activeFieldCell.x, activeFieldCell.y)
-                || grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y)
                 || selectedSeedType == null
                 || !inventaire.possedeGraine(selectedSeedType)) {
             return false;
         }
 
-        return grilleCulture.getCulture(activeFieldCell.x, activeFieldCell.y) == null;
+        return grilleCulture.canPlantCulture(activeFieldCell.x, activeFieldCell.y, selectedSeedType, inventaire);
     }
 
     /**

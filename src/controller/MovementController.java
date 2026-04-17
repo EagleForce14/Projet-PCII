@@ -45,6 +45,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     private final FieldPanel fieldPanel;
     private final InventoryStatusOverlay inventoryStatusOverlay;
     private final ShopOverlay shopOverlay;
+    private final ShopOverlay stallShopOverlay;
     private final WorkshopOverlay workshopOverlay;
     private final TreeManager treeManager;
     private final GamePauseController pauseController;
@@ -54,6 +55,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
                               GrilleCulture grilleCulture, Money playerMoney, Inventaire inventaire,
                               TreeManager treeManager,
                               FieldPanel fieldPanel, InventoryStatusOverlay inventoryStatusOverlay, ShopOverlay shopOverlay,
+                              ShopOverlay stallShopOverlay,
                               WorkshopOverlay workshopOverlay) {
         this.model = model;
         this.grilleCulture = grilleCulture;
@@ -64,6 +66,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         this.fieldPanel = fieldPanel;
         this.inventoryStatusOverlay = inventoryStatusOverlay;
         this.shopOverlay = shopOverlay;
+        this.stallShopOverlay = stallShopOverlay;
         this.workshopOverlay = workshopOverlay;
         this.treeManager = treeManager;
         this.pauseController = GamePauseController.getInstance();
@@ -136,10 +139,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         }
 
         Point activeFieldCell = model.getActiveFieldCell();
-        if (activeFieldCell == null
-                || !fieldPanel.isFarmableCell(activeFieldCell)
-                || grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y)
-                || !grilleCulture.isLabouree(activeFieldCell.x, activeFieldCell.y)) {
+        if (activeFieldCell == null || !fieldPanel.isFarmableCell(activeFieldCell)) {
             return;
         }
 
@@ -148,12 +148,14 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             return;
         }
 
-        if (grilleCulture.getCulture(activeFieldCell.x, activeFieldCell.y) == null) {
-            grilleCulture.planterCulture(activeFieldCell.x, activeFieldCell.y, selectedSeedType, inventaire);
-            if (!inventaire.possedeGraine(selectedSeedType)) {
-                model.clearSelectedInventoryItem();
-                inventoryStatusOverlay.repaint();
-            }
+        if (!grilleCulture.canPlantCulture(activeFieldCell.x, activeFieldCell.y, selectedSeedType, inventaire)) {
+            return;
+        }
+
+        grilleCulture.planterCulture(activeFieldCell.x, activeFieldCell.y, selectedSeedType, inventaire);
+        if (!inventaire.possedeGraine(selectedSeedType)) {
+            model.clearSelectedInventoryItem();
+            inventoryStatusOverlay.repaint();
         }
     }
 
@@ -389,6 +391,18 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         shopOverlay.openShop();
     }
 
+    private void ouvrirEchoppe() {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
+        stopPlayerMovement();
+        fieldPanel.clearFencePreview();
+        fieldPanel.clearCompostInfluenceHighlight();
+        showOverlay(stallShopOverlay);
+        stallShopOverlay.openShop();
+    }
+
     /**
      * La menuiserie ouvre son propre overlay,
      * mais suit exactement la même règle de pause que la boutique.
@@ -500,11 +514,17 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             // On nettoie alors la sélection courante pour éviter de garder un outil fantôme.
             if (!inventaire.possedeGraine(clickedSeedType)) {
                 model.clearSelectedInventoryItem();
-            // Cas 2: le joueur reclique sur la graine déjà active.
+            // Cas 2: la graine existe mais appartient à l'autre côté du champ.
+            // Le clic est absorbé par l'inventaire, mais on ne change rien à la sélection.
+            } else if (!inventoryStatusOverlay.isSeedSelectableInCurrentZone(clickedSeedType)) {
+                inventoryStatusOverlay.repaint();
+                movementView.requestFocusInWindow();
+                return true;
+            // Cas 3: le joueur reclique sur la graine déjà active.
             // Ici on interprète ce geste comme une annulation du mode courant.
             } else if (model.getSelectedSeedType() == clickedSeedType) {
                 model.clearSelectedInventoryItem();
-            // Cas 3: le slot contient bien des graines et devient la nouvelle sélection active.
+            // Cas 4: le slot contient bien des graines et devient la nouvelle sélection active.
             } else {
                 model.selectSeed(clickedSeedType);
             }
@@ -757,14 +777,15 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         return true;
     }
 
-    /**
-     * L'échoppe n'a pas encore d'overlay dédié.
-     * On consomme néanmoins le clic sur son sprite pour éviter des interactions "à travers" le bâtiment.
-     */
     private boolean handleStallClick(MouseEvent event) {
         Point pointInFieldPanel = getPointInFieldPanel(event);
         Rectangle stallBounds = fieldPanel.getStallScreenBounds();
-        return pointInFieldPanel != null && stallBounds != null && stallBounds.contains(pointInFieldPanel);
+        if (pointInFieldPanel == null || stallBounds == null || !stallBounds.contains(pointInFieldPanel)) {
+            return false;
+        }
+
+        ouvrirEchoppe();
+        return true;
     }
 
     /**

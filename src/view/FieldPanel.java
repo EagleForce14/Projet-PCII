@@ -154,6 +154,10 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private final Image choufleurIntermediaireImage;
     private final Image choufleurMatureImage;
     private final Image choufleurFletriImage;
+    private final Image nenupharJeuneImage;
+    private final Image nenupharIntermediaireImage;
+    private final Image nenupharMatureImage;
+    private final Image nenupharFletriImage;
     private final Image compostImage;
     private final Image bridgeImage;
 
@@ -213,6 +217,10 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         this.choufleurIntermediaireImage = ImageLoader.load("/assets/choufleur_inter.png");
         this.choufleurMatureImage = ImageLoader.load("/assets/choufleur_mature.png");
         this.choufleurFletriImage = ImageLoader.load("/assets/choufleur_fletri.png");
+        this.nenupharJeuneImage = ImageLoader.load("/assets/nenuphar_jeune.png");
+        this.nenupharIntermediaireImage = ImageLoader.load("/assets/nenuphar_inter.png");
+        this.nenupharMatureImage = ImageLoader.load("/assets/nenuphar_mature.png");
+        this.nenupharFletriImage = ImageLoader.load("/assets/nenuphar_fletri.png");
         this.compostImage = ImageLoader.load("/assets/Compost.png");
         this.bridgeImage = ImageLoader.load("/assets/bridge.png");
         this.compostInfluenceVisible = false;
@@ -938,6 +946,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         if (culture.getType() == Type.CHOUFLEUR) {
             return getCauliflowerCultureImage(culture.getStadeCroissance());
         }
+        if (culture.getType() == Type.NENUPHAR) {
+            return getWaterLilyCultureImage(culture.getStadeCroissance());
+        }
 
         Stade stade = culture.getStadeCroissance();
         if (stade == Stade.JEUNE_POUSSE) {
@@ -951,6 +962,22 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         }
         if (stade == Stade.FLETRIE) {
             return fletrieImage;
+        }
+        return null;
+    }
+
+    private Image getWaterLilyCultureImage(Stade stade) {
+        if (stade == Stade.JEUNE_POUSSE) {
+            return nenupharJeuneImage;
+        }
+        if (stade == Stade.INTERMEDIAIRE) {
+            return nenupharIntermediaireImage;
+        }
+        if (stade == Stade.MATURE) {
+            return nenupharMatureImage;
+        }
+        if (stade == Stade.FLETRIE) {
+            return nenupharFletriImage;
         }
         return null;
     }

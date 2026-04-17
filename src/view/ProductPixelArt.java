@@ -23,6 +23,7 @@ public final class ProductPixelArt {
     private static final int CARROT_SEED_IMAGE_MAX_SIDE = 6;
     private static final int RADISH_SEED_IMAGE_MAX_SIDE = 6;
     private static final int CAULIFLOWER_SEED_IMAGE_MAX_SIDE = 6;
+    private static final int WATER_LILY_SEED_IMAGE_MAX_SIDE = 6;
     private static final int FENCE_ART_COLUMNS = 9;
     private static final int FENCE_ART_ROWS = 7;
     private static final int PATH_ART_MAX_SIDE = 7;
@@ -38,6 +39,7 @@ public final class ProductPixelArt {
     private static final Image CARROT_IMAGE = ImageLoader.load("/assets/carotte_mature.png");
     private static final Image RADISH_IMAGE = ImageLoader.load("/assets/radis_mature.png");
     private static final Image CAULIFLOWER_IMAGE = ImageLoader.load("/assets/choufleur_mature.png");
+    private static final Image WATER_LILY_IMAGE = ImageLoader.load("/assets/nenuphar_mature.png");
 
     // Le constructeur de la classe
     private ProductPixelArt() {}
@@ -72,6 +74,9 @@ public final class ProductPixelArt {
         if (type == Type.CHOUFLEUR) {
             return getScaledImageSize(CAULIFLOWER_IMAGE, CAULIFLOWER_SEED_IMAGE_MAX_SIDE * pixelSize).width;
         }
+        if (type == Type.NENUPHAR) {
+            return getScaledImageSize(WATER_LILY_IMAGE, WATER_LILY_SEED_IMAGE_MAX_SIDE * pixelSize).width;
+        }
         return DEFAULT_ART_COLUMNS * pixelSize;
     }
 
@@ -84,6 +89,9 @@ public final class ProductPixelArt {
         }
         if (type == Type.CHOUFLEUR) {
             return getScaledImageSize(CAULIFLOWER_IMAGE, CAULIFLOWER_SEED_IMAGE_MAX_SIDE * pixelSize).height;
+        }
+        if (type == Type.NENUPHAR) {
+            return getScaledImageSize(WATER_LILY_IMAGE, WATER_LILY_SEED_IMAGE_MAX_SIDE * pixelSize).height;
         }
         return DEFAULT_ART_ROWS * pixelSize;
     }
@@ -167,8 +175,8 @@ public final class ProductPixelArt {
             case CHOUFLEUR:
                 drawScaledImage(g2d, CAULIFLOWER_IMAGE, x, y, CAULIFLOWER_SEED_IMAGE_MAX_SIDE * pixelSize);
                 break;
-            case COURGETTE:
-                drawZucchini(g2d, x, y, pixelSize);
+            case NENUPHAR:
+                drawScaledImage(g2d, WATER_LILY_IMAGE, x, y, WATER_LILY_SEED_IMAGE_MAX_SIDE * pixelSize);
                 break;
             default:
                 break;
@@ -243,15 +251,6 @@ public final class ProductPixelArt {
         fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, lightPurple);
         fillPixel(g2d, x, y + (2 * pixelSize), pixelSize, purple);
         fillPixel(g2d, x + (4 * pixelSize), y + (2 * pixelSize), pixelSize, purple);
-    }
-
-    private static void drawZucchini(Graphics2D g2d, int x, int y, int pixelSize) {
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(72, 146, 71));
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(92, 173, 91));
-        fillPixel(g2d, x + (3 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(72, 146, 71));
-        fillPixel(g2d, x + pixelSize, y + (2 * pixelSize), pixelSize, new Color(72, 146, 71));
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(92, 173, 91));
-        fillPixel(g2d, x + (3 * pixelSize), y + (3 * pixelSize), pixelSize, new Color(72, 146, 71));
     }
 
     private static void drawFence(Graphics2D g2d, int x, int y, int pixelSize) {
