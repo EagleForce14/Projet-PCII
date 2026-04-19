@@ -1,7 +1,5 @@
 package model.culture;
 
-import java.util.function.BooleanSupplier;
-
 /** Classe représentant une culture */
 public class Culture {
     /*
@@ -30,22 +28,23 @@ public class Culture {
 
     /*
      * On ne fige pas le bonus rivière au moment de la plantation.
-     * À la place, on garde un petit fournisseur d'état :
-     * si une rivière est posée plus tard à côté de la case,
-     * la culture peut adapter son chrono au prochain recalcul.
+     * La culture relit directement la carte des cases rivière autour d'elle,
+     * ce qui garde le modèle simple et explicite.
      */
-    private final BooleanSupplier riverBoostSupplier;
+    private final boolean[][] decorativeRiverCells;
+    private final int gridX;
+    private final int gridY;
 
     /** Constructeur de la classe Culture qui initialise le stade de croissance et démarre le thread de croissance */
     public Culture(Type type) {
-        this(type, () -> false);
+        this(type, null, -1, -1);
     }
 
     /**
      * Variante utilisée par la grille quand une culture a besoin
      * de relire dynamiquement son environnement.
      */
-    public Culture(Type type, BooleanSupplier riverBoostSupplier) {
+    public Culture(Type type, boolean[][] decorativeRiverCells, int gridX, int gridY) {
         if (type == null) {
             throw new IllegalArgumentException("Le type de culture ne peut pas être null.");
         }
@@ -53,7 +52,9 @@ public class Culture {
         this.type = type;
         this.stadeCroissance = Stade.JEUNE_POUSSE;
         this.arrosee = false;
-        this.riverBoostSupplier = riverBoostSupplier == null ? () -> false : riverBoostSupplier;
+        this.decorativeRiverCells = decorativeRiverCells;
+        this.gridX = gridX;
+        this.gridY = gridY;
         this.threadCroissance = new Croissance(this);
         this.threadCroissance.start(); // Démarrer le thread de croissance
     }
@@ -165,6 +166,6 @@ public class Culture {
     }
 
     private boolean isBoostedByRiver() {
-        return riverBoostSupplier != null && riverBoostSupplier.getAsBoolean();
+        return GrilleCulture.isCellBoostedByRiver(decorativeRiverCells, gridX, gridY);
     }
 }

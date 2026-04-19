@@ -44,7 +44,7 @@ public class FieldObstacleMap implements MovementCollisionMap {
     /**
      * Le placement des arbres reste le cas le plus exigeant :
      * on tient compte de leur future taille mature,
-     * du bord du champ, de la grange et des autres arbres.
+     * du bord du champ, de la boutique principale (à droite) et des autres arbres.
      */
     public boolean canPlaceTreeAt(int gridX, int gridY) {
         if (treeManager.canPlaceTreeAt(gridX, gridY)) {

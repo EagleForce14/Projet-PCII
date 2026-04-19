@@ -42,7 +42,7 @@ public final class TerrainTileFactory {
 
     /**
      * Sol mixte pierre + herbe partagé par les chemins
-     * et par la zone désactivée autour de la grange.
+     * et par la zone désactivée autour de la boutique principale (à droite).
      */
     public static Image[] createStoneWithGrass(int pixelSize) {
         return new Image[] {

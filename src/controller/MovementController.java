@@ -753,8 +753,10 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     }
 
     /**
-     * La boutique s'ouvre maintenant directement en cliquant sur la grange.
-     * On teste l'image visible de la grange, pas seulement sa hitbox de collision,
+     * La boutique s'ouvre maintenant directement en cliquant sur la
+     * boutique principale (à droite).
+     * On teste l'image visible de la boutique principale (à droite),
+     * pas seulement sa hitbox de collision,
      * car le joueur raisonne avec ce qu'il voit à l'écran.
      */
     private boolean handleBarnShopClick(MouseEvent event) {

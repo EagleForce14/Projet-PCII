@@ -25,7 +25,7 @@ import java.awt.image.BufferedImage;
 
 /**
  * Vue dédiée à l'affichage des éléments fixes de l'environnement,
- * comme la grange et les arbres.
+ * comme la boutique principale (à droite) et les arbres.
  */
 public class EnvironmentView extends JPanel {
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";

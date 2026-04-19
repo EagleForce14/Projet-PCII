@@ -151,7 +151,7 @@ public final class PredefinedFieldLayout {
     }
 
     /**
-     * Repère la première colonne touchée par l'image de la boutique/grange,
+     * Repère la première colonne touchée par l'image de la boutique principale (à droite),
      * puis conserve la même largeur de terrain du côté gauche de la rivière
      * même si la boutique a été décalée vers la gauche.
      */

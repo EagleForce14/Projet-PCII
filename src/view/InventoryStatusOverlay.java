@@ -47,7 +47,8 @@ public class InventoryStatusOverlay extends JPanel {
             Type.CHOUFLEUR
     };
     private static final Type[] LEFT_ZONE_SEED_ORDER = {
-            Type.NENUPHAR
+            Type.NENUPHAR,
+            Type.IRIS_DES_MARAIS
     };
     private static final FacilityType[] INVENTORY_FACILITY_ORDER = {
             FacilityType.CLOTURE,

@@ -20,10 +20,7 @@ import java.awt.RenderingHints;
 public final class ProductPixelArt {
     private static final int DEFAULT_ART_COLUMNS = 5;
     private static final int DEFAULT_ART_ROWS = 5;
-    private static final int CARROT_SEED_IMAGE_MAX_SIDE = 6;
-    private static final int RADISH_SEED_IMAGE_MAX_SIDE = 6;
-    private static final int CAULIFLOWER_SEED_IMAGE_MAX_SIDE = 6;
-    private static final int WATER_LILY_SEED_IMAGE_MAX_SIDE = 6;
+    private static final int ILLUSTRATED_SEED_IMAGE_MAX_SIDE = 6;
     private static final int FENCE_ART_COLUMNS = 9;
     private static final int FENCE_ART_ROWS = 7;
     private static final int PATH_ART_MAX_SIDE = 7;
@@ -40,6 +37,7 @@ public final class ProductPixelArt {
     private static final Image RADISH_IMAGE = ImageLoader.load("/assets/radis_mature.png");
     private static final Image CAULIFLOWER_IMAGE = ImageLoader.load("/assets/choufleur_mature.png");
     private static final Image WATER_LILY_IMAGE = ImageLoader.load("/assets/nenuphar_mature.png");
+    private static final Image MARSH_IRIS_IMAGE = ImageLoader.load("/assets/iris_marais_mature.png");
 
     // Le constructeur de la classe
     private ProductPixelArt() {}
@@ -65,33 +63,17 @@ public final class ProductPixelArt {
     }
 
     public static int getSeedArtWidth(Type type, int pixelSize) {
-        if (type == Type.CAROTTE) {
-            return getScaledImageSize(CARROT_IMAGE, CARROT_SEED_IMAGE_MAX_SIDE * pixelSize).width;
-        }
-        if (type == Type.RADIS) {
-            return getScaledImageSize(RADISH_IMAGE, RADISH_SEED_IMAGE_MAX_SIDE * pixelSize).width;
-        }
-        if (type == Type.CHOUFLEUR) {
-            return getScaledImageSize(CAULIFLOWER_IMAGE, CAULIFLOWER_SEED_IMAGE_MAX_SIDE * pixelSize).width;
-        }
-        if (type == Type.NENUPHAR) {
-            return getScaledImageSize(WATER_LILY_IMAGE, WATER_LILY_SEED_IMAGE_MAX_SIDE * pixelSize).width;
+        Image illustratedSeedImage = getIllustratedSeedImage(type);
+        if (illustratedSeedImage != null) {
+            return getScaledImageSize(illustratedSeedImage, ILLUSTRATED_SEED_IMAGE_MAX_SIDE * pixelSize).width;
         }
         return DEFAULT_ART_COLUMNS * pixelSize;
     }
 
     public static int getSeedArtHeight(Type type, int pixelSize) {
-        if (type == Type.CAROTTE) {
-            return getScaledImageSize(CARROT_IMAGE, CARROT_SEED_IMAGE_MAX_SIDE * pixelSize).height;
-        }
-        if (type == Type.RADIS) {
-            return getScaledImageSize(RADISH_IMAGE, RADISH_SEED_IMAGE_MAX_SIDE * pixelSize).height;
-        }
-        if (type == Type.CHOUFLEUR) {
-            return getScaledImageSize(CAULIFLOWER_IMAGE, CAULIFLOWER_SEED_IMAGE_MAX_SIDE * pixelSize).height;
-        }
-        if (type == Type.NENUPHAR) {
-            return getScaledImageSize(WATER_LILY_IMAGE, WATER_LILY_SEED_IMAGE_MAX_SIDE * pixelSize).height;
+        Image illustratedSeedImage = getIllustratedSeedImage(type);
+        if (illustratedSeedImage != null) {
+            return getScaledImageSize(illustratedSeedImage, ILLUSTRATED_SEED_IMAGE_MAX_SIDE * pixelSize).height;
         }
         return DEFAULT_ART_ROWS * pixelSize;
     }
@@ -153,6 +135,12 @@ public final class ProductPixelArt {
     }
 
     public static void drawSeed(Graphics2D g2d, Type type, int x, int y, int pixelSize) {
+        Image illustratedSeedImage = getIllustratedSeedImage(type);
+        if (illustratedSeedImage != null) {
+            drawScaledImage(g2d, illustratedSeedImage, x, y, ILLUSTRATED_SEED_IMAGE_MAX_SIDE * pixelSize);
+            return;
+        }
+
         switch (type) {
             case TULIPE:
                 drawTulip(g2d, x, y, pixelSize);
@@ -166,21 +154,33 @@ public final class ProductPixelArt {
             case ORCHIDEE:
                 drawOrchid(g2d, x, y, pixelSize);
                 break;
-            case CAROTTE:
-                drawScaledImage(g2d, CARROT_IMAGE, x, y, CARROT_SEED_IMAGE_MAX_SIDE * pixelSize);
-                break;
-            case RADIS:
-                drawScaledImage(g2d, RADISH_IMAGE, x, y, RADISH_SEED_IMAGE_MAX_SIDE * pixelSize);
-                break;
-            case CHOUFLEUR:
-                drawScaledImage(g2d, CAULIFLOWER_IMAGE, x, y, CAULIFLOWER_SEED_IMAGE_MAX_SIDE * pixelSize);
-                break;
-            case NENUPHAR:
-                drawScaledImage(g2d, WATER_LILY_IMAGE, x, y, WATER_LILY_SEED_IMAGE_MAX_SIDE * pixelSize);
-                break;
             default:
                 break;
         }
+    }
+
+    /**
+     * Certaines graines réutilisent directement leur sprite mature.
+     * On centralise cette liste ici pour ne pas répéter les mêmes conditions
+     * dans la largeur, la hauteur et le dessin.
+     */
+    private static Image getIllustratedSeedImage(Type type) {
+        if (type == Type.CAROTTE) {
+            return CARROT_IMAGE;
+        }
+        if (type == Type.RADIS) {
+            return RADISH_IMAGE;
+        }
+        if (type == Type.CHOUFLEUR) {
+            return CAULIFLOWER_IMAGE;
+        }
+        if (type == Type.NENUPHAR) {
+            return WATER_LILY_IMAGE;
+        }
+        if (type == Type.IRIS_DES_MARAIS) {
+            return MARSH_IRIS_IMAGE;
+        }
+        return null;
     }
 
     public static void drawFacility(Graphics2D g2d, FacilityType type, int x, int y, int pixelSize) {

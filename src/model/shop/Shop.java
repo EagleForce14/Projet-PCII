@@ -76,6 +76,10 @@ public class Shop implements DayChangeListener {
         return kind.getDisplayName();
     }
 
+    public boolean usesCategoryFilters() {
+        return kind.usesCategoryFilters();
+    }
+
     /**
      * une méthode pour récupérer la liste des produits que le joueur souhaite acheter
      *
@@ -134,14 +138,20 @@ public class Shop implements DayChangeListener {
      *
      **/
     public synchronized Boolean addToShoppingCard(Product product, int quantity) {
-        if (product == null || quantity <= 0 || quantity > product.getQuantity()) {
+        if (product == null || quantity <= 0) {
             return false;
         }
 
-        int desiredQuantity = getShoppingCardQuantity(product) + quantity;
+        long desiredQuantity = (long) getShoppingCardQuantity(product) + quantity;
+        if (desiredQuantity > getShoppingCardQuantityLimit(product)) {
+            return false;
+        }
+        if (desiredQuantity > Integer.MAX_VALUE) {
+            return false;
+        }
 
 
-        return setShoppingCardQuantity(product, desiredQuantity);
+        return setShoppingCardQuantity(product, (int) desiredQuantity);
     }
 
     /**
@@ -177,7 +187,35 @@ public class Shop implements DayChangeListener {
         if (product == null) {
             return 0;
         }
+
+        if (!usesManagedStock(product)) {
+            return Integer.MAX_VALUE;
+        }
+
         return Math.max(0, product.getQuantity() - getShoppingCardQuantity(product));
+    }
+
+    /**
+     * Seuls quelques articles gardent un stock limité en boutique.
+     * Toutes les graines et le chemin sont désormais achetables sans limite.
+     */
+    public synchronized boolean usesManagedStock(Product product) {
+        if (!(product instanceof Facility)) {
+            return false;
+        }
+
+        FacilityType type = ((Facility) product).getType();
+        return type == FacilityType.CLOTURE
+                || type == FacilityType.COMPOST
+                || type == FacilityType.JARDINIER;
+    }
+
+    /**
+     * Le panier peut monter librement tant que l'article n'est pas limité en stock.
+     * Pour les articles limités, on garde le comportement actuel basé sur le stock magasin.
+     */
+    public synchronized boolean canIncreaseShoppingCardQuantity(Product product) {
+        return product != null && getShoppingCardQuantity(product) < getShoppingCardQuantityLimit(product);
     }
 
     /**
@@ -185,7 +223,7 @@ public class Shop implements DayChangeListener {
      * Une quantité à 0 retire naturellement l'article.
      */
     public synchronized boolean setShoppingCardQuantity(Product product, int quantity) {
-        if (product == null || quantity < 0 || quantity > product.getQuantity()) {
+        if (product == null || quantity < 0 || quantity > getShoppingCardQuantityLimit(product)) {
             return false;
         }
 
@@ -242,12 +280,6 @@ public class Shop implements DayChangeListener {
 
                 // cas des graines 
                 if (item.product instanceof Seed) {
-                    for (Product seed : seeds) {
-                        if (seed.getName().equals(item.product.getName())) {
-                            seed.setQuantity(seed.getQuantity() - item.quantity);
-                            break;
-                        }
-                    }
                     // ajout dans l'inventaire
                     inventaire.ajoutGraine((Seed) item.product, item.quantity);
 
@@ -255,7 +287,9 @@ public class Shop implements DayChangeListener {
                 } else if (item.product instanceof Facility) {
                     for (Product facility : facilities) {
                         if (facility.getName().equals(item.product.getName())) {
-                            facility.setQuantity(facility.getQuantity() - item.quantity);
+                            if (usesManagedStock(facility)) {
+                                facility.setQuantity(facility.getQuantity() - item.quantity);
+                            }
                             break;
                         }
                     }
@@ -334,6 +368,10 @@ public class Shop implements DayChangeListener {
 
     private int getInitialSeedPrice(Type type) {
         return type != null && type.isFleur() ? 8 : 5;
+    }
+
+    private int getShoppingCardQuantityLimit(Product product) {
+        return usesManagedStock(product) ? product.getQuantity() : Integer.MAX_VALUE;
     }
 
     /**

@@ -99,7 +99,7 @@ public class TreeThread extends Thread {
 
     /**
      * On délègue toute la validation géométrique au helper dédié :
-     * espacement entre arbres, marge avec la grange,
+     * espacement entre arbres, marge avec la boutique principale (à droite),
      * et exclusion des zones trop proches du bord visible.
      */
     private Point pickRandomAvailableGrassCell(boolean spawningTrunk) {

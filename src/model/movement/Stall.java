@@ -7,7 +7,7 @@ import java.awt.Rectangle;
 
 /**
  * Représente l'échoppe affichée à gauche de la boutique.
- * Son placement repart du même alignement vertical que la grange,
+ * Son placement repart du même alignement vertical que la boutique principale (à droite),
  * puis est volontairement décalé d'une ligne vers le bas
  * pour mieux occuper la zone gauche du décor.
  */
@@ -30,8 +30,8 @@ public final class Stall {
     private Stall() {}
 
     /**
-     * Place l'échoppe à gauche de la grange.
-     * On calcule d'abord une position "de base" alignée sur le bas de la grange,
+     * Place l'échoppe à gauche de la boutique principale.
+     * On calcule d'abord une position "de base" alignée sur le bas de la boutique principale,
      * puis on recentre le bâtiment dans la zone gauche et on l'abaisse d'une ligne.
      */
     public static Rectangle getDrawBounds(Rectangle fieldLogicalBounds) {
@@ -77,7 +77,7 @@ public final class Stall {
 
     /**
      * Reprend la même idée que le layout prédéfini :
-     * on cherche la première colonne réellement touchée par la grange
+     * on cherche la première colonne réellement touchée par la boutique principale (à droite)
      * pour retrouver ensuite la zone gauche située avant la rivière décorative.
      */
     private static int resolveLeftmostBarnColumn(Rectangle fieldLogicalBounds, Rectangle barnDrawBounds, int tileSize) {

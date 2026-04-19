@@ -4,7 +4,7 @@ import java.awt.Dimension;
 import java.awt.Rectangle;
 
 /**
- * Représente la menuiserie affichée à droite de la grange.
+ * Représente la menuiserie affichée à droite de la boutique principale.
  * Son placement et sa collision restent alignés avec la géométrie réelle du sprite.
  */
 public final class Workshop {
@@ -24,7 +24,7 @@ public final class Workshop {
     private Workshop() {}
 
     /**
-     * Place la menuiserie à droite de la grange en gardant sa base sur le même sol.
+     * Place la menuiserie à droite de la boutique principale en gardant sa base sur le même sol.
      * Les coordonnées renvoyées sont dans le repère logique centré du champ.
      */
     public static Rectangle getDrawBounds(Rectangle fieldLogicalBounds) {

@@ -693,7 +693,8 @@ public class SidebarPanel extends JPanel {
 
     /**
      * Le chemin se pose uniquement sur de l'herbe:
-     * pas sur la grange, pas sur une case deja labourée, pas sur une case deja occupee.
+     * pas sur la boutique principale (à droite), pas sur une case deja labourée,
+     * pas sur une case deja occupee.
      *
      * On garde cette regle dans la sidebar aussi
      * pour que le bouton explique visuellement quand l'action est possible.

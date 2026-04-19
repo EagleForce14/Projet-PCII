@@ -31,6 +31,7 @@ public class GrilleCulture {
         Type.MARGUERITE, 10,
         Type.ORCHIDEE, 10,
         Type.NENUPHAR, 10,
+        Type.IRIS_DES_MARAIS, 10,
         Type.CAROTTE, 20,
         Type.RADIS, 20,
         Type.CHOUFLEUR, 20
@@ -43,6 +44,7 @@ public class GrilleCulture {
         Type.MARGUERITE, 12,
         Type.ORCHIDEE, 25,
         Type.NENUPHAR, 15,
+        Type.IRIS_DES_MARAIS, 15,
         Type.CAROTTE, 25,
         Type.RADIS, 30,
         Type.CHOUFLEUR, 35
@@ -55,6 +57,7 @@ public class GrilleCulture {
         Type.MARGUERITE, 5,
         Type.ORCHIDEE, 5,
         Type.NENUPHAR, 5,
+        Type.IRIS_DES_MARAIS, 5,
         Type.CAROTTE, 10,
         Type.RADIS, 10,
         Type.CHOUFLEUR, 10
@@ -145,7 +148,7 @@ public class GrilleCulture {
         // chaque case existe déjà, mais aucune n'est labourée au lancement.
         for (int i = 0; i < LARGEUR_GRILLE; i++) {
             for (int j = 0; j < HAUTEUR_GRILLE; j++) {
-                grille[i][j] = new ZoneCulture(false);
+                grille[i][j] = new ZoneCulture(false, decorativeRiverCells, i, j);
                 pathCells[i][j] = false;
                 decorativeRiverCells[i][j] = false;
             }
@@ -697,7 +700,24 @@ public class GrilleCulture {
      * visuellement, cela donne une zone d'humidité compacte et facile à comprendre.
      */
     public boolean isCellBoostedByRiver(int x, int y) {
-        if (!estDansGrille(x, y) || !isLabouree(x, y)) {
+        return estDansGrille(x, y)
+                && isLabouree(x, y)
+                && isCellBoostedByRiver(decorativeRiverCells, x, y);
+    }
+
+    /**
+     * Helper partagé par la grille et les cultures.
+     * On centralise ici la lecture du voisinage rivière pour éviter de dupliquer
+     * la même boucle sur les cases adjacentes.
+     */
+    static boolean isCellBoostedByRiver(boolean[][] decorativeRiverCells, int x, int y) {
+        if (decorativeRiverCells == null
+                || decorativeRiverCells.length == 0
+                || x < 0
+                || x >= decorativeRiverCells.length
+                || decorativeRiverCells[x] == null
+                || y < 0
+                || y >= decorativeRiverCells[x].length) {
             return false;
         }
 
@@ -709,13 +729,23 @@ public class GrilleCulture {
 
                 int candidateX = x + deltaX;
                 int candidateY = y + deltaY;
-                if (hasRiver(candidateX, candidateY)) {
+                if (hasRiverAt(decorativeRiverCells, candidateX, candidateY)) {
                     return true;
                 }
             }
         }
 
         return false;
+    }
+
+    private static boolean hasRiverAt(boolean[][] decorativeRiverCells, int x, int y) {
+        return decorativeRiverCells != null
+                && x >= 0
+                && x < decorativeRiverCells.length
+                && decorativeRiverCells[x] != null
+                && y >= 0
+                && y < decorativeRiverCells[x].length
+                && decorativeRiverCells[x][y];
     }
 
     /**
@@ -776,10 +806,9 @@ public class GrilleCulture {
             throw new IllegalStateException("Cette graine ne peut pas être plantée dans cette zone du champ.");
         }
 
-        if (grille[x][y].planterCulture(type, () -> isCellBoostedByRiver(x, y))) {
-            // Met à jour les objectifs liés à la plantation de cultures
-            gestionnaireObjectifs.mettreAJourObjectifsPlanter(type);
-        }
+        grille[x][y].planterCulture(type);
+        // Met à jour les objectifs liés à la plantation de cultures
+        gestionnaireObjectifs.mettreAJourObjectifsPlanter(type);
 
         // retirer la graine de l'inventaire
         inventaire.UseGraineFleure(type);

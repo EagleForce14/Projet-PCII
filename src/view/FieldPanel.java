@@ -46,6 +46,8 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private static final double CAULIFLOWER_INTERMEDIATE_MAP_SCALE = 0.90;
     private static final double CAULIFLOWER_MATURE_MAP_SCALE = 0.82;
     private static final double CAULIFLOWER_WILTED_MAP_SCALE = 0.82;
+    private static final double WATER_LILY_YOUNG_MAP_SCALE = 0.78;
+    private static final double MARSH_IRIS_YOUNG_MAP_SCALE = 0.78;
 
     // Taille préférée alignée sur la zone de jeu principale.
     // Le panneau peut s'étirer ensuite, mais ces valeurs servent de base cohérente
@@ -158,6 +160,10 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private final Image nenupharIntermediaireImage;
     private final Image nenupharMatureImage;
     private final Image nenupharFletriImage;
+    private final Image irisMaraisJeuneImage;
+    private final Image irisMaraisIntermediaireImage;
+    private final Image irisMaraisMatureImage;
+    private final Image irisMaraisFletrieImage;
     private final Image compostImage;
     private final Image bridgeImage;
 
@@ -221,6 +227,10 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         this.nenupharIntermediaireImage = ImageLoader.load("/assets/nenuphar_inter.png");
         this.nenupharMatureImage = ImageLoader.load("/assets/nenuphar_mature.png");
         this.nenupharFletriImage = ImageLoader.load("/assets/nenuphar_fletri.png");
+        this.irisMaraisJeuneImage = ImageLoader.load("/assets/iris_marais_jeune.png");
+        this.irisMaraisIntermediaireImage = ImageLoader.load("/assets/iris_marais_inter.png");
+        this.irisMaraisMatureImage = ImageLoader.load("/assets/iris_marais_mature.png");
+        this.irisMaraisFletrieImage = ImageLoader.load("/assets/iris_marais_fletrie.png");
         this.compostImage = ImageLoader.load("/assets/Compost.png");
         this.bridgeImage = ImageLoader.load("/assets/bridge.png");
         this.compostInfluenceVisible = false;
@@ -449,7 +459,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     }
 
     /**
-     * Expose le rectangle écran de la grange.
+     * Expose le rectangle écran de la boutique principale (à droite).
      * La vue d'environnement et le contrôleur s'en servent pour parler
      * exactement du même objet visuel sans recalculer chacun de leur côté.
      */
@@ -463,7 +473,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     }
 
     /**
-     * La menuiserie est calculée dans le même repère logique que la grange,
+     * La menuiserie est calculée dans le même repère logique que la boutique principale (à droite),
      * puis simplement décalée vers l'écran comme le reste du décor fixe.
      */
     public Rectangle getWorkshopScreenBounds() {
@@ -485,7 +495,8 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
 
     /**
      * L'échoppe partage le même repère logique que les autres bâtiments fixes.
-     * On peut donc la projeter à l'écran exactement comme la grange et la menuiserie.
+     * On peut donc la projeter à l'écran exactement comme la boutique principale (à droite)
+     * et la menuiserie.
      */
     public Rectangle getStallScreenBounds() {
         Rectangle fieldBounds = getFieldBounds();
@@ -581,7 +592,8 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
 
     /**
      * Construit le rectangle logique d'une case dans le repère centré de la map.
-     * Cette version est utilisée pour les collisions et les comparaisons avec la grange.
+     * Cette version est utilisée pour les collisions et les comparaisons avec
+     * la boutique principale (à droite).
      */
     private Rectangle buildLogicalCellBounds(int gridX, int gridY, Rectangle fieldBounds) {
         int tileSize = getTileSize(fieldBounds);
@@ -615,7 +627,8 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
 
     /**
      * Cette méthode sert surtout aux règles de gameplay.
-     * Une case qui croise la grange ne doit jamais pouvoir être labourée ni plantée.
+     * Une case qui croise la boutique principale (à droite) ne doit jamais
+     * pouvoir être labourée ni plantée.
      */
     public boolean isBlockedByBarn(Point cell) {
         return cell != null && isBlockedByBarn(cell.x, cell.y);
@@ -638,7 +651,8 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         }
 
         /*
-         * La zone pierre + herbe autour de la grange doit elle aussi désactiver les cases.
+         * La zone pierre + herbe autour de la boutique principale (à droite)
+         * doit elle aussi désactiver les cases.
          * Comme l'utilisateur a demandé d'inclure les cases partiellement visibles,
          * toute intersection avec cette bordure suffit ici.
          */
@@ -786,7 +800,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     /**
      * Les calculs de collisions et de déplacements utilisent un repère centré sur la map.
      * On reconstruit donc ici le rectangle logique d'une case dans ce même repère,
-     * pour pouvoir comparer proprement la case à la grange.
+     * pour pouvoir comparer proprement la case à la boutique principale (à droite).
      */
     public Rectangle getLogicalCellBounds(int gridX, int gridY) {
         if (!isInsideGrid(gridX, gridY)) {
@@ -849,7 +863,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     }
 
     /**
-     * Expose le rectangle logique associé au sprite complet de la grange.
+     * Expose le rectangle logique associé au sprite complet de la boutique principale (à droite).
      * Cela sert aux règles visuelles de placement des arbres, plus strictes que la seule hitbox.
      */
     public Rectangle getBarnLogicalDrawBounds() {
@@ -875,8 +889,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     }
 
     /**
-     * Zone pierre + herbe autour de la grange :
-     * elle colle à la grange, mais on retire volontairement la première rangée du haut
+     * Zone pierre + herbe autour de la boutique principale (à droite) :
+     * elle colle à la boutique principale (à droite),
+     * mais on retire volontairement la première rangée du haut
      * pour éviter d'afficher cette texture au-dessus du toit.
      */
     public Rectangle getBarnCourtyardLogicalBounds() {
@@ -946,8 +961,8 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         if (culture.getType() == Type.CHOUFLEUR) {
             return getCauliflowerCultureImage(culture.getStadeCroissance());
         }
-        if (culture.getType() == Type.NENUPHAR) {
-            return getWaterLilyCultureImage(culture.getStadeCroissance());
+        if (culture.getType() == Type.NENUPHAR || culture.getType() == Type.IRIS_DES_MARAIS) {
+            return getLeftZoneFlowerCultureImage(culture.getType(), culture.getStadeCroissance());
         }
 
         Stade stade = culture.getStadeCroissance();
@@ -966,18 +981,32 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return null;
     }
 
-    private Image getWaterLilyCultureImage(Stade stade) {
+    /**
+     * Les fleurs vendues uniquement à l'échoppe suivent toutes la même logique visuelle :
+     * on choisit simplement le bon lot d'images, puis on laisse le stade faire le reste.
+     */
+    private Image getLeftZoneFlowerCultureImage(Type type, Stade stade) {
+        if (type == Type.NENUPHAR) {
+            return getStageImage(stade, nenupharJeuneImage, nenupharIntermediaireImage, nenupharMatureImage, nenupharFletriImage);
+        }
+        if (type == Type.IRIS_DES_MARAIS) {
+            return getStageImage(stade, irisMaraisJeuneImage, irisMaraisIntermediaireImage, irisMaraisMatureImage, irisMaraisFletrieImage);
+        }
+        return null;
+    }
+
+    private Image getStageImage(Stade stade, Image jeuneImage, Image intermediaireImage, Image matureImage, Image fletrieImage) {
         if (stade == Stade.JEUNE_POUSSE) {
-            return nenupharJeuneImage;
+            return jeuneImage;
         }
         if (stade == Stade.INTERMEDIAIRE) {
-            return nenupharIntermediaireImage;
+            return intermediaireImage;
         }
         if (stade == Stade.MATURE) {
-            return nenupharMatureImage;
+            return matureImage;
         }
         if (stade == Stade.FLETRIE) {
-            return nenupharFletriImage;
+            return fletrieImage;
         }
         return null;
     }
@@ -1334,6 +1363,10 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
             scale *= getRadishMapScale(culture.getStadeCroissance());
         } else if (culture != null && culture.getType() == Type.CHOUFLEUR) {
             scale *= getCauliflowerMapScale(culture.getStadeCroissance());
+        } else if (culture != null && culture.getType() == Type.NENUPHAR) {
+            scale *= getWaterLilyMapScale(culture.getStadeCroissance());
+        } else if (culture != null && culture.getType() == Type.IRIS_DES_MARAIS) {
+            scale *= getMarshIrisMapScale(culture.getStadeCroissance());
         }
 
         int drawWidth = (int) Math.round(imageWidth * scale);
@@ -1349,10 +1382,30 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         int drawX = x + ((tileSize - scaledVisibleWidth) / 2) - (int) Math.round(visibleBounds.x * scale);
         int drawY = y + ((tileSize - scaledVisibleHeight) / 2) - (int) Math.round(visibleBounds.y * scale);
 
+        /*
+         * L'iris des marais mature dépasse volontairement de sa case.
+         * Si on le centre complètement, sa base retombe trop bas visuellement.
+         * On aligne donc le bas réellement visible de l'image sur le centre de la case
+         * pour les stades où la fleur commence vraiment à prendre de la hauteur.
+         */
+        if (shouldAnchorVisibleBottomAtCellCenter(culture)) {
+            int visibleTopY = y + (tileSize / 2) - scaledVisibleHeight;
+            drawY = visibleTopY - (int) Math.round(visibleBounds.y * scale);
+        }
+
         // Les plantes sont elles aussi en pixel art :
         // on évite donc le flou de l'interpolation bilinéaire.
         g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
         g2.drawImage(cultureImage, drawX, drawY, drawWidth, drawHeight, this);
+    }
+
+    private boolean shouldAnchorVisibleBottomAtCellCenter(Culture culture) {
+        if (culture == null || culture.getType() != Type.IRIS_DES_MARAIS) {
+            return false;
+        }
+
+        Stade stade = culture.getStadeCroissance();
+        return stade == Stade.INTERMEDIAIRE || stade == Stade.MATURE || stade == Stade.FLETRIE;
     }
 
     private Rectangle getVisibleCultureBounds(Image cultureImage, int imageWidth, int imageHeight) {
@@ -1438,6 +1491,20 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
             return CAULIFLOWER_WILTED_MAP_SCALE;
         }
         return CAULIFLOWER_MATURE_MAP_SCALE;
+    }
+
+    private double getWaterLilyMapScale(Stade stade) {
+        if (stade == Stade.JEUNE_POUSSE) {
+            return WATER_LILY_YOUNG_MAP_SCALE;
+        }
+        return 1.0;
+    }
+
+    private double getMarshIrisMapScale(Stade stade) {
+        if (stade == Stade.JEUNE_POUSSE) {
+            return MARSH_IRIS_YOUNG_MAP_SCALE;
+        }
+        return 1.0;
     }
 
     private BufferedImage toBufferedImage(Image image, int imageWidth, int imageHeight) {
@@ -1798,7 +1865,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
 
     /**
      * Le cache contient uniquement le décor immobile du champ :
-     * sol, chemins, rivière et habillage autour de la grange.
+     * sol, chemins, rivière et habillage autour de la boutique principale (à droite).
      */
     private void paintStaticTerrain(Graphics2D g2, Rectangle fieldBounds) {
         if (fieldBounds == null) {

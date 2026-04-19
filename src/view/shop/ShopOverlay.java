@@ -267,26 +267,30 @@ public class ShopOverlay extends JPanel {
     }
 
     private JComponent buildColumns() {
-        // On verrouille ici notre proportion 3 colonnes.
-        // Le centre prend l'air, les cotes restent utilitaires.
+        // La boutique principale garde 3 colonnes,
+        // mais l'échoppe n'en a besoin que de 2.
         JPanel columns = new JPanel(new GridBagLayout());
         columns.setOpaque(false);
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(0, 0, 0, 18);
         gbc.fill = GridBagConstraints.BOTH;
         gbc.gridy = 0;
         gbc.weighty = 1.0;
 
-        gbc.gridx = 0;
-        gbc.weightx = 0.0;
-        columns.add(buildFiltersPanel(), gbc);
+        int nextColumn = 0;
+        if (shop.usesCategoryFilters()) {
+            gbc.gridx = nextColumn++;
+            gbc.weightx = 0.0;
+            gbc.insets = new Insets(0, 0, 0, 18);
+            columns.add(buildFiltersPanel(), gbc);
+        }
 
-        gbc.gridx = 1;
+        gbc.gridx = nextColumn++;
         gbc.weightx = 1.0;
+        gbc.insets = new Insets(0, 0, 0, 18);
         columns.add(buildCatalogPanel(), gbc);
 
-        gbc.gridx = 2;
+        gbc.gridx = nextColumn;
         gbc.weightx = 0.0;
         gbc.insets = new Insets(0, 0, 0, 0);
         columns.add(buildSummaryPanel(), gbc);
@@ -440,7 +444,7 @@ public class ShopOverlay extends JPanel {
         top.add(productPreview, BorderLayout.WEST);
 
         // Le bloc meta reste volontairement compact:
-        // nom, categorie, prix, stock, deja-present-dans-le-panier.
+        // nom, categorie, prix, éventuel stock limité, deja-present-dans-le-panier.
         // Le texte d'effet des boosts est maintenant visible directement
         // sur les cartes du catalogue central pour faciliter la comparaison.
         JPanel meta = new JPanel();
@@ -484,7 +488,7 @@ public class ShopOverlay extends JPanel {
         // Toute la logique de clic reste ici pour eviter de disperser
         // les comportements de la boutique dans plusieurs classes internes.
         decreaseDesiredButton.addActionListener(event -> updateDesiredQuantity(desiredQuantity - 1));
-        increaseDesiredButton.addActionListener(event -> updateDesiredQuantity(desiredQuantity + 1));
+        increaseDesiredButton.addActionListener(event -> updateDesiredQuantity(incrementQuantity(desiredQuantity)));
         addToCartButton.addActionListener(event -> addSelectedProductToCart());
         clearCartButton.addActionListener(event -> {
             shop.clearShoppingCard();
@@ -560,7 +564,7 @@ public class ShopOverlay extends JPanel {
                         getProductCategoryLabel(product),
                         getProductCatalogDetailLabel(product),
                         product.getPrice() + " EUR",
-                        "Stock : " + shop.getRemainingStock(product),
+                        getProductFooterLabel(product),
                         getCatalogBadgeText(product),
                         product == selectedProduct,
                         woodTexture,
@@ -594,7 +598,8 @@ public class ShopOverlay extends JPanel {
             selectedNameLabel.setText("Aucune selection");
             selectedMetaLabel.setText("Choisissez une carte au centre.");
             selectedPriceLabel.setText("--");
-            selectedStockLabel.setText("Stock : --");
+            selectedStockLabel.setText("");
+            selectedStockLabel.setVisible(false);
             selectedCartLabel.setText("Dans le panier : 0");
             desiredQuantityLabel.setText("0");
             addToCartButton.setEnabled(false);
@@ -609,15 +614,21 @@ public class ShopOverlay extends JPanel {
         selectedNameLabel.setText(selectedProduct.getName());
         selectedMetaLabel.setText(getProductCategoryLabel(selectedProduct));
         selectedPriceLabel.setText(selectedProduct.getPrice() + " EUR");
-        selectedStockLabel.setText("Stock libre : " + remainingStock);
+        if (shop.usesManagedStock(selectedProduct)) {
+            selectedStockLabel.setText("Stock libre : " + remainingStock);
+            selectedStockLabel.setVisible(true);
+        } else {
+            selectedStockLabel.setText("");
+            selectedStockLabel.setVisible(false);
+        }
         selectedCartLabel.setText("Dans le panier : " + cartQuantity);
         desiredQuantityLabel.setText(String.valueOf(desiredQuantity));
 
         // Le bouton Ajouter n'est actif que si la quantite courante est realiste.
-        boolean canAdd = remainingStock > 0 && desiredQuantity > 0;
+        boolean canAdd = hasAvailableQuantity(selectedProduct) && desiredQuantity > 0;
         addToCartButton.setEnabled(canAdd);
         decreaseDesiredButton.setEnabled(desiredQuantity > 1);
-        increaseDesiredButton.setEnabled(desiredQuantity > 0 && desiredQuantity < remainingStock);
+        increaseDesiredButton.setEnabled(canIncreaseDesiredQuantity(selectedProduct, desiredQuantity));
     }
 
     private void refreshCartPanel() {
@@ -704,7 +715,7 @@ public class ShopOverlay extends JPanel {
             syncFromModel();
         });
         plus.addActionListener(event -> {
-            shop.setShoppingCardQuantity(product, item.getQuantity() + 1);
+            shop.setShoppingCardQuantity(product, incrementQuantity(item.getQuantity()));
             syncFromModel();
         });
         remove.addActionListener(event -> {
@@ -716,7 +727,7 @@ public class ShopOverlay extends JPanel {
         });
 
         minus.setEnabled(item.getQuantity() > 1);
-        plus.setEnabled(item.getQuantity() < product.getQuantity());
+        plus.setEnabled(shop.canIncreaseShoppingCardQuantity(product));
 
         JPanel quantityControls = new JPanel(new BorderLayout(6, 0));
         quantityControls.setOpaque(false);
@@ -749,47 +760,47 @@ public class ShopOverlay extends JPanel {
             selectedProduct = visibleProducts.get(0);
         }
 
-        int remainingStock = shop.getRemainingStock(selectedProduct);
-        if (remainingStock <= 0) {
+        if (!hasAvailableQuantity(selectedProduct)) {
             desiredQuantity = 0;
             return;
         }
 
         // On corrige aussi la quantite desiree si elle n'a plus de sens
         // apres un changement de filtre ou de panier.
-        if (desiredQuantity <= 0 || desiredQuantity > remainingStock) {
+        if (desiredQuantity <= 0
+                || (shop.usesManagedStock(selectedProduct) && desiredQuantity > shop.getRemainingStock(selectedProduct))) {
             desiredQuantity = 1;
         }
     }
 
     private void updateDesiredQuantity(int nextQuantity) {
-        // La quantité locale ne doit jamais dépasser le stock encore libre
-        // une fois le panier courant pris en compte.
+        // Pour les articles limités, on reste borné par le stock libre.
+        // Pour les autres, on laisse simplement monter la quantité demandée.
         if (selectedProduct == null) {
             desiredQuantity = 0;
             syncFromModel();
             return;
         }
 
-        int remainingStock = shop.getRemainingStock(selectedProduct);
-        if (remainingStock <= 0) {
+        if (!hasAvailableQuantity(selectedProduct)) {
             desiredQuantity = 0;
             syncFromModel();
             return;
         }
 
-        desiredQuantity = Math.max(1, Math.min(nextQuantity, remainingStock));
+        if (shop.usesManagedStock(selectedProduct)) {
+            int remainingStock = shop.getRemainingStock(selectedProduct);
+            desiredQuantity = Math.max(1, Math.min(nextQuantity, remainingStock));
+        } else {
+            desiredQuantity = Math.max(1, nextQuantity);
+        }
         refreshSelectionPanel();
         repaint();
     }
 
     private void selectProduct(Product product) {
         selectedProduct = product;
-
-        int remainingStock = shop.getRemainingStock(product);
-        // Si le stock visible est vide, on montre bien 0
-        // plutot qu'un stepper encore actif.
-        desiredQuantity = remainingStock > 0 ? 1 : 0;
+        desiredQuantity = getInitialDesiredQuantity(product);
         setMessage(null, TEXT_MUTED);
         syncFromModel();
     }
@@ -809,10 +820,7 @@ public class ShopOverlay extends JPanel {
 
         setMessage(null, TEXT_MUTED);
         // Une fois l'ajout fait, on repasse sur 1 pour faciliter les achats suivants.
-        desiredQuantity = Math.min(1, shop.getRemainingStock(selectedProduct));
-        if (shop.getRemainingStock(selectedProduct) > 0) {
-            desiredQuantity = 1;
-        }
+        desiredQuantity = getInitialDesiredQuantity(selectedProduct);
         syncFromModel();
     }
 
@@ -907,6 +915,38 @@ public class ShopOverlay extends JPanel {
     private String getCatalogBadgeText(Product product) {
         int cartQuantity = shop.getShoppingCardQuantity(product);
         return cartQuantity > 0 ? "Panier " + cartQuantity : "";
+    }
+
+    private String getProductFooterLabel(Product product) {
+        if (product == null || !shop.usesManagedStock(product)) {
+            return "";
+        }
+
+        return "Stock : " + shop.getRemainingStock(product);
+    }
+
+    private boolean hasAvailableQuantity(Product product) {
+        return product != null && (!shop.usesManagedStock(product) || shop.getRemainingStock(product) > 0);
+    }
+
+    private int getInitialDesiredQuantity(Product product) {
+        return hasAvailableQuantity(product) ? 1 : 0;
+    }
+
+    private boolean canIncreaseDesiredQuantity(Product product, int currentQuantity) {
+        if (product == null || currentQuantity <= 0) {
+            return false;
+        }
+
+        if (!shop.usesManagedStock(product)) {
+            return currentQuantity < Integer.MAX_VALUE;
+        }
+
+        return currentQuantity < shop.getRemainingStock(product);
+    }
+
+    private int incrementQuantity(int quantity) {
+        return quantity >= Integer.MAX_VALUE ? Integer.MAX_VALUE : quantity + 1;
     }
 
     private JComponent createLeftAlignedRow(JComponent component) {

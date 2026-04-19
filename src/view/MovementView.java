@@ -75,7 +75,7 @@ public class MovementView extends JPanel {
                 Rectangle playerBoundsInField = SwingUtilities.convertRectangle(this, playerBounds, mapPanel.getMapComponent());
                 highlightedCell = mapPanel.getFullyOccupiedCell(playerBoundsInField);
 
-                // Une case recouverte par la grange ou par un arbre
+                // Une case recouverte par la boutique principale (à droite) ou par un arbre
                 // ne doit jamais devenir la case active du gameplay.
                 if (!mapPanel.isFarmableCell(highlightedCell)) {
                     highlightedCell = null;

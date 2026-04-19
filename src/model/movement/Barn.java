@@ -4,7 +4,7 @@ import java.awt.Dimension;
 import java.awt.Rectangle;
 
 /**
- * Représente la grange, un obstacle fixe situé en haut du champ.
+ * Représente la boutique principale (à droite), un obstacle fixe situé en haut du champ.
  * Les entités (Unité, Ennemis) ne peuvent pas la traverser.
  */
 public class Barn {
@@ -53,7 +53,7 @@ public class Barn {
      * Celle-ci reste plus étroite et plus basse que l'image entière :
      * le joueur et les lapins ne doivent pas heurter le toit ou le vide autour du sprite.
      *
-     * @return Rectangle représentant les limites infranchissables de la grange
+     * @return Rectangle représentant les limites infranchissables de la boutique principale (à droite)
      */
     public static Rectangle getCollisionBounds() {
         return BuildingGeometry.buildCollisionBounds(
@@ -65,7 +65,8 @@ public class Barn {
     }
 
     /**
-     * Vérifie si une entité centrée sur (centerX, centerY) recoupe la hitbox de la grange.
+     * Vérifie si une entité centrée sur (centerX, centerY) recoupe la hitbox de
+     * la boutique principale (à droite).
      * Les coordonnées reçues sont dans le repère logique partagé par le joueur et les lapins.
      */
     public static boolean collidesWithCenteredBox(double centerX, double centerY, int width, int height) {
@@ -73,7 +74,8 @@ public class Barn {
     }
 
     /**
-     * Vérifie qu'une entité centrée sur la position donnée ne touche pas la grange.
+     * Vérifie qu'une entité centrée sur la position donnée ne touche pas
+     * la boutique principale (à droite).
      */
     public static boolean canOccupyCenteredBox(double centerX, double centerY, int width, int height) {
         return !collidesWithCenteredBox(centerX, centerY, width, height);

@@ -25,4 +25,11 @@ public enum ShopKind {
     public boolean sellsFacilities() {
         return sellsFacilities;
     }
+
+    /**
+     * On affiche les filtres de catégories que pour l'échoppe.
+     */
+    public boolean usesCategoryFilters() {
+        return this == MAIN;
+    }
 }

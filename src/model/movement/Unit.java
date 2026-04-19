@@ -61,7 +61,7 @@ public class Unit {
         int nextX = x;
         int nextY = y;
 
-        /* La collision avec la grange s'applique uniquement au corps du joueur.
+        /* La collision avec la boutique principale (à droite) s'applique uniquement au corps du joueur.
          * Ainsi, le cercle de zone d'influence n'est pas pris en compte pour bloquer le déplacement, il est par ailleurs
          * purement visuel.
          */

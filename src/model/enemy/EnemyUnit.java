@@ -53,8 +53,8 @@ public class EnemyUnit {
     private static final double CAVE_PAUSE_PROBABILITY = 0.12;
     private static final double CAVE_GLOBAL_PATROL_PROBABILITY = 0.32;
     private static final int CAVE_WALK_FRAME_TOGGLE_TICKS = 8;
-    // La taille de la zone de "sécurité" autour de la grange (on ne peut pas traverser cette zone i.e.
-    // on ne peut pas traverser la grange)
+    // La taille de la zone de "sécurité" autour de la boutique principale (à droite)
+    // (on ne peut pas traverser cette zone i.e. on ne peut pas traverser la boutique principale).
     private static final int HITBOX_SIZE = 20;
     // Le rayon de détection d'une culture par un lapin
     private static final int CULTURE_DETECTION_RADIUS = 120;
@@ -71,10 +71,12 @@ public class EnemyUnit {
     private static final double FENCE_ATTACK_BACKSTEP_TOLERANCE = 1.0;
     // Le délai de retour au terrier si le lapin n'a rien trouvé. Correspond à 30s
     private static final long DELAI_RETOUR_TERRIER_MS = 30000L;
-    // Ces listes décrivent les rotations possibles autour de la direction voulue afin de contourner la grange.
+    // Ces listes décrivent les rotations possibles autour de la direction voulue afin de contourner
+    // la boutique principale (à droite).
     // On teste d'abord de petits écarts, puis des virages plus forts, puis seulement un demi-tour.
     // RIGHT_HAND_OFFSETS privilégie un contournement "main droite", LEFT_HAND_OFFSETS l'inverse.
-    // Le lapin garde ainsi un côté préféré le long de la grange, ce qui limite les hésitations.
+    // Le lapin garde ainsi un côté préféré le long de la boutique principale (à droite),
+    // ce qui limite les hésitations.
     private static final double[] RIGHT_HAND_OFFSETS = {
         Math.PI / 8, Math.PI / 4, (3 * Math.PI) / 8, Math.PI / 2,
         (5 * Math.PI) / 8, (3 * Math.PI) / 4, (7 * Math.PI) / 8,
@@ -115,7 +117,8 @@ public class EnemyUnit {
     // Dernier déplacement réellement appliqué, utile pour éviter un demi-tour immédiat.
     private double lastMoveX = 0;
     private double lastMoveY = 0;
-    // Côté de contournement actuellement privilégié pour longer proprement la grange.
+    // Côté de contournement actuellement privilégié pour longer proprement
+    // la boutique principale (à droite).
     private int preferredTurnSign = 1;
     // Case de culture actuellement visée par le lapin.
     private int targetCultureGridX = -1;
@@ -1130,7 +1133,8 @@ public class EnemyUnit {
     }
     
     /**
-     * Choisit un premier point d'entrée crédible dans le champ, en évitant la grange.
+     * Choisit un premier point d'entrée crédible dans le champ,
+     * en évitant la boutique principale (à droite).
      * Le but n'est pas d'être optimal, mais d'obtenir une entrée naturelle et sans collision.
      */
     private void pickFieldEntryTarget() {
@@ -1153,7 +1157,8 @@ public class EnemyUnit {
             }
         }
 
-        // Fallback: on vise franchement un des côtés libres de la grange pour contourner l'obstacle.
+        // Fallback: on vise franchement un des côtés libres de la boutique principale (à droite)
+        // pour contourner l'obstacle.
         boolean goLeft = x <= (barnBounds.x + (barnBounds.width / 2.0));
         double fallbackX = goLeft ? barnBounds.x - barnMargin : barnBounds.x + barnBounds.width + barnMargin;
         double fallbackY = barnBounds.y + barnBounds.height + 35;
@@ -1321,7 +1326,7 @@ public class EnemyUnit {
 
     /**
      * Cherche une petite déviation libre quand la trajectoire directe tape un obstacle fixe.
-     * À l'origine cette logique servait surtout à la grange,
+     * À l'origine cette logique servait surtout à la boutique principale (à droite),
      * mais on la réutilise maintenant aussi pour la rivière afin d'éviter
      * un arrêt sec dès qu'un lapin rencontre un obstacle de terrain.
      */
@@ -1376,7 +1381,7 @@ public class EnemyUnit {
     /**
      * Encapsule le test de collision avec tous les obstacles fixes
      * pour garder le reste du code lisible :
-     * grange, arbres, rivière, et clôtures côté lapins.
+     * boutique principale (à droite), arbres, rivière, et clôtures côté lapins.
      */
     private boolean canOccupy(double centerX, double centerY) {
         if (enemyKind == EnemyKind.CAVE_MONSTER) {
@@ -1390,7 +1395,8 @@ public class EnemyUnit {
 
     /**
      * Détecte un demi-tour immédiat par rapport au pas précédent.
-     * Cela évite l'effet "ping-pong" contre la grange quand plusieurs directions sont techniquement possibles.
+     * Cela évite l'effet "ping-pong" contre la boutique principale (à droite)
+     * quand plusieurs directions sont techniquement possibles.
      */
     private boolean isImmediateReverse(double stepX, double stepY) {
         double lastMagnitude = Math.sqrt((lastMoveX * lastMoveX) + (lastMoveY * lastMoveY));
@@ -1404,7 +1410,7 @@ public class EnemyUnit {
     }
 
     /**
-     * Prolonge légèrement le détour choisi autour de la grange.
+     * Prolonge légèrement le détour choisi autour de la boutique principale (à droite).
      * Sans ça, le lapin risquerait de repointer tout de suite vers l'obstacle à la frame suivante.
      */
     private void setDetourTarget(double angle) {
@@ -1424,8 +1430,8 @@ public class EnemyUnit {
     }
 
     /**
-     * Petit helper géométrique: il définit la "zone à éviter" autour de la grange au moment
-     * de choisir des cibles approximatives dans le champ.
+     * Petit helper géométrique: il définit la "zone à éviter" autour de la
+     * boutique principale (à droite) au moment de choisir des cibles approximatives dans le champ.
      */
     private boolean isInsideBarnAvoidanceZone(double candidateX, double candidateY, Rectangle barnBounds, int margin) {
         return candidateX >= barnBounds.x - margin

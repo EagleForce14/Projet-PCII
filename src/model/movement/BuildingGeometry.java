@@ -17,7 +17,7 @@ public final class BuildingGeometry {
     private BuildingGeometry() {}
 
     /**
-     * Place un bâtiment latéral par rapport à la grange en conservant
+     * Place un bâtiment latéral par rapport à la boutique principale (à droite) en conservant
      * exactement le même niveau de sol et un léger écart horizontal.
      *
      * Le calcul est volontairement partagé entre les bâtiments de gauche et de droite

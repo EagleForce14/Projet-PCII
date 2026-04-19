@@ -1,7 +1,5 @@
 package model.culture;
 
-import java.util.function.BooleanSupplier;
-
 /** Classe représentant une zone de culture */
 public class ZoneCulture {
     /**
@@ -14,13 +12,19 @@ public class ZoneCulture {
 
     /** Attribut représentant la culture dans la zone */
     private Culture culture;
+    // Une zone libre peut vivre seule dans un test, ou appartenir à une vraie grille.
+    // Quand elle connaît simplement la carte des rivières et sa position,
+    // la culture plantée peut relire le bonus sans callback ni dépendance inutile à toute la grille.
+    private final boolean[][] decorativeRiverCells;
+    private final int gridX;
+    private final int gridY;
 
     /**
      * Ce constructeur reste pratique pour les tests unitaires
      * qui manipulent une simple parcelle déjà prête à accueillir une plante.
      */
     public ZoneCulture() {
-        this(true);
+        this(true, null, -1, -1);
     }
 
     /**
@@ -28,8 +32,20 @@ public class ZoneCulture {
      * On peut ainsi créer des cases d'herbe non labourées au démarrage.
      */
     public ZoneCulture(boolean laboureeInitialement) {
+        this(laboureeInitialement, null, -1, -1);
+    }
+
+    /**
+     * Constructeur utilisé par la grille.
+     * La zone connaît alors son emplacement logique et peut transmettre ce contexte
+     * à la culture pour les bonus liés à l'environnement.
+     */
+    public ZoneCulture(boolean laboureeInitialement, boolean[][] decorativeRiverCells, int gridX, int gridY) {
         this.labouree = laboureeInitialement;
         this.culture = null;
+        this.decorativeRiverCells = decorativeRiverCells;
+        this.gridX = gridX;
+        this.gridY = gridY;
     }
 
     /** Getter pour l'attribut culture */
@@ -50,19 +66,13 @@ public class ZoneCulture {
         return labouree;
     }
 
-    /** Méthode qui plante une culture dans la zone 
+    /**
+     * Méthode qui plante une culture dans la zone
+     *
      * @param type : le type concret de la culture à planter
      * @throws IllegalStateException si la zone de culture est déjà occupée par une culture
-    **/
-    public boolean planterCulture(Type type) {
-        return planterCulture(type, () -> false);
-    }
-
-    /**
-     * Variante utilisée par la grille quand la plante doit pouvoir relire
-     * un bonus d'environnement évolutif, comme la proximité d'une rivière.
-     */
-    public boolean planterCulture(Type type, BooleanSupplier riverBoostSupplier) {
+     **/
+    public void planterCulture(Type type) {
         // Règle importante :
         // tant que le joueur n'a pas labouré la case, on reste sur de l'herbe.
         if (!labouree) {
@@ -73,14 +83,8 @@ public class ZoneCulture {
         if (culture != null) {
             throw new IllegalStateException("Il y a déjà une culture plantée dans cette zone.");
         } else {
-            // On transmet ici un petit fournisseur d'état
-            // plutôt qu'un booléen figé.
-            // Grâce à ça, la culture peut profiter d'une rivière ajoutée plus tard.
-            this.culture = new Culture(type, riverBoostSupplier);
-            return true; // Indique que la culture a été plantée avec succès
+            this.culture = new Culture(type, decorativeRiverCells, gridX, gridY);
         }
-
-
     }
 
     /** Méthode qui récolte la culture de la zone et renvoie son prix de vente */

@@ -15,7 +15,8 @@ public enum Type {
     CAROTTE("Carotte", Categorie.LEGUME, FieldZone.RIGHT_OF_RIVER, ShopKind.MAIN),
     RADIS("Radis", Categorie.LEGUME, FieldZone.RIGHT_OF_RIVER, ShopKind.MAIN),
     CHOUFLEUR("Choufleur", Categorie.LEGUME, FieldZone.RIGHT_OF_RIVER, ShopKind.MAIN),
-    NENUPHAR("Nénuphar", Categorie.FLEUR, FieldZone.LEFT_OF_RIVER, ShopKind.STALL);
+    NENUPHAR("Nénuphar", Categorie.FLEUR, FieldZone.LEFT_OF_RIVER, ShopKind.STALL),
+    IRIS_DES_MARAIS("Iris des marais", Categorie.FLEUR, FieldZone.LEFT_OF_RIVER, ShopKind.STALL);
 
     /** Petite catégorie embarquée pour éviter les anciens sous-types. */
     public enum Categorie {
