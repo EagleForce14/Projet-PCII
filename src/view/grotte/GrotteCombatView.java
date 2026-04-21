@@ -13,6 +13,7 @@ import view.RewardAnimationUtils;
 
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -114,34 +115,65 @@ public final class GrotteCombatView extends JPanel {
 
     private void drawProjectiles(Graphics2D g2d, int centerX, int centerY) {
         for (CaveProjectile projectile : combatModel.getProjectiles()) {
-            int drawX = (int) Math.round(centerX + projectile.getX() - (projectile.getWidth() / 2.0));
-            int drawY = (int) Math.round(centerY + projectile.getY() - (projectile.getHeight() / 2.0));
-            int previousX = (int) Math.round(centerX + projectile.getPreviousX());
-            int previousY = (int) Math.round(centerY + projectile.getPreviousY());
-            int currentX = (int) Math.round(centerX + projectile.getX());
-            int currentY = (int) Math.round(centerY + projectile.getY());
+            double projectileX = centerX + projectile.getX();
+            double projectileY = centerY + projectile.getY();
+            double previousX = centerX + projectile.getPreviousX();
+            double previousY = centerY + projectile.getPreviousY();
+            double directionX = projectileX - previousX;
+            double directionY = projectileY - previousY;
+            if (Math.abs(directionX) < 0.0001 && Math.abs(directionY) < 0.0001) {
+                directionX = 1.0;
+                directionY = 0.0;
+            }
+
+            double rotationRadians = Math.atan2(directionY, directionX);
+            int baseSize = Math.max(projectile.getWidth(), projectile.getHeight());
+            int trailLength = Math.max(10, baseSize + 12);
+            int coreLength = Math.max(8, baseSize + 8);
+            /*
+             * On garde volontairement une épaisseur commune joueur/ennemis
+             * pour que les tirs ennemis n'aient pas un rendu visuellement "lourd".
+             */
+            int coreThickness = 4;
+            int glowThickness = coreThickness + 4;
 
             boolean playerProjectile = projectile.getOwner() == CaveProjectileOwner.PLAYER;
             g2d.setColor(playerProjectile ? PLAYER_PROJECTILE_GLOW : ENEMY_PROJECTILE_GLOW);
-            g2d.drawLine(previousX, previousY, currentX, currentY);
-            g2d.fillRoundRect(
-                    drawX - 2,
-                    drawY - 2,
-                    projectile.getWidth() + 4,
-                    projectile.getHeight() + 4,
-                    6,
-                    6
+            g2d.setStroke(new BasicStroke(
+                    Math.max(2.0f, glowThickness / 2.0f),
+                    BasicStroke.CAP_ROUND,
+                    BasicStroke.JOIN_ROUND
+            ));
+            g2d.drawLine(
+                    (int) Math.round(previousX),
+                    (int) Math.round(previousY),
+                    (int) Math.round(projectileX),
+                    (int) Math.round(projectileY)
             );
 
-            g2d.setColor(playerProjectile ? PLAYER_PROJECTILE_CORE : ENEMY_PROJECTILE_CORE);
-            g2d.fillRoundRect(
-                    drawX,
-                    drawY,
-                    projectile.getWidth(),
-                    projectile.getHeight(),
-                    4,
-                    4
+            Graphics2D projectileGraphics = (Graphics2D) g2d.create();
+            projectileGraphics.translate(projectileX, projectileY);
+            projectileGraphics.rotate(rotationRadians);
+            projectileGraphics.setColor(playerProjectile ? PLAYER_PROJECTILE_GLOW : ENEMY_PROJECTILE_GLOW);
+            projectileGraphics.fillRoundRect(
+                    -(trailLength / 2),
+                    -(glowThickness / 2),
+                    trailLength,
+                    glowThickness,
+                    glowThickness,
+                    glowThickness
             );
+
+            projectileGraphics.setColor(playerProjectile ? PLAYER_PROJECTILE_CORE : ENEMY_PROJECTILE_CORE);
+            projectileGraphics.fillRoundRect(
+                    -(coreLength / 2),
+                    -(coreThickness / 2),
+                    coreLength,
+                    coreThickness,
+                    coreThickness,
+                    coreThickness
+            );
+            projectileGraphics.dispose();
         }
     }
 
