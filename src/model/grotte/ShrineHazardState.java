@@ -44,7 +44,7 @@ public final class ShrineHazardState {
     }
 
     public boolean isWarningPhase() {
-        return getRemainingMs() > WARNING_DURATION_MS;
+        return getRemainingMs() <= WARNING_DURATION_MS;
     }
 
     /**
@@ -52,7 +52,7 @@ public final class ShrineHazardState {
      * La vue n'a ainsi aucune logique temporelle parallèle à maintenir.
      */
     public boolean isWarningBlinkVisible() {
-        if (isWarningPhase()) {
+        if (!isWarningPhase()) {
             return false;
         }
 

@@ -670,8 +670,22 @@ public class EnvironmentView extends JPanel {
         int debrisDistance = baseRadius + (int) Math.round(progress * 22);
         int debrisSize = Math.max(3, baseRadius / 3);
 
-        drawCenteredGlow(effectGraphics, centerX, centerY, outerRadius * 2, TREE_FELLING_FLASH_OUTER, outerAlpha);
-        drawCenteredGlow(effectGraphics, centerX, centerY, innerRadius * 2, TREE_FELLING_FLASH_INNER, innerAlpha);
+        RewardAnimationUtils.drawCenteredGlow(
+                effectGraphics,
+                centerX,
+                centerY,
+                outerRadius * 2,
+                TREE_FELLING_FLASH_OUTER,
+                outerAlpha
+        );
+        RewardAnimationUtils.drawCenteredGlow(
+                effectGraphics,
+                centerX,
+                centerY,
+                innerRadius * 2,
+                TREE_FELLING_FLASH_INNER,
+                innerAlpha
+        );
         drawStandardBurstShards(effectGraphics, centerX, centerY, debrisDistance, debrisSize, progress);
         effectGraphics.dispose();
     }
@@ -688,16 +702,23 @@ public class EnvironmentView extends JPanel {
         }
 
         Point start = getBoundsCenter(cellBounds);
-        Point current = computeArcPosition(start.x, start.y, destinationX, destinationY, progress, 52.0);
+        Point current = RewardAnimationUtils.computeArcPosition(start.x, start.y, destinationX, destinationY, progress, 52.0);
         int iconSize = 22;
         int iconX = current.x - (iconSize / 2);
         int iconY = current.y - (iconSize / 2);
 
         Graphics2D rewardGraphics = (Graphics2D) g2.create();
         rewardGraphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-        drawCenteredGlow(rewardGraphics, current.x, current.y, 28, WOOD_REWARD_GLOW, (int) Math.round(110 * (1.0 - (progress * 0.45))));
+        RewardAnimationUtils.drawCenteredGlow(
+                rewardGraphics,
+                current.x,
+                current.y,
+                28,
+                WOOD_REWARD_GLOW,
+                (int) Math.round(110 * (1.0 - (progress * 0.45)))
+        );
         drawWoodRewardIcon(rewardGraphics, iconX, iconY, iconSize);
-        drawParachuteCanopy(rewardGraphics, current.x, iconY - 2, progress);
+        RewardAnimationUtils.drawParachuteCanopy(rewardGraphics, current.x, iconY - 2, progress, WOOD_REWARD_PARACHUTE);
         rewardGraphics.dispose();
     }
 
@@ -724,7 +745,7 @@ public class EnvironmentView extends JPanel {
         int startY = effect.hasExplicitSource()
                 ? fieldBoundsInView.y + (fieldBoundsInView.height / 2) + effect.getSourceWorldY()
                 : fieldBoundsInView.y + fieldBoundsInView.height - 36;
-        Point current = computeArcPosition(startX, startY, destinationX, destinationY, progress, 46.0);
+        Point current = RewardAnimationUtils.computeArcPosition(startX, startY, destinationX, destinationY, progress, 46.0);
         int pixelSize = 6;
         int iconWidth = ProductPixelArt.getCoinArtWidth(pixelSize);
         int iconHeight = ProductPixelArt.getCoinArtHeight(pixelSize);
@@ -732,7 +753,14 @@ public class EnvironmentView extends JPanel {
         int iconY = current.y - (iconHeight / 2);
 
         Graphics2D rewardGraphics = (Graphics2D) g2.create();
-        drawCenteredGlow(rewardGraphics, current.x, current.y, 36, MONEY_REWARD_GLOW, (int) Math.round(105 * (1.0 - (progress * 0.35))));
+        RewardAnimationUtils.drawCenteredGlow(
+                rewardGraphics,
+                current.x,
+                current.y,
+                36,
+                MONEY_REWARD_GLOW,
+                (int) Math.round(105 * (1.0 - (progress * 0.35)))
+        );
         ProductPixelArt.drawCoinResource(rewardGraphics, iconX, iconY, pixelSize);
         rewardGraphics.dispose();
     }
@@ -741,7 +769,7 @@ public class EnvironmentView extends JPanel {
         int drawX = centerX + (directionX * distance) - (size / 2);
         int drawY = centerY + (directionY * distance) - (size / 2);
         int alpha = (int) Math.round(205 * (1.0 - progress));
-        g2.setColor(withAlpha(TREE_FELLING_DEBRIS, alpha));
+        g2.setColor(RewardAnimationUtils.withAlpha(TREE_FELLING_DEBRIS, alpha));
         g2.fillRect(drawX, drawY, size, size);
     }
 
@@ -754,18 +782,6 @@ public class EnvironmentView extends JPanel {
         drawTreeShard(g2, centerX, centerY, 0, 1, debrisDistance + 5, debrisSize, progress);
     }
 
-    private void drawParachuteCanopy(Graphics2D g2, int centerX, int canopyBaseY, double progress) {
-        int canopyWidth = 14;
-        int canopyHeight = 7;
-        int canopyX = centerX - (canopyWidth / 2);
-        int canopyY = canopyBaseY - 9 - (int) Math.round(Math.sin(progress * Math.PI) * 4.0);
-
-        g2.setColor(withAlpha(WOOD_REWARD_PARACHUTE, (int) Math.round(230 * (1.0 - (progress * 0.35)))));
-        g2.fillArc(canopyX, canopyY, canopyWidth, canopyHeight, 0, 180);
-        g2.drawLine(centerX - 4, canopyY + canopyHeight - 1, centerX - 2, canopyBaseY);
-        g2.drawLine(centerX + 4, canopyY + canopyHeight - 1, centerX + 2, canopyBaseY);
-    }
-
     private void drawWoodRewardIcon(Graphics2D g2, int iconX, int iconY, int iconSize) {
         if (woodImage != null) {
             g2.drawImage(woodImage, iconX, iconY, iconSize, iconSize, this);
@@ -773,11 +789,6 @@ public class EnvironmentView extends JPanel {
         }
 
         ProductPixelArt.drawWoodResource(g2, iconX, iconY, 4);
-    }
-
-    private void drawCenteredGlow(Graphics2D g2, int centerX, int centerY, int diameter, Color color, int alpha) {
-        g2.setColor(withAlpha(color, alpha));
-        g2.fillOval(centerX - (diameter / 2), centerY - (diameter / 2), diameter, diameter);
     }
 
     private void drawShadowedText(Graphics2D g2, String text, int x, int y, Color textColor, Color shadowColor) {
@@ -791,24 +802,4 @@ public class EnvironmentView extends JPanel {
         return new Point(bounds.x + (bounds.width / 2), bounds.y + (bounds.height / 2));
     }
 
-    private Point computeArcPosition(int startX, int startY, int destinationX, int destinationY, double progress, double arcHeight) {
-        double easedProgress = easeOutCubic(progress);
-        int currentX = (int) Math.round(lerp(startX, destinationX, easedProgress));
-        int currentY = (int) Math.round(lerp(startY, destinationY, easedProgress) - (Math.sin(progress * Math.PI) * arcHeight));
-        return new Point(currentX, currentY);
-    }
-
-    private Color withAlpha(Color color, int alpha) {
-        int clampedAlpha = Math.max(0, Math.min(255, alpha));
-        return new Color(color.getRed(), color.getGreen(), color.getBlue(), clampedAlpha);
-    }
-
-    private double lerp(double start, double end, double progress) {
-        return start + ((end - start) * progress);
-    }
-
-    private double easeOutCubic(double progress) {
-        double inverse = 1.0 - progress;
-        return 1.0 - (inverse * inverse * inverse);
-    }
 }

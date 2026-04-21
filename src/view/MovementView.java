@@ -1,4 +1,6 @@
 package view;
+
+import model.movement.FacingDirection;
 import model.movement.MovementModel;
 import model.movement.Unit;
 
@@ -27,6 +29,9 @@ public class MovementView extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g); // Toujours appeler super pour nettoyer le fond
 
+        Graphics2D g2d = (Graphics2D) g.create();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
         List<Unit> units = model.getUnits();
         Unit playerUnit = model.getPlayerUnit();
         Point highlightedCell = null;
@@ -50,17 +55,14 @@ public class MovementView extends JPanel {
             // La zone d'influence n'existe pas en grotte :
             // ni visuellement, ni côté logique.
             if (!u.isInCave()) {
-                g.setColor(new Color(0, 0, 255, 50)); // Bleu semi-transparent
+                g2d.setColor(new Color(0, 0, 255, 50)); // Bleu semi-transparent
                 int radius = Unit.INFLUENCE_RADIUS;
                 int circleX = centerX + u.getX() - radius;
                 int circleY = centerY + u.getY() - radius;
-                g.fillOval(circleX, circleY, radius * 2, radius * 2);
-                g.setColor(Color.BLUE);
-                g.drawOval(circleX, circleY, radius * 2, radius * 2);
+                g2d.fillOval(circleX, circleY, radius * 2, radius * 2);
+                g2d.setColor(Color.BLUE);
+                g2d.drawOval(circleX, circleY, radius * 2, radius * 2);
             }
-
-            // La couleur du rectangle
-            g.setColor(Color.RED);
             
             // Position relative au centre de la fenêtre
             // Rappel : La position (0,0) de l'unité correspond au centre de l'écran
@@ -104,13 +106,77 @@ public class MovementView extends JPanel {
                 Point movementCell = mapPanel.getGridPositionAt(playerCenterInField.x, playerCenterInField.y);
                 u.setCurrentSpeed(mapPanel.resolveMovementSpeed(movementCell));
             }
-            
-            g.fillRect(drawX, drawY, Unit.SIZE, Unit.SIZE);
+
+            drawUnit(g2d, u, drawX, drawY);
         }
 
         // La condition d'activation des actions est liée à la présence
         // de l'unité déplaçable sur une case valide highlightée du champ.
         model.setActiveFieldCell(highlightedCell);
         mapPanel.setHighlightedCell(highlightedCell);
+        g2d.dispose();
+    }
+
+    private void drawUnit(Graphics2D g2d, Unit unit, int drawX, int drawY) {
+        if (unit.isInCave()) {
+            drawCaveExplorer(g2d, unit, drawX, drawY);
+            return;
+        }
+
+        drawFarmGardener(g2d, drawX, drawY);
+    }
+
+    private void drawFarmGardener(Graphics2D g2d, int drawX, int drawY) {
+        g2d.setColor(new Color(0, 0, 0, 55));
+        g2d.fillOval(drawX + 4, drawY + Unit.SIZE - 7, Unit.SIZE - 8, 8);
+
+        g2d.setColor(new Color(83, 122, 64));
+        g2d.fillRoundRect(drawX + 5, drawY + 5, Unit.SIZE - 10, Unit.SIZE - 8, 9, 9);
+        g2d.setColor(new Color(229, 209, 171));
+        g2d.fillRoundRect(drawX + 8, drawY + 7, Unit.SIZE - 16, 10, 6, 6);
+        g2d.setColor(new Color(82, 52, 34));
+        g2d.fillRoundRect(drawX + 6, drawY + 2, Unit.SIZE - 12, 6, 6, 6);
+        g2d.setColor(new Color(38, 29, 21));
+        g2d.drawRoundRect(drawX + 5, drawY + 5, Unit.SIZE - 11, Unit.SIZE - 9, 9, 9);
+    }
+
+    /**
+     * Le joueur de la grotte garde volontairement un look très lisible :
+     * corps sombre, visière claire et petit canon orienté dans la direction courante.
+     */
+    private void drawCaveExplorer(Graphics2D g2d, Unit unit, int drawX, int drawY) {
+        g2d.setColor(new Color(0, 0, 0, 75));
+        g2d.fillOval(drawX + 4, drawY + Unit.SIZE - 7, Unit.SIZE - 8, 8);
+
+        g2d.setColor(new Color(29, 37, 53));
+        g2d.fillRoundRect(drawX + 4, drawY + 4, Unit.SIZE - 8, Unit.SIZE - 8, 10, 10);
+        g2d.setColor(new Color(84, 215, 221));
+        g2d.fillRoundRect(drawX + 8, drawY + 8, Unit.SIZE - 16, 8, 6, 6);
+
+        FacingDirection facingDirection = unit.getFacingDirection();
+        int weaponWidth = 8;
+        int weaponHeight = 4;
+        int weaponX = drawX + ((Unit.SIZE - weaponWidth) / 2);
+        int weaponY = drawY + ((Unit.SIZE - weaponHeight) / 2);
+        if (facingDirection == FacingDirection.UP) {
+            weaponY = drawY + 2;
+            weaponHeight = 8;
+            weaponWidth = 4;
+            weaponX = drawX + ((Unit.SIZE - weaponWidth) / 2);
+        } else if (facingDirection == FacingDirection.DOWN) {
+            weaponY = drawY + Unit.SIZE - 10;
+            weaponHeight = 8;
+            weaponWidth = 4;
+            weaponX = drawX + ((Unit.SIZE - weaponWidth) / 2);
+        } else if (facingDirection == FacingDirection.LEFT) {
+            weaponX = drawX + 2;
+        } else if (facingDirection == FacingDirection.RIGHT) {
+            weaponX = drawX + Unit.SIZE - 10;
+        }
+
+        g2d.setColor(new Color(208, 174, 90));
+        g2d.fillRoundRect(weaponX, weaponY, weaponWidth, weaponHeight, 4, 4);
+        g2d.setColor(new Color(30, 24, 20));
+        g2d.drawRoundRect(drawX + 4, drawY + 4, Unit.SIZE - 9, Unit.SIZE - 9, 10, 10);
     }
 }

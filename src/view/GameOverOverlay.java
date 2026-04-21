@@ -93,7 +93,9 @@ public class GameOverOverlay extends JPanel {
         Font hintFont = CustomFontLoader.loadFont(FONT_PATH, 10.0f);
 
         DefeatCause defeatCause = jour.getDefeatCause();
-        String title = defeatCause == DefeatCause.CAVE_SHRINE ? "MORT DANS LA GROTTE" : "PARTIE PERDUE";
+        String title = (defeatCause == DefeatCause.CAVE_SHRINE || defeatCause == DefeatCause.CAVE_ENEMY)
+                ? "MORT DANS LA GROTTE"
+                : "PARTIE PERDUE";
         String body = buildBodyText(defeatCause);
         String hint = "Lancez une nouvelle partie pour rejouer !";
 
@@ -148,6 +150,9 @@ public class GameOverOverlay extends JPanel {
     private String buildBodyText(DefeatCause defeatCause) {
         if (defeatCause == DefeatCause.CAVE_SHRINE) {
             return "La statue du sanctuaire vous a foudroyé.";
+        }
+        if (defeatCause == DefeatCause.CAVE_ENEMY) {
+            return "Les monstres de la grotte vous ont abattu.";
         }
 
         GestionnaireObjectifs gestionnaire = jour.getGestionnaireObjectifs();

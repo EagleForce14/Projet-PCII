@@ -43,6 +43,7 @@ public class EnemyStatusOverlay {
         long remainingMs = enemy.getOverlayCountdownMs();
         String status = enemy.getOverlayStatus();
         boolean isEatingCulture = enemy.isEatingCultureCountdownActive();
+        boolean caveMonster = enemy.isCaveMonster();
 
         // Le chrono n'est affiché que lorsqu'il existe réellement un temps à suivre.
         // Sinon on garde juste un état textuel simple ("En fuite", "Culture trouvée", etc.).
@@ -53,10 +54,12 @@ public class EnemyStatusOverlay {
         // Le titre et la phrase de détail changent selon le contexte:
         // soit le lapin est en train d'attendre avant de manger,
         // soit on suit son chrono de retour au terrier.
-        String titleText = isEatingCulture ? "Manger la culture" : "Retour au terrier";
+        String titleText = caveMonster
+                ? (enemy.isCaveAggroed() ? "Sentinelle en alerte" : "Sentinelle de grotte")
+                : (isEatingCulture ? "Manger la culture" : "Retour au terrier");
         String detailText = hasCountdown
                 ? String.format(isEatingCulture ? "Fini de manger dans %.1f s" : "Depart dans %.1f s", remainingMs / 1000.0)
-                : "";
+                : (caveMonster ? "PV " + enemy.getHealthLabel() : "");
 
         // Ombre légère sous la carte pour mieux la détacher du décor.
         g2d.setColor(new Color(0, 0, 0, 70));
@@ -84,8 +87,9 @@ public class EnemyStatusOverlay {
         // On garde des textes courts pour ne pas surcharger la carte.
         g2d.setFont(bodyFont);
         g2d.setColor(new Color(236, 229, 212));
+        String percentLabel = caveMonster ? (int) Math.round(enemy.getHealthRatio() * 100.0) + "%" : (hasCountdown ? percent + "%" : "--");
         g2d.drawString(status, cardX + 16, cardY + 45);
-        g2d.drawString(hasCountdown ? percent + "%" : "--", cardX + cardWidth - 42, cardY + 45);
+        g2d.drawString(percentLabel, cardX + cardWidth - 42, cardY + 45);
         g2d.drawString(detailText, cardX + 16, cardY + 57);
 
         // La barre utilise des segments plutôt qu'un remplissage continu:
@@ -96,7 +100,8 @@ public class EnemyStatusOverlay {
         int barHeight = 12;
         int segmentGap = 3;
         int segmentCount = 11;
-        int filledSegments = hasCountdown ? (int) Math.round(progress * segmentCount) : 0;
+        double barProgress = caveMonster ? enemy.getHealthRatio() : progress;
+        int filledSegments = (int) Math.round(barProgress * segmentCount);
         int segmentWidth = (barWidth - ((segmentCount - 1) * segmentGap)) / segmentCount;
 
         // Fond sombre de la barre.
@@ -108,8 +113,10 @@ public class EnemyStatusOverlay {
         for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++) {
             int segmentX = barX + (segmentIndex * (segmentWidth + segmentGap));
             boolean isFilled = segmentIndex < filledSegments;
-            Color filledColor = new Color(216, 188, 91);
-            Color emptyColor = hasCountdown ? new Color(94, 72, 49) : new Color(70, 57, 44);
+            Color filledColor = caveMonster ? new Color(206, 90, 90) : new Color(216, 188, 91);
+            Color emptyColor = caveMonster
+                    ? new Color(84, 36, 36)
+                    : (hasCountdown ? new Color(94, 72, 49) : new Color(70, 57, 44));
             g2d.setColor(isFilled ? filledColor : emptyColor);
             g2d.fillRoundRect(segmentX, barY + 3, segmentWidth, barHeight - 6, 5, 5);
         }

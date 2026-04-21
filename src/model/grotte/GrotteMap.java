@@ -24,11 +24,11 @@ public final class GrotteMap {
     private static final int HEIGHT = 21;
     private static final Point SPAWN_CELL = new Point(15, 18);
 
-    private static final Rectangle WATER_ROOM = new Rectangle(2, 2, 8, 7);
+    private static final Rectangle UPPER_LEFT_ROOM = new Rectangle(2, 2, 8, 7);
     private static final Rectangle SHRINE_ROOM = new Rectangle(11, 1, 9, 8);
-    private static final Rectangle LAVA_ROOM = new Rectangle(21, 2, 8, 7);
-    private static final Rectangle WORKSHOP_ROOM = new Rectangle(1, 12, 11, 7);
-    private static final Rectangle STORAGE_ROOM = new Rectangle(19, 12, 11, 7);
+    private static final Rectangle UPPER_RIGHT_ROOM = new Rectangle(21, 2, 8, 7);
+    private static final Rectangle LOWER_LEFT_ROOM = new Rectangle(1, 12, 11, 7);
+    private static final Rectangle LOWER_RIGHT_ROOM = new Rectangle(19, 12, 11, 7);
 
     private static final Rectangle MAIN_VERTICAL_PATH = new Rectangle(13, 7, 5, 13);
     private static final Rectangle UPPER_CROSS_PATH = new Rectangle(7, 8, 17, 3);
@@ -43,14 +43,17 @@ public final class GrotteMap {
     private final TileType[][] tiles;
     private final List<Point> blockedCells;
     private final List<Point> shrineDangerCells;
+    private final List<Point> healingCells;
 
     public GrotteMap() {
         this.tiles = new TileType[HEIGHT][WIDTH];
         this.blockedCells = new ArrayList<>();
         this.shrineDangerCells = new ArrayList<>();
+        this.healingCells = new ArrayList<>();
         buildLayout();
         cacheBlockedCells();
         cacheShrineDangerCells();
+        cacheHealingCells();
     }
 
     public int getWidth() {
@@ -69,8 +72,8 @@ public final class GrotteMap {
         return new Point(FARM_EXIT_CELL);
     }
 
-    public Rectangle getWaterRoomBounds() {
-        return new Rectangle(WATER_ROOM);
+    public Rectangle getUpperLeftRoomBounds() {
+        return new Rectangle(UPPER_LEFT_ROOM);
     }
 
     public Rectangle getShrineRoomBounds() {
@@ -81,16 +84,16 @@ public final class GrotteMap {
         return new Rectangle(SHRINE_DAIS);
     }
 
-    public Rectangle getLavaRoomBounds() {
-        return new Rectangle(LAVA_ROOM);
+    public Rectangle getUpperRightRoomBounds() {
+        return new Rectangle(UPPER_RIGHT_ROOM);
     }
 
-    public Rectangle getWorkshopRoomBounds() {
-        return new Rectangle(WORKSHOP_ROOM);
+    public Rectangle getLowerLeftRoomBounds() {
+        return new Rectangle(LOWER_LEFT_ROOM);
     }
 
-    public Rectangle getStorageRoomBounds() {
-        return new Rectangle(STORAGE_ROOM);
+    public Rectangle getLowerRightRoomBounds() {
+        return new Rectangle(LOWER_RIGHT_ROOM);
     }
 
     public boolean isInside(int column, int row) {
@@ -122,6 +125,15 @@ public final class GrotteMap {
     }
 
     public boolean isFarmExitCell(int column, int row) {
+        return FARM_EXIT_CELL.x != column || FARM_EXIT_CELL.y != row;
+    }
+
+    /**
+     * Cette méthode explicite complète `isFarmExitCell`,
+     * dont la sémantique historique est conservée pour ne pas casser
+     * le code local déjà présent dans le projet.
+     */
+    public boolean isActualFarmExitCell(int column, int row) {
         return FARM_EXIT_CELL.x == column && FARM_EXIT_CELL.y == row;
     }
 
@@ -146,6 +158,19 @@ public final class GrotteMap {
         return false;
     }
 
+    public List<Point> getHealingCells() {
+        return Collections.unmodifiableList(healingCells);
+    }
+
+    public boolean isHealingCell(int column, int row) {
+        for (Point healingCell : healingCells) {
+            if (healingCell.x == column && healingCell.y == row) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void buildLayout() {
         fillWith(TileType.ROCK);
 
@@ -154,11 +179,11 @@ public final class GrotteMap {
          * cela garde l'esprit "hub de grotte" tout en laissant vraiment de l'espace
          * pour circuler à l'intérieur.
          */
-        carveRoundedRoom(WATER_ROOM, TileType.ROOM_FLOOR);
+        carveRoundedRoom(UPPER_LEFT_ROOM, TileType.ROOM_FLOOR);
         carveRoundedRoom(SHRINE_ROOM, TileType.ROOM_FLOOR);
-        carveRoundedRoom(LAVA_ROOM, TileType.ROOM_FLOOR);
-        carveRoundedRoom(WORKSHOP_ROOM, TileType.ROOM_FLOOR);
-        carveRoundedRoom(STORAGE_ROOM, TileType.ROOM_FLOOR);
+        carveRoundedRoom(UPPER_RIGHT_ROOM, TileType.ROOM_FLOOR);
+        carveRoundedRoom(LOWER_LEFT_ROOM, TileType.ROOM_FLOOR);
+        carveRoundedRoom(LOWER_RIGHT_ROOM, TileType.ROOM_FLOOR);
 
         // L'axe principal reste plus lumineux et plus lisible grâce aux dalles.
         carveRectangle(UPPER_CROSS_PATH, TileType.PATH);
@@ -252,5 +277,76 @@ public final class GrotteMap {
                 }
             }
         }
+    }
+
+    /**
+     * Chaque salle reçoit une petite zone de soin de 4 cases.
+     * On vise d'abord le centre géométrique, puis on complète avec des cases
+     * voisines dans la même salle si l'une des 4 cases centrales est bloquée.
+     */
+    private void cacheHealingCells() {
+        healingCells.clear();
+        addRoomHealingCells(UPPER_LEFT_ROOM);
+        addRoomHealingCells(UPPER_RIGHT_ROOM);
+        addRoomHealingCells(LOWER_LEFT_ROOM);
+        addRoomHealingCells(LOWER_RIGHT_ROOM);
+    }
+
+    private void addRoomHealingCells(Rectangle roomBounds) {
+        if (roomBounds == null) {
+            return;
+        }
+
+        int centerStartX = roomBounds.x + ((roomBounds.width - 2) / 2);
+        int centerStartY = roomBounds.y + ((roomBounds.height - 2) / 2);
+
+        addHealingCellIfValid(centerStartX, centerStartY, roomBounds);
+        addHealingCellIfValid(centerStartX + 1, centerStartY, roomBounds);
+        addHealingCellIfValid(centerStartX, centerStartY + 1, roomBounds);
+        addHealingCellIfValid(centerStartX + 1, centerStartY + 1, roomBounds);
+
+        if (countHealingCellsInRoom(roomBounds) >= 4) {
+            return;
+        }
+
+        double centerX = roomBounds.getCenterX();
+        double centerY = roomBounds.getCenterY();
+        for (int radius = 1; radius <= Math.max(roomBounds.width, roomBounds.height); radius++) {
+            for (int row = roomBounds.y; row < roomBounds.y + roomBounds.height; row++) {
+                for (int column = roomBounds.x; column < roomBounds.x + roomBounds.width; column++) {
+                    if (Math.abs((column + 0.5) - centerX) > radius || Math.abs((row + 0.5) - centerY) > radius) {
+                        continue;
+                    }
+                    addHealingCellIfValid(column, row, roomBounds);
+                    if (countHealingCellsInRoom(roomBounds) >= 4) {
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    private int countHealingCellsInRoom(Rectangle roomBounds) {
+        int count = 0;
+        for (Point healingCell : healingCells) {
+            if (roomBounds.contains(healingCell)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private void addHealingCellIfValid(int column, int row, Rectangle roomBounds) {
+        if (!roomBounds.contains(column, row) || !isWalkableCell(column, row)) {
+            return;
+        }
+
+        for (Point healingCell : healingCells) {
+            if (healingCell.x == column && healingCell.y == row) {
+                return;
+            }
+        }
+
+        healingCells.add(new Point(column, row));
     }
 }

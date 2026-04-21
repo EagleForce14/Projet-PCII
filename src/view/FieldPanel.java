@@ -1838,6 +1838,17 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         cachedTerrainFieldBounds = null;
     }
 
+    /**
+     * Certains changements (comme la pose d'un chemin) modifient le sol
+     * sans passer par la partie dynamique des cases.
+     * On expose donc un point d'entrée simple pour forcer la reconstruction
+     * du cache de terrain au prochain repaint.
+     */
+    public void refreshStaticTerrain() {
+        invalidateStaticTerrainCache();
+        repaint();
+    }
+
     private void ensureStaticTerrainCache() {
         if (getWidth() <= 0 || getHeight() <= 0) {
             invalidateStaticTerrainCache();

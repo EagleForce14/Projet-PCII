@@ -245,6 +245,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         }
 
         grilleCulture.placePath(activeFieldCell.x, activeFieldCell.y, inventaire);
+        fieldPanel.refreshStaticTerrain();
         if (inventaire.possedeInstallation(FacilityType.CHEMIN)) {
             model.clearSelectedInventoryItem();
         }

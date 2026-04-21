@@ -4,6 +4,7 @@ import model.culture.GrilleCulture;
 import model.enemy.EnemyPhysicsThread;
 import model.environment.TreeThread;
 import model.grotte.ShrineHazardThread;
+import model.grotte.combat.CaveCombatThread;
 import model.movement.PhysicsThread;
 import model.workshop.WorkshopConstructionManager;
 import view.RenderThread;
@@ -20,6 +21,7 @@ public final class GameSession {
     private final PhysicsThread cavePhysicsThread;
     private final EnemyPhysicsThread enemyPhysicsThread;
     private final EnemyPhysicsThread caveEnemyPhysicsThread;
+    private final CaveCombatThread caveCombatThread;
     private final RenderThread renderThread;
     private final TreeThread treeThread;
     private final ShrineHazardThread shrineHazardThread;
@@ -29,6 +31,7 @@ public final class GameSession {
                        PhysicsThread cavePhysicsThread,
                        EnemyPhysicsThread enemyPhysicsThread,
                        EnemyPhysicsThread caveEnemyPhysicsThread,
+                       CaveCombatThread caveCombatThread,
                        RenderThread renderThread,
                        TreeThread treeThread,
                        ShrineHazardThread shrineHazardThread,
@@ -39,6 +42,7 @@ public final class GameSession {
         this.cavePhysicsThread = cavePhysicsThread;
         this.enemyPhysicsThread = enemyPhysicsThread;
         this.caveEnemyPhysicsThread = caveEnemyPhysicsThread;
+        this.caveCombatThread = caveCombatThread;
         this.renderThread = renderThread;
         this.treeThread = treeThread;
         this.shrineHazardThread = shrineHazardThread;
@@ -65,6 +69,9 @@ public final class GameSession {
         enemyPhysicsThread.interrupt();
         if (caveEnemyPhysicsThread != null) {
             caveEnemyPhysicsThread.interrupt();
+        }
+        if (caveCombatThread != null) {
+            caveCombatThread.interrupt();
         }
         renderThread.arreter();
         treeThread.arreter();

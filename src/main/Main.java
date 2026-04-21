@@ -15,6 +15,8 @@ import model.grotte.GrotteMap;
 import model.grotte.GrotteObstacleMap;
 import model.grotte.ShrineHazardState;
 import model.grotte.ShrineHazardThread;
+import model.grotte.combat.CaveCombatModel;
+import model.grotte.combat.CaveCombatThread;
 import model.movement.Barn;
 import model.movement.MovementModel;
 import model.movement.PhysicsThread;
@@ -28,6 +30,7 @@ import model.shop.Shop;
 import model.shop.ShopKind;
 import model.workshop.WorkshopConstructionManager;
 import view.*;
+import view.grotte.GrotteCombatView;
 import view.grotte.GrotteFieldPanel;
 import view.shop.ShopOverlay;
 import view.workshop.WorkshopOverlay;
@@ -37,6 +40,7 @@ import javax.swing.JPanel;
 import javax.swing.OverlayLayout;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Point;
 
@@ -102,19 +106,16 @@ public class Main {
         enemyModel.setGrilleCulture(grilleCulture);
         enemyModel.setFieldObstacleMap(fieldObstacleMap);
         MovementView movementView = new MovementView(model, fieldPanel);
-        movementView.setAlignmentX(0.5f);
-        movementView.setAlignmentY(0.5f);
+        configureOverlayAlignment(movementView);
 
         // Les actions contextuelles sont affichées dans une sidebar dédiée, hors du jeu.
         SidebarPanel actionSidebarPanel = new SidebarPanel(model, grilleCulture, fieldPanel, inventaire, jour);
 
         EnemyView enemyView = new EnemyView(enemyModel, fieldPanel);
-        enemyView.setAlignmentX(0.5f);
-        enemyView.setAlignmentY(0.5f);
+        configureOverlayAlignment(enemyView);
 
         InventoryStatusOverlay inventoryStatusOverlay = new InventoryStatusOverlay(fieldPanel, inventaire, model);
-        inventoryStatusOverlay.setAlignmentX(0.5f);
-        inventoryStatusOverlay.setAlignmentY(0.5f);
+        configureOverlayAlignment(inventoryStatusOverlay);
 
         TopBarPanel topBarPanel = new TopBarPanel(playerMoney, jour);
 
@@ -126,36 +127,28 @@ public class Main {
                 playerMoney,
                 topBarPanel
         );
-        environmentView.setAlignmentX(0.5f);
-        environmentView.setAlignmentY(0.5f);
+        configureOverlayAlignment(environmentView);
 
-        JPanel fieldLayer = new JPanel(new BorderLayout());
-        fieldLayer.setOpaque(false);
-        fieldLayer.setAlignmentX(0.5f);
-        fieldLayer.setAlignmentY(0.5f);
-        fieldLayer.add(fieldPanel, BorderLayout.CENTER);
-
-        JPanel gamePanel = createGamePanel();
-        gamePanel.setLayout(new OverlayLayout(gamePanel));
-        gamePanel.add(movementView);
-        gamePanel.add(enemyView);
-        gamePanel.add(inventoryStatusOverlay);
-        gamePanel.add(environmentView); // S'affiche derrière les ennemis
-        gamePanel.add(fieldLayer); // S'affiche derrière l'environnement
+        JPanel fieldLayer = createFieldLayer(fieldPanel);
+        JPanel gamePanel = createOverlayGamePanel(
+                movementView,
+                enemyView,
+                inventoryStatusOverlay,
+                environmentView,
+                fieldLayer
+        );
 
         // Petit overlay HUD pour garder les infos du joueur visibles sans bouger le layout principal.
         JPanel hudPanel = new JPanel(new BorderLayout());
         hudPanel.setOpaque(false);
-        hudPanel.setAlignmentX(0.5f);
-        hudPanel.setAlignmentY(0.5f);
+        configureOverlayAlignment(hudPanel);
         hudPanel.add(topBarPanel, BorderLayout.NORTH);
         gamePanel.add(hudPanel);
 
         GrotteMap grotteMap = new GrotteMap();
         ShrineHazardState shrineHazardState = new ShrineHazardState();
         GrotteFieldPanel grotteFieldPanel = new GrotteFieldPanel(grotteMap, shrineHazardState);
-        grotteFieldPanel.setAlignmentX(0.5f);
-        grotteFieldPanel.setAlignmentY(0.5f);
+        configureOverlayAlignment(grotteFieldPanel);
 
         MovementModel grotteMovementModel = new MovementModel();
         Point grotteInitialOffset = grotteFieldPanel.getInitialPlayerOffset();
@@ -167,26 +160,41 @@ public class Main {
         EnemyModel caveEnemyModel = EnemyModel.createCaveModel(grotteMap);
         caveEnemyModel.setPlayer(grottePlayerUnit);
         caveEnemyModel.setMovementCollisionMap(grotteObstacleMap);
+        CaveCombatModel caveCombatModel = new CaveCombatModel(
+                grottePlayerUnit,
+                caveEnemyModel,
+                grotteObstacleMap,
+                jour,
+                inventaire,
+                grotteMap
+        );
 
         MovementView grotteMovementView = new MovementView(grotteMovementModel, grotteFieldPanel);
-        grotteMovementView.setAlignmentX(0.5f);
-        grotteMovementView.setAlignmentY(0.5f);
+        configureOverlayAlignment(grotteMovementView);
 
         EnemyView caveEnemyView = new EnemyView(caveEnemyModel, grotteFieldPanel);
-        caveEnemyView.setAlignmentX(0.5f);
-        caveEnemyView.setAlignmentY(0.5f);
+        configureOverlayAlignment(caveEnemyView);
 
-        JPanel grotteFieldLayer = new JPanel(new BorderLayout());
-        grotteFieldLayer.setOpaque(false);
-        grotteFieldLayer.setAlignmentX(0.5f);
-        grotteFieldLayer.setAlignmentY(0.5f);
-        grotteFieldLayer.add(grotteFieldPanel, BorderLayout.CENTER);
+        GrotteCombatView grotteCombatView = new GrotteCombatView(caveCombatModel, grotteFieldPanel);
+        configureOverlayAlignment(grotteCombatView);
+        InventoryStatusOverlay caveInventoryStatusOverlay = new InventoryStatusOverlay(
+                grotteFieldPanel,
+                inventaire,
+                grotteMovementModel
+        );
+        // En grotte, l'inventaire ne doit pas rester affiché en permanence.
+        // On active donc le mode "transient" : apparition brève après un pickup, puis disparition animée.
+        caveInventoryStatusOverlay.enableTransientCaveDisplay(caveCombatModel);
+        configureOverlayAlignment(caveInventoryStatusOverlay);
 
-        JPanel grotteGamePanel = createGamePanel();
-        grotteGamePanel.setLayout(new OverlayLayout(grotteGamePanel));
-        grotteGamePanel.add(grotteMovementView);
-        grotteGamePanel.add(caveEnemyView);
-        grotteGamePanel.add(grotteFieldLayer);
+        JPanel grotteFieldLayer = createFieldLayer(grotteFieldPanel);
+        JPanel grotteGamePanel = createOverlayGamePanel(
+                grotteCombatView,
+                grotteMovementView,
+                caveEnemyView,
+                caveInventoryStatusOverlay,
+                grotteFieldLayer
+        );
 
         JPanel centerPanel = new JPanel(new CardLayout());
         centerPanel.add(gamePanel, FARM_CARD);
@@ -206,6 +214,7 @@ public class Main {
         PhysicsThread grottePhysicsThread = new PhysicsThread(grotteMovementModel, false);
         EnemyPhysicsThread enemyPhysicsThread = new EnemyPhysicsThread(enemyModel);
         EnemyPhysicsThread caveEnemyPhysicsThread = new EnemyPhysicsThread(caveEnemyModel, false);
+        CaveCombatThread caveCombatThread = new CaveCombatThread(caveCombatModel, false);
         RenderThread renderThread = new RenderThread(contentPanel);
         TreeThread treeThread = new TreeThread(treeManager, fieldObstacleMap, playerUnit, enemyModel);
         ShrineHazardThread shrineHazardThread = new ShrineHazardThread(
@@ -221,6 +230,7 @@ public class Main {
                 grottePhysicsThread,
                 enemyPhysicsThread,
                 caveEnemyPhysicsThread,
+                caveCombatThread,
                 renderThread,
                 treeThread,
                 shrineHazardThread,
@@ -231,6 +241,8 @@ public class Main {
         GameOverOverlay caveGameOverOverlay = installGameOverOverlay(grotteGamePanel, jour);
         gamePanel.setComponentZOrder(hudPanel, 1);
         gamePanel.setComponentZOrder(inventoryStatusOverlay, 2);
+        grotteGamePanel.setComponentZOrder(grotteCombatView, 1);
+        grotteGamePanel.setComponentZOrder(caveInventoryStatusOverlay, 2);
         new GameOverController(frame, session, farmGameOverOverlay, caveGameOverOverlay);
 
         new MovementController(
@@ -254,6 +266,8 @@ public class Main {
                 grotteMovementModel,
                 movementView,
                 grotteMovementView,
+                caveEnemyView,
+                grotteCombatView,
                 grotteFieldPanel,
                 centerPanel,
                 FARM_CARD,
@@ -262,8 +276,10 @@ public class Main {
                 playerUnit,
                 grottePlayerUnit,
                 caveEnemyModel,
+                caveCombatModel,
                 grottePhysicsThread,
                 caveEnemyPhysicsThread,
+                caveCombatThread,
                 shrineHazardThread
         );
 
@@ -291,6 +307,7 @@ public class Main {
         grottePhysicsThread.start();
         enemyPhysicsThread.start();
         caveEnemyPhysicsThread.start();
+        caveCombatThread.start();
         renderThread.start();
         treeThread.start();
         shrineHazardThread.start();
@@ -341,6 +358,51 @@ public class Main {
         JPanel gamePanel = new BackgroundPanel(null);
         gamePanel.setMinimumSize(GAME_AREA_MINIMUM_SIZE);
         gamePanel.setPreferredSize(GAME_AREA_PREFERRED_SIZE);
+        return gamePanel;
+    }
+
+    /**
+     * Toutes les couches superposées utilisent le même centrage dans l'OverlayLayout.
+     * On évite ainsi de répéter les deux mêmes affectations partout dans `Main`.
+     */
+    private static void configureOverlayAlignment(Component component) {
+        if (component == null) {
+            return;
+        }
+
+        if (component instanceof JPanel) {
+            ((JPanel) component).setAlignmentX(0.5f);
+            ((JPanel) component).setAlignmentY(0.5f);
+        }
+    }
+
+    /**
+     * Le fond jouable repose systématiquement sur un panneau transparent en BorderLayout.
+     * On factorise cette construction pour la ferme et la grotte.
+     */
+    private static JPanel createFieldLayer(Component mapComponent) {
+        JPanel fieldLayer = new JPanel(new BorderLayout());
+        fieldLayer.setOpaque(false);
+        configureOverlayAlignment(fieldLayer);
+        fieldLayer.add(mapComponent, BorderLayout.CENTER);
+        return fieldLayer;
+    }
+
+    /**
+     * Petit helper de composition :
+     * on garde l'ordre des couches explicite à l'appel,
+     * tout en évitant de recopier le même boilerplate pour chaque scène.
+     */
+    private static JPanel createOverlayGamePanel(Component... layers) {
+        JPanel gamePanel = createGamePanel();
+        gamePanel.setLayout(new OverlayLayout(gamePanel));
+        if (layers == null) {
+            return gamePanel;
+        }
+
+        for (Component layer : layers) {
+            gamePanel.add(layer);
+        }
         return gamePanel;
     }
 

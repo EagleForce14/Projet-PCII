@@ -101,6 +101,20 @@ public class EnemyModel {
             this.fieldHeight = fieldHeight;
         }
     }
+
+    /**
+     * Le combat de la grotte a besoin de convertir une position logique
+     * en coordonnées de case.
+     * On expose donc uniquement les dimensions déjà calculées par la vue,
+     * sans lui donner accès à d'autres détails d'implémentation.
+     */
+    public int getFieldWidth() {
+        return fieldWidth;
+    }
+
+    public int getFieldHeight() {
+        return fieldHeight;
+    }
     
     /**
      * Met à jour l'état du modèle (apparition et déplacement des ennemis).
@@ -203,6 +217,17 @@ public class EnemyModel {
         return enemies;
     }
 
+    /**
+     * Suppression explicite utilisée par le combat de la grotte.
+     * On garde cette opération centralisée dans le modèle des ennemis
+     * pour éviter qu'une autre couche manipule directement la collection interne.
+     */
+    public void removeEnemy(EnemyUnit enemy) {
+        if (enemy != null) {
+            enemies.remove(enemy);
+        }
+    }
+
     private void updateCaveEnemies() {
         if (!caveActive) {
             return;
@@ -218,6 +243,10 @@ public class EnemyModel {
         int currentFieldHeight = fieldHeight;
 
         for (EnemyUnit enemy : enemies) {
+            if (!enemy.isAlive()) {
+                enemies.remove(enemy);
+                continue;
+            }
             enemy.update(
                     this,
                     player,
@@ -256,13 +285,13 @@ public class EnemyModel {
      */
     private List<CaveGuardPost> buildCaveGuardPosts() {
         List<CaveGuardPost> posts = new ArrayList<>();
-        addSelectedCornerPosts(posts, 0, grotteMap.getWaterRoomBounds(), true, true, true, true);
+        addSelectedCornerPosts(posts, 0, grotteMap.getUpperLeftRoomBounds(), true, true, true, true);
         addSelectedCornerPosts(posts, 1, grotteMap.getShrineRoomBounds(), true, true, false, false);
-        addSelectedCornerPosts(posts, 2, grotteMap.getLavaRoomBounds(), true, true, true, true);
-        addSelectedCornerPosts(posts, 3, grotteMap.getWorkshopRoomBounds(), true, false, true, true);
-        addSelectedCornerPosts(posts, 4, grotteMap.getStorageRoomBounds(), false, true, true, true);
+        addSelectedCornerPosts(posts, 2, grotteMap.getUpperRightRoomBounds(), true, true, true, true);
+        addSelectedCornerPosts(posts, 3, grotteMap.getLowerLeftRoomBounds(), true, false, true, true);
+        addSelectedCornerPosts(posts, 4, grotteMap.getLowerRightRoomBounds(), false, true, true, true);
 
-        addLavaChestPosts(posts, 2, grotteMap.getLavaRoomBounds());
+        addLavaChestPosts(posts, 2, grotteMap.getUpperRightRoomBounds());
         return posts;
     }
 

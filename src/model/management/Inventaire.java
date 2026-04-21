@@ -4,9 +4,38 @@ import model.culture.Type;
 import model.shop.FacilityType;
 import model.shop.Seed;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 public class Inventaire {
     /** Une classe qui modélise l'inventaire du joueur et la gestion de ses ressources **/
+
+    /*
+     * Cette définition représente le vrai "catalogue" de l'inventaire affiché au joueur.
+     * Les drops de la grotte s'appuient sur cette même source pour éviter toute divergence.
+     * Ainsi, si l'on ajoute ou retire un type ici plus tard,
+     * l'UI de l'inventaire et les drops évolueront ensemble.
+     */
+    private static final Type[] MAIN_ZONE_SEED_SLOT_ORDER = {
+            Type.TULIPE,
+            Type.ROSE,
+            Type.MARGUERITE,
+            Type.ORCHIDEE,
+            Type.CAROTTE,
+            Type.RADIS,
+            Type.CHOUFLEUR
+    };
+    private static final Type[] LEFT_ZONE_SEED_SLOT_ORDER = {
+            Type.NENUPHAR,
+            Type.IRIS_DES_MARAIS
+    };
+    private static final FacilityType[] FACILITY_SLOT_ORDER = {
+            FacilityType.CLOTURE,
+            FacilityType.CHEMIN,
+            FacilityType.COMPOST,
+            FacilityType.PONT
+    };
 
     // Attributs
     // liste des nombres de graines que le joueur possède
@@ -48,19 +77,25 @@ public class Inventaire {
          * @param quantite : la quantité de graines que le joueur à acheté 
          * **/
         public void ajoutGraine(Seed graine, int quantite) {
-            //traiter les graines par case selon leur type
-
-
-                
-            // si le joueur possède déjà la graine, on rajoute les graines achetées à la quantité de base
-            if (graines.containsKey(graine.getType())) {
-                graines.put(graine.getType(), graines.get(graine.getType()) + quantite);
-            } else {
-                // sinon, on ajoute la nouvelle graine avec sa quantité
-                graines.put(graine.getType(), quantite);
+            if (graine == null) {
+                return;
             }
 
+            ajoutGraine(graine.getType(), quantite);
+        }
 
+        /**
+         * Variante directe utilisée par les récompenses ou les drops :
+         * on peut créditer l'inventaire sans avoir à recréer artificiellement
+         * un objet boutique complet.
+         */
+        public void ajoutGraine(Type type, int quantite) {
+            if (type == null || quantite <= 0) {
+                return;
+            }
+
+            int quantiteActuelle = getQuantiteGraine(type);
+            graines.put(type, quantiteActuelle + quantite);
         }
 
         /**
@@ -165,8 +200,98 @@ public class Inventaire {
         return Math.max(0, woodQuantity);
     }
 
+    /**
+     * Retourne un instantané des graines réellement disponibles.
+     *
+     * On itère directement sur le contenu courant de l'inventaire
+     * au lieu d'utiliser une liste codée en dur.
+     * Si de nouveaux types sont ajoutés plus tard dans l'inventaire,
+     * ils entreront automatiquement dans ce résultat.
+     */
+    public List<Type> getAvailableSeedTypes() {
+        List<Type> availableSeedTypes = new ArrayList<>();
+        for (Map.Entry<Type, Integer> entry : new HashMap<>(graines).entrySet()) {
+            if (entry.getKey() != null && entry.getValue() != null && entry.getValue() > 0) {
+                availableSeedTypes.add(entry.getKey());
+            }
+        }
+        return availableSeedTypes;
+    }
+
+    /**
+     * Même logique pour les installations :
+     * seul le stock réellement positif est proposé au système de drops.
+     */
+    public List<FacilityType> getAvailableFacilityTypes() {
+        List<FacilityType> availableFacilityTypes = new ArrayList<>();
+        for (Map.Entry<FacilityType, Integer> entry : new HashMap<>(installations).entrySet()) {
+            if (entry.getKey() != null && entry.getValue() != null && entry.getValue() > 0) {
+                availableFacilityTypes.add(entry.getKey());
+            }
+        }
+        return availableFacilityTypes;
+    }
+
     public boolean possedeBois(int quantiteDemandee) {
         return quantiteDemandee > 0 && getQuantiteBois() >= quantiteDemandee;
+    }
+
+    /**
+     * Chaque getter renvoie une copie afin de protéger la définition officielle des slots.
+     */
+    public static Type[] getMainZoneSeedSlotOrder() {
+        return MAIN_ZONE_SEED_SLOT_ORDER.clone();
+    }
+
+    public static Type[] getLeftZoneSeedSlotOrder() {
+        return LEFT_ZONE_SEED_SLOT_ORDER.clone();
+    }
+
+    public static FacilityType[] getFacilitySlotOrder() {
+        return FACILITY_SLOT_ORDER.clone();
+    }
+
+    /**
+     * Retourne les graines autorisées pour les drops de grotte.
+     *
+     * On ne filtre volontairement pas par quantité possédée :
+     * une nouvelle partie démarre avec un stock à zéro,
+     * mais les types existent déjà dans l'inventaire visible.
+     * Sans cela, aucun drop n'apparaîtrait jamais au début de la partie.
+     */
+    public List<Type> getDropCandidateSeedTypes() {
+        List<Type> dropCandidateSeedTypes = new ArrayList<>();
+        for (Type type : MAIN_ZONE_SEED_SLOT_ORDER) {
+            if (type != null) {
+                dropCandidateSeedTypes.add(type);
+            }
+        }
+        for (Type type : LEFT_ZONE_SEED_SLOT_ORDER) {
+            if (type != null) {
+                dropCandidateSeedTypes.add(type);
+            }
+        }
+        return dropCandidateSeedTypes;
+    }
+
+    /**
+     * Même logique pour les installations montrées dans l'inventaire.
+     */
+    public List<FacilityType> getDropCandidateFacilityTypes() {
+        List<FacilityType> dropCandidateFacilityTypes = new ArrayList<>();
+        for (FacilityType type : FACILITY_SLOT_ORDER) {
+            if (type != null) {
+                dropCandidateFacilityTypes.add(type);
+            }
+        }
+        return dropCandidateFacilityTypes;
+    }
+
+    /**
+     * Le bois fait toujours partie des ressources de base affichées dans l'inventaire.
+     */
+    public boolean supportsWoodDrops() {
+        return true;
     }
 
     public void ajoutBois(int quantite) {

@@ -1,5 +1,6 @@
 package model.enemy;
 
+import model.Combat.CombatUnit;
 import model.culture.GrilleCulture;
 import model.culture.CellSide;
 import model.culture.Culture;
@@ -37,7 +38,8 @@ public class EnemyUnit {
 
     private enum CaveBehavior {
         PAUSE,
-        PATROL
+        PATROL,
+        ALERT
     }
 
     private static final int SPAWN_SIDE_TOP = 0;
@@ -46,6 +48,7 @@ public class EnemyUnit {
     private static final int SPAWN_SIDE_LEFT = 3;
     private static final double DISPLAY_DIRECTION_EPSILON = 0.01;
     private static final double CAVE_PATROL_SPEED = 1.4;
+    private static final double CAVE_ALERT_SPEED = 2.0;
     private static final int CAVE_PATROL_RETARGET_MIN_FRAMES = 28;
     private static final int CAVE_PATROL_RETARGET_RANDOM_FRAMES = 42;
     private static final int CAVE_PAUSE_MIN_FRAMES = 6;
@@ -53,6 +56,17 @@ public class EnemyUnit {
     private static final double CAVE_PAUSE_PROBABILITY = 0.12;
     private static final double CAVE_GLOBAL_PATROL_PROBABILITY = 0.32;
     private static final int CAVE_WALK_FRAME_TOGGLE_TICKS = 8;
+    private static final int CAVE_INFLUENCE_RADIUS = 120;
+    private static final int CAVE_SHOOT_RANGE = 185;
+    private static final long CAVE_ALERT_MEMORY_MS = 1_250L;
+    private static final long CAVE_STRAFE_SWAP_DELAY_MS = 820L;
+    private static final long CAVE_SHOT_COOLDOWN_MS = 860L;
+    private static final long CAVE_HIT_FLASH_MS = 150L;
+    private static final double CAVE_COMBAT_MIN_DISTANCE = 82.0;
+    private static final double CAVE_COMBAT_MAX_DISTANCE = 138.0;
+    private static final double CAVE_COMBAT_STRAFE_DISTANCE = 30.0;
+    private static final int CAVE_MAX_HEALTH = 60;
+    private static final int CAVE_ATTACK_POWER = 12;
     // La taille de la zone de "sécurité" autour de la boutique principale (à droite)
     // (on ne peut pas traverser cette zone i.e. on ne peut pas traverser la boutique principale).
     private static final int HITBOX_SIZE = 20;
@@ -166,6 +180,16 @@ public class EnemyUnit {
     private final FieldObstacleMap farmObstacleMap;
     private final MovementCollisionMap movementCollisionMap;
     private final int decorativeRiverColumn;
+    private final CombatUnit combatUnit;
+
+    private boolean caveAggroed = false;
+    private double caveLastSeenPlayerX = Double.NaN;
+    private double caveLastSeenPlayerY = Double.NaN;
+    private long caveLastSeenPlayerTime = -1L;
+    private long caveLastStrafeSwapTime = 0L;
+    private long caveLastShotTime = Long.MIN_VALUE;
+    private long caveHitFlashUntilMs = 0L;
+    private boolean caveStrafeClockwise = true;
 
     // On construit ici une unité ennemie avec les dimensions connues au moment de son apparition.
     public EnemyUnit(int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight, GrilleCulture grilleCulture,
@@ -179,6 +203,7 @@ public class EnemyUnit {
         this.farmObstacleMap = fieldObstacleMap;
         this.movementCollisionMap = fieldObstacleMap;
         this.decorativeRiverColumn = resolveDecorativeRiverColumn(grilleCulture);
+        this.combatUnit = new CombatUnit();
         // On fait apparaître le lapin hors écran.
         spawnOutside();
         // On initialise la dernière position connue sur X.
@@ -202,11 +227,14 @@ public class EnemyUnit {
         this.farmObstacleMap = null;
         this.movementCollisionMap = movementCollisionMap;
         this.decorativeRiverColumn = -1;
+        this.combatUnit = new CombatUnit(CAVE_MAX_HEALTH, CAVE_ATTACK_POWER);
         this.caveGuardBounds = buildCaveGuardBounds(caveSpawnBounds);
         this.cavePatrolBounds = cavePatrolBounds == null ? new Rectangle(-20, -20, 40, 40) : new Rectangle(cavePatrolBounds);
         this.caveRoomIndex = roomIndex;
         this.caveBehavior = CaveBehavior.PATROL;
         this.preferredTurnSign = random.nextBoolean() ? 1 : -1;
+        this.caveStrafeClockwise = random.nextBoolean();
+        this.caveLastShotTime = System.currentTimeMillis() - random.nextInt((int) CAVE_SHOT_COOLDOWN_MS);
 
         Point2D.Double spawnPoint = findValidCavePoint(caveSpawnBounds, 40);
         if (spawnPoint == null) {
@@ -393,8 +421,107 @@ public class EnemyUnit {
             int fieldHeight
     ) {
         refreshDimensions(viewportWidth, viewportHeight, fieldWidth, fieldHeight);
-        updateCavePatrolState();
+        if (!combatUnit.isAlive()) {
+            caveMoving = false;
+            return;
+        }
+
+        updateCaveAggroState(player);
+        if (caveAggroed) {
+            updateCaveCombatMovement(player);
+        } else {
+            updateCavePatrolState();
+        }
         moveDirectlyTowardTarget(resolveCaveSpeed());
+    }
+
+    /**
+     * La grotte ne doit pas devenir un simple couloir de patrouille.
+     * Dès que le joueur entre dans la zone d'influence avec une ligne de vue dégagée,
+     * le monstre bascule en état d'alerte et garde ce souvenir quelques instants.
+     */
+    private void updateCaveAggroState(Unit player) {
+        if (player == null || !player.isInCave()) {
+            caveAggroed = false;
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        double deltaX = player.getX() - x;
+        double deltaY = player.getY() - y;
+        double distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
+        boolean playerInInfluenceZone = distanceSquared <= ((double) CAVE_INFLUENCE_RADIUS * CAVE_INFLUENCE_RADIUS);
+        boolean lineOfSight = playerInInfluenceZone && hasLineOfSight(player.getX(), player.getY());
+
+        if (lineOfSight) {
+            caveAggroed = true;
+            caveLastSeenPlayerX = player.getX();
+            caveLastSeenPlayerY = player.getY();
+            caveLastSeenPlayerTime = now;
+            return;
+        }
+
+        if (!caveAggroed) {
+            return;
+        }
+
+        double alertLeashDistance = CAVE_SHOOT_RANGE * 1.45;
+        if ((now - caveLastSeenPlayerTime) > CAVE_ALERT_MEMORY_MS
+                || distanceSquared > (alertLeashDistance * alertLeashDistance)) {
+            caveAggroed = false;
+            caveBehavior = CaveBehavior.PATROL;
+        }
+    }
+
+    /**
+     * En état d'alerte, le monstre essaie de rester dans une "bonne" distance de tir.
+     * Trop proche : il recule. Trop loin : il revient. Entre les deux : il strafe.
+     */
+    private void updateCaveCombatMovement(Unit player) {
+        caveBehavior = CaveBehavior.ALERT;
+
+        double focusX = Double.isFinite(caveLastSeenPlayerX) ? caveLastSeenPlayerX : caveHomeX;
+        double focusY = Double.isFinite(caveLastSeenPlayerY) ? caveLastSeenPlayerY : caveHomeY;
+        if (player != null && player.isInCave() && hasLineOfSight(player.getX(), player.getY())) {
+            focusX = player.getX();
+            focusY = player.getY();
+        }
+
+        double deltaX = focusX - x;
+        double deltaY = focusY - y;
+        double distance = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
+        if (distance < 0.0001) {
+            targetX = x;
+            targetY = y;
+            return;
+        }
+
+        double normalizedX = deltaX / distance;
+        double normalizedY = deltaY / distance;
+        if (distance < CAVE_COMBAT_MIN_DISTANCE) {
+            targetX = x - (normalizedX * CAVE_COMBAT_STRAFE_DISTANCE);
+            targetY = y - (normalizedY * CAVE_COMBAT_STRAFE_DISTANCE);
+            return;
+        }
+
+        if (distance > CAVE_COMBAT_MAX_DISTANCE) {
+            targetX = focusX - (normalizedX * CAVE_COMBAT_MIN_DISTANCE);
+            targetY = focusY - (normalizedY * CAVE_COMBAT_MIN_DISTANCE);
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        if ((now - caveLastStrafeSwapTime) > CAVE_STRAFE_SWAP_DELAY_MS) {
+            caveLastStrafeSwapTime = now;
+            if (random.nextDouble() < 0.35) {
+                caveStrafeClockwise = !caveStrafeClockwise;
+            }
+        }
+
+        double perpendicularX = caveStrafeClockwise ? -normalizedY : normalizedY;
+        double perpendicularY = caveStrafeClockwise ? normalizedX : -normalizedX;
+        targetX = x + (perpendicularX * CAVE_COMBAT_STRAFE_DISTANCE);
+        targetY = y + (perpendicularY * CAVE_COMBAT_STRAFE_DISTANCE);
     }
 
     /**
@@ -432,7 +559,11 @@ public class EnemyUnit {
     }
 
     private double resolveCaveSpeed() {
-        return caveBehavior == CaveBehavior.PAUSE ? 0.0 : CAVE_PATROL_SPEED;
+        if (caveBehavior == CaveBehavior.PAUSE) {
+            return 0.0;
+        }
+
+        return caveBehavior == CaveBehavior.ALERT ? CAVE_ALERT_SPEED : CAVE_PATROL_SPEED;
     }
 
     /**
@@ -515,6 +646,36 @@ public class EnemyUnit {
 
         targetX = patrolPoint.x;
         targetY = patrolPoint.y;
+    }
+
+    /**
+     * Ligne de vue simplifiée :
+     * on échantillonne plusieurs points entre le monstre et sa cible.
+     * Si un de ces points tombe dans un mur, le tir ou l'aggro directe sont refusés.
+     */
+    private boolean hasLineOfSight(double targetX, double targetY) {
+        if (movementCollisionMap == null) {
+            return true;
+        }
+
+        double deltaX = targetX - x;
+        double deltaY = targetY - y;
+        double distance = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
+        if (distance <= 0.0001) {
+            return true;
+        }
+
+        int sampleCount = Math.max(2, (int) Math.ceil(distance / 12.0));
+        int probeSize = Math.max(8, HITBOX_SIZE / 2);
+        for (int sampleIndex = 1; sampleIndex < sampleCount; sampleIndex++) {
+            double ratio = sampleIndex / (double) sampleCount;
+            double sampleX = x + (deltaX * ratio);
+            double sampleY = y + (deltaY * ratio);
+            if (!movementCollisionMap.canOccupyCenteredBox(sampleX, sampleY, probeSize, probeSize)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -1493,6 +1654,93 @@ public class EnemyUnit {
         return caveRoomIndex;
     }
 
+    public synchronized boolean isCaveAggroed() {
+        return enemyKind == EnemyKind.CAVE_MONSTER && caveAggroed;
+    }
+
+    public synchronized int getCaveInfluenceRadius() {
+        return enemyKind == EnemyKind.CAVE_MONSTER ? CAVE_INFLUENCE_RADIUS : 0;
+    }
+
+    public synchronized double getHealthRatio() {
+        return combatUnit.getHealthRatio();
+    }
+
+    public synchronized int getHealth() {
+        return combatUnit.getHealth();
+    }
+
+    public synchronized int getMaxHealth() {
+        return combatUnit.getMaxHealth();
+    }
+
+    public synchronized String getHealthLabel() {
+        return combatUnit.getHealth() + " / " + combatUnit.getMaxHealth();
+    }
+
+    public synchronized boolean isAlive() {
+        return combatUnit.isAlive();
+    }
+
+    public synchronized boolean isHitFlashVisible() {
+        return enemyKind == EnemyKind.CAVE_MONSTER && System.currentTimeMillis() < caveHitFlashUntilMs;
+    }
+
+    /**
+     * Le modèle de combat demande explicitement au monstre
+     * s'il a le droit de tirer à cet instant.
+     */
+    public synchronized boolean canFireAtPlayer(Unit player, long now) {
+        if (enemyKind != EnemyKind.CAVE_MONSTER
+                || player == null
+                || !player.isInCave()
+                || !caveAggroed
+                || !combatUnit.isAlive()) {
+            return false;
+        }
+
+        double deltaX = player.getX() - x;
+        double deltaY = player.getY() - y;
+        double distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
+        return distanceSquared <= ((double) CAVE_SHOOT_RANGE * CAVE_SHOOT_RANGE)
+                && hasLineOfSight(player.getX(), player.getY())
+                && (now - caveLastShotTime) >= CAVE_SHOT_COOLDOWN_MS;
+    }
+
+    public synchronized int getAttackPower() {
+        return combatUnit.getAttackPower();
+    }
+
+    public synchronized void markShotFiredAt(double targetX, double targetY, long now) {
+        caveLastShotTime = now;
+        caveDisplayVectorX = targetX - x;
+        caveDisplayVectorY = targetY - y;
+        caveLastSeenPlayerX = targetX;
+        caveLastSeenPlayerY = targetY;
+        caveLastSeenPlayerTime = now;
+    }
+
+    /**
+     * Les tirs du joueur réveillent immédiatement le monstre touché.
+     * Le booléen renvoyé permet au modèle de combat de le retirer sans re-tester sa vie.
+     */
+    public synchronized boolean receiveProjectileDamage(int damage, double attackerX, double attackerY) {
+        if (enemyKind != EnemyKind.CAVE_MONSTER || !combatUnit.isAlive()) {
+            return false;
+        }
+
+        combatUnit.receiveDamage(damage);
+        caveAggroed = true;
+        caveBehavior = CaveBehavior.ALERT;
+        caveHitFlashUntilMs = System.currentTimeMillis() + CAVE_HIT_FLASH_MS;
+        caveLastSeenPlayerX = attackerX;
+        caveLastSeenPlayerY = attackerY;
+        caveLastSeenPlayerTime = System.currentTimeMillis();
+        caveDisplayVectorX = x - attackerX;
+        caveDisplayVectorY = y - attackerY;
+        return !combatUnit.isAlive();
+    }
+
     /**
      * Expose à la vue quel sprite afficher sans lui faire relire la logique métier.
      * On privilégie le vrai dernier pas appliqué, puis la cible courante si le lapin
@@ -1641,6 +1889,12 @@ public class EnemyUnit {
      */
     public synchronized String getOverlayStatus() {
         if (enemyKind == EnemyKind.CAVE_MONSTER) {
+            if (!combatUnit.isAlive()) {
+                return "Neutralise";
+            }
+            if (caveAggroed) {
+                return "Alerte";
+            }
             if (caveBehavior == CaveBehavior.PAUSE) {
                 return "En garde";
             }

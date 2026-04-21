@@ -30,6 +30,10 @@ public class EnemyView extends JPanel {
     private static final int RABBIT_FRAME_HEIGHT = 54;
     private static final int MONSTER_FRAME_WIDTH = 48;
     private static final int MONSTER_FRAME_HEIGHT = 48;
+    private static final Color CAVE_HEALTH_BACKGROUND = new Color(28, 14, 16, 196);
+    private static final Color CAVE_HEALTH_FILL = new Color(212, 74, 74, 235);
+    private static final Color CAVE_HEALTH_BORDER = new Color(245, 208, 184, 214);
+    private static final Color CAVE_HIT_FLASH = new Color(255, 255, 255, 68);
 
     private final EnemyModel model;
     private final PlayableMapPanel mapPanel;
@@ -286,6 +290,44 @@ public class EnemyView extends JPanel {
         double frameX = enemyCenterX - (frameWidth / 2.0);
         double frameY = enemyCenterY - (frameHeight / 2.0);
         g2d.drawImage(sprite, AffineTransform.getTranslateInstance(frameX, frameY), this);
+        if (enemy != null && enemy.isHitFlashVisible()) {
+            g2d.setColor(CAVE_HIT_FLASH);
+            g2d.fillOval(
+                    (int) Math.round(enemyCenterX - (frameWidth / 2.0)),
+                    (int) Math.round(enemyCenterY - (frameHeight / 2.0)),
+                    frameWidth,
+                    frameHeight
+            );
+        }
+        if (enemy != null && enemy.isCaveMonster()) {
+            drawCaveHealthBar(g2d, enemy, enemyCenterX, enemyCenterY, isSelected);
+        }
+    }
+
+    private void drawCaveHealthBar(
+            Graphics2D g2d,
+            EnemyUnit enemy,
+            double enemyCenterX,
+            double enemyCenterY,
+            boolean isSelected
+    ) {
+        boolean shouldDisplay = isSelected || enemy.isCaveAggroed() || enemy.getHealthRatio() < 1.0;
+        if (!shouldDisplay) {
+            return;
+        }
+
+        int barWidth = 36;
+        int barHeight = 6;
+        int drawX = (int) Math.round(enemyCenterX - (barWidth / 2.0));
+        int drawY = (int) Math.round(enemyCenterY - 34);
+        int fillWidth = Math.max(0, Math.min(barWidth - 2, (int) Math.round((barWidth - 2) * enemy.getHealthRatio())));
+
+        g2d.setColor(CAVE_HEALTH_BACKGROUND);
+        g2d.fillRoundRect(drawX, drawY, barWidth, barHeight, 6, 6);
+        g2d.setColor(CAVE_HEALTH_FILL);
+        g2d.fillRoundRect(drawX + 1, drawY + 1, fillWidth, barHeight - 2, 6, 6);
+        g2d.setColor(CAVE_HEALTH_BORDER);
+        g2d.drawRoundRect(drawX, drawY, barWidth, barHeight, 6, 6);
     }
 
     @Override

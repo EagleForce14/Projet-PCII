@@ -33,6 +33,7 @@ public final class ProductPixelArt {
     private static final Image BRIDGE_IMAGE = ImageLoader.load("/assets/bridge.png");
     private static final Image WOOD_IMAGE = ImageLoader.load("/assets/wood.png");
     private static final Image COIN_IMAGE = ImageLoader.load("/assets/coin.png");
+    private static final Image DEFAULT_MATURE_FLOWER_IMAGE = ImageLoader.load("/assets/maturite.png");
     private static final Image CARROT_IMAGE = ImageLoader.load("/assets/carotte_mature.png");
     private static final Image RADISH_IMAGE = ImageLoader.load("/assets/radis_mature.png");
     private static final Image CAULIFLOWER_IMAGE = ImageLoader.load("/assets/choufleur_mature.png");
@@ -76,6 +77,27 @@ public final class ProductPixelArt {
             return getScaledImageSize(illustratedSeedImage, ILLUSTRATED_SEED_IMAGE_MAX_SIDE * pixelSize).height;
         }
         return DEFAULT_ART_ROWS * pixelSize;
+    }
+
+    /**
+     * Les drops de grotte réutilisent toujours le rendu mature de la culture.
+     * On évite ainsi de faire apparaître au sol une jeune pousse ou une graine
+     * alors que le joueur récupère un vrai loot lisible.
+     */
+    public static int getMatureCultureArtWidth(Type type, int pixelSize) {
+        Image matureCultureImage = getMatureCultureImage(type);
+        if (matureCultureImage == null) {
+            return DEFAULT_ART_COLUMNS * pixelSize;
+        }
+        return getScaledImageSize(matureCultureImage, ILLUSTRATED_SEED_IMAGE_MAX_SIDE * pixelSize).width;
+    }
+
+    public static int getMatureCultureArtHeight(Type type, int pixelSize) {
+        Image matureCultureImage = getMatureCultureImage(type);
+        if (matureCultureImage == null) {
+            return DEFAULT_ART_ROWS * pixelSize;
+        }
+        return getScaledImageSize(matureCultureImage, ILLUSTRATED_SEED_IMAGE_MAX_SIDE * pixelSize).height;
     }
 
     public static int getFacilityArtWidth(FacilityType type, int pixelSize) {
@@ -159,6 +181,16 @@ public final class ProductPixelArt {
         }
     }
 
+    public static void drawMatureCulture(Graphics2D g2d, Type type, int x, int y, int pixelSize) {
+        Image matureCultureImage = getMatureCultureImage(type);
+        if (matureCultureImage != null) {
+            drawScaledImage(g2d, matureCultureImage, x, y, ILLUSTRATED_SEED_IMAGE_MAX_SIDE * pixelSize);
+            return;
+        }
+
+        drawSeed(g2d, type, x, y, pixelSize);
+    }
+
     /**
      * Certaines graines réutilisent directement leur sprite mature.
      * On centralise cette liste ici pour ne pas répéter les mêmes conditions
@@ -181,6 +213,33 @@ public final class ProductPixelArt {
             return MARSH_IRIS_IMAGE;
         }
         return null;
+    }
+
+    /**
+     * Cette table décrit le visuel "au sol" d'une culture mature.
+     * Les légumes et fleurs des marais utilisent leur sprite mature dédié,
+     * alors que les fleurs génériques de la ferme réutilisent le sprite mature commun.
+     */
+    private static Image getMatureCultureImage(Type type) {
+        if (type == null) {
+            return null;
+        }
+        if (type == Type.CAROTTE) {
+            return CARROT_IMAGE;
+        }
+        if (type == Type.RADIS) {
+            return RADISH_IMAGE;
+        }
+        if (type == Type.CHOUFLEUR) {
+            return CAULIFLOWER_IMAGE;
+        }
+        if (type == Type.NENUPHAR) {
+            return WATER_LILY_IMAGE;
+        }
+        if (type == Type.IRIS_DES_MARAIS) {
+            return MARSH_IRIS_IMAGE;
+        }
+        return DEFAULT_MATURE_FLOWER_IMAGE;
     }
 
     public static void drawFacility(Graphics2D g2d, FacilityType type, int x, int y, int pixelSize) {

@@ -78,13 +78,13 @@ public final class GrotteObstacleMap implements MovementCollisionMap {
                 if (grotteMap.isWallCell(column, row - 1)) {
                     topWallFrontCells.add(new Point(column, row));
                 }
-                if (grotteMap.isWallCell(column, row + 1) && !grotteMap.isFarmExitCell(column, row)) {
+                if (grotteMap.isWallCell(column, row + 1) && !grotteMap.isActualFarmExitCell(column, row)) {
                     bottomWallFrontCells.add(new Point(column, row));
                 }
-                if (grotteMap.isWallCell(column - 1, row) && !grotteMap.isFarmExitCell(column, row)) {
+                if (grotteMap.isWallCell(column - 1, row) && !grotteMap.isActualFarmExitCell(column, row)) {
                     leftWallFrontCells.add(new Point(column, row));
                 }
-                if (grotteMap.isWallCell(column + 1, row) && !grotteMap.isFarmExitCell(column, row)) {
+                if (grotteMap.isWallCell(column + 1, row) && !grotteMap.isActualFarmExitCell(column, row)) {
                     rightWallFrontCells.add(new Point(column, row));
                 }
             }

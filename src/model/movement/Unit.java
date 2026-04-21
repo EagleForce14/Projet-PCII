@@ -32,10 +32,11 @@ public class Unit {
     private MovementCollisionMap fieldObstacleMap;
 
     // Attribut pour la gestion des combats
-    private CombatUnit combatUnit;
+    private final CombatUnit combatUnit;
 
     // Attribut qui indique si l'unité est dans la grotte ou non
     private volatile boolean inCave = false;
+    private volatile FacingDirection facingDirection = FacingDirection.DOWN;
 
     // Le constructeur de la classe.
     public Unit(int x, int y) {
@@ -107,12 +108,34 @@ public class Unit {
         y = Math.max(minY, Math.min(y, maxY));
     }
     
-    public void setMoveUp(boolean moveUp) { this.moveUp = moveUp; }
-    public void setMoveDown(boolean moveDown) { this.moveDown = moveDown; }
-    public void setMoveLeft(boolean moveLeft) { this.moveLeft = moveLeft; }
-    public void setMoveRight(boolean moveRight) { this.moveRight = moveRight; }
+    public void setMoveUp(boolean moveUp) { setMoveUp(moveUp, true); }
+    public void setMoveDown(boolean moveDown) { setMoveDown(moveDown, true); }
+    public void setMoveLeft(boolean moveLeft) { setMoveLeft(moveLeft, true); }
+    public void setMoveRight(boolean moveRight) { setMoveRight(moveRight, true); }
     public void setCurrentSpeed(int currentSpeed) { this.currentSpeed = currentSpeed; }
     public void setFieldObstacleMap(MovementCollisionMap fieldObstacleMap) { this.fieldObstacleMap = fieldObstacleMap; }
+
+    public CombatUnit getCombatUnit() {
+        return combatUnit;
+    }
+
+    public FacingDirection getFacingDirection() {
+        return facingDirection;
+    }
+
+    public void setFacingDirection(FacingDirection facingDirection) {
+        if (facingDirection != null) {
+            this.facingDirection = facingDirection;
+        }
+    }
+
+    /**
+     * Restaure la vie du joueur sans toucher a son positionnement ni a ses déplacements.
+     * Cela permet de relancer une tentative dans la grotte sur une base saine.
+     */
+    public void restoreFullHealth() {
+        combatUnit.healToFull();
+    }
 
     /**
      * Le joueur partage le même filtre d'occupation que les autres entités mobiles
@@ -161,5 +184,33 @@ public class Unit {
      */
     public void exitCave() {
         inCave = false;
+    }
+
+    public void setMoveUp(boolean moveUp, boolean updateFacing) {
+        this.moveUp = moveUp;
+        if (moveUp && updateFacing) {
+            setFacingDirection(FacingDirection.UP);
+        }
+    }
+
+    public void setMoveDown(boolean moveDown, boolean updateFacing) {
+        this.moveDown = moveDown;
+        if (moveDown && updateFacing) {
+            setFacingDirection(FacingDirection.DOWN);
+        }
+    }
+
+    public void setMoveLeft(boolean moveLeft, boolean updateFacing) {
+        this.moveLeft = moveLeft;
+        if (moveLeft && updateFacing) {
+            setFacingDirection(FacingDirection.LEFT);
+        }
+    }
+
+    public void setMoveRight(boolean moveRight, boolean updateFacing) {
+        this.moveRight = moveRight;
+        if (moveRight && updateFacing) {
+            setFacingDirection(FacingDirection.RIGHT);
+        }
     }
 }

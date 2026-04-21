@@ -7,5 +7,6 @@ package model.runtime;
 public enum DefeatCause {
     NONE,
     OBJECTIVES,
-    CAVE_SHRINE
+    CAVE_SHRINE,
+    CAVE_ENEMY
 }

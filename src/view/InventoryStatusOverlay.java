@@ -2,6 +2,7 @@ package view;
 
 import model.culture.FieldZone;
 import model.culture.Type;
+import model.grotte.combat.CaveCombatModel;
 import model.management.Inventaire;
 import model.movement.MovementModel;
 import model.movement.Unit;
@@ -9,6 +10,7 @@ import model.shop.FacilityType;
 
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -20,7 +22,7 @@ import java.awt.RenderingHints;
 /**
  * Vue dédiée à l'inventaire affiché en bas de l'écran.
  *
- * L'inventaire est volontairement découpé en trois petits blocs visuels :
+ * L'inventaire est découpé en trois blocs :
  * - les graines du champ principal,
  * - les graines du côté gauche de la rivière,
  * - puis les ressources et objets de pose.
@@ -34,41 +36,48 @@ public class InventoryStatusOverlay extends JPanel {
     private static final int SLOT_GAP = 6;
     private static final int GROUP_GAP = 12;
     private static final int OUTER_PADDING = 10;
+    private static final long CAVE_INVENTORY_VISIBLE_MS = 1250L;
+    private static final long CAVE_INVENTORY_SLIDE_MS = 220L;
+    private static final int CAVE_INVENTORY_HIDDEN_OFFSET_Y = 84;
     private static final Color LOCKED_SEED_OVERLAY = new Color(22, 18, 14, 148);
     private static final Color LOCKED_SEED_BORDER = new Color(150, 132, 112, 185);
 
-    private static final Type[] MAIN_ZONE_SEED_ORDER = {
-            Type.TULIPE,
-            Type.ROSE,
-            Type.MARGUERITE,
-            Type.ORCHIDEE,
-            Type.CAROTTE,
-            Type.RADIS,
-            Type.CHOUFLEUR
-    };
-    private static final Type[] LEFT_ZONE_SEED_ORDER = {
-            Type.NENUPHAR,
-            Type.IRIS_DES_MARAIS
-    };
-    private static final FacilityType[] INVENTORY_FACILITY_ORDER = {
-            FacilityType.CLOTURE,
-            FacilityType.CHEMIN,
-            FacilityType.COMPOST,
-            FacilityType.PONT
-    };
-
-    private final FieldPanel fieldPanel;
+    private final PlayableMapPanel mapPanel;
+    private final FieldPanel farmFieldPanel;
     private final Inventaire inventaire;
     private final MovementModel movementModel;
     private final Font quantityFont;
+    private CaveCombatModel caveCombatModel;
+    private boolean transientCaveDisplayEnabled;
+    private long transientDisplayStartMs;
+    private long transientDisplayEndMs;
+    private long lastObservedPickupMs;
 
-    public InventoryStatusOverlay(FieldPanel fieldPanel, Inventaire inventaire, MovementModel movementModel) {
-        this.fieldPanel = fieldPanel;
+    public InventoryStatusOverlay(PlayableMapPanel mapPanel, Inventaire inventaire, MovementModel movementModel) {
+        this.mapPanel = mapPanel;
+        this.farmFieldPanel = mapPanel instanceof FieldPanel ? (FieldPanel) mapPanel : null;
         this.inventaire = inventaire;
         this.movementModel = movementModel;
         this.quantityFont = CustomFontLoader.loadFont(FONT_PATH, 8.0f);
+        this.caveCombatModel = null;
+        this.transientCaveDisplayEnabled = false;
+        this.transientDisplayStartMs = Long.MIN_VALUE;
+        this.transientDisplayEndMs = Long.MIN_VALUE;
+        this.lastObservedPickupMs = Long.MIN_VALUE;
         setOpaque(false);
         setDoubleBuffered(true);
+    }
+
+    /**
+     * Active le mode grotte : l'inventaire apparaît uniquement après un pickup,
+     * puis disparaît automatiquement avec une animation verticale.
+     */
+    public void enableTransientCaveDisplay(CaveCombatModel caveCombatModel) {
+        this.caveCombatModel = caveCombatModel;
+        this.transientCaveDisplayEnabled = caveCombatModel != null;
+        this.transientDisplayStartMs = Long.MIN_VALUE;
+        this.transientDisplayEndMs = Long.MIN_VALUE;
+        this.lastObservedPickupMs = caveCombatModel == null ? Long.MIN_VALUE : caveCombatModel.getLastInventoryPickupTimeMs();
     }
 
     /**
@@ -76,7 +85,10 @@ public class InventoryStatusOverlay extends JPanel {
      * Cela nous permet ensuite de garder un petit espace de sécurité entre la grille et les barres.
      */
     private Rectangle getFieldBoundsInView() {
-        return SwingUtilities.convertRectangle(fieldPanel, fieldPanel.getFieldBounds(), this);
+        if (mapPanel == null) {
+            return new Rectangle();
+        }
+        return SwingUtilities.convertRectangle(mapPanel.getMapComponent(), mapPanel.getFieldBounds(), this);
     }
 
     /**
@@ -85,9 +97,16 @@ public class InventoryStatusOverlay extends JPanel {
      */
     @Override
     public boolean contains(int x, int y) {
+        long now = System.currentTimeMillis();
+        updateTransientDisplayWindow(now);
+        if (transientCaveDisplayEnabled && !isTransientDisplayVisible(now)) {
+            return false;
+        }
+
+        int translatedY = y - resolveTransientOffsetY(now);
         Rectangle[] groupBounds = getInventoryGroupBounds(getFieldBoundsInView(), getWidth(), getHeight());
         for (Rectangle groupBoundsItem : groupBounds) {
-            if (groupBoundsItem.contains(x, y)) {
+            if (groupBoundsItem.contains(x, translatedY)) {
                 return true;
             }
         }
@@ -98,10 +117,120 @@ public class InventoryStatusOverlay extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
+        long now = System.currentTimeMillis();
+        updateTransientDisplayWindow(now);
+        if (transientCaveDisplayEnabled && !isTransientDisplayVisible(now)) {
+            return;
+        }
+
         Graphics2D g2d = (Graphics2D) g.create();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        int transientOffsetY = resolveTransientOffsetY(now);
+        if (transientOffsetY != 0) {
+            g2d.translate(0, transientOffsetY);
+        }
+        float transientAlpha = resolveTransientAlpha(now);
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, transientAlpha));
         paintInventory(g2d, getFieldBoundsInView(), getWidth(), getHeight());
         g2d.dispose();
+    }
+
+    /**
+     * Synchronise la fenêtre d'affichage temporaire à partir du dernier pickup
+     * notifié par le modèle de combat de grotte.
+     */
+    private void updateTransientDisplayWindow(long now) {
+        if (!transientCaveDisplayEnabled || caveCombatModel == null) {
+            return;
+        }
+
+        long pickupTime = caveCombatModel.getLastInventoryPickupTimeMs();
+        if (pickupTime <= lastObservedPickupMs) {
+            return;
+        }
+
+        lastObservedPickupMs = pickupTime;
+        /*
+         * - si l'overlay est déjà visible, on n'en relance pas l'animation
+         * - mais chaque pickup ajoute du temps de maintien.
+         * Résultat : plusieurs ramassages d'affilée prolongent l'affichage.
+         */
+        if (isTransientDisplayVisible(now)) {
+            transientDisplayEndMs += CAVE_INVENTORY_VISIBLE_MS;
+            return;
+        }
+
+        transientDisplayStartMs = now;
+        transientDisplayEndMs = now + CAVE_INVENTORY_VISIBLE_MS;
+    }
+
+    private boolean isTransientDisplayVisible(long now) {
+        if (!transientCaveDisplayEnabled) {
+            return true;
+        }
+        if (transientDisplayStartMs == Long.MIN_VALUE) {
+            return false;
+        }
+        return now <= (transientDisplayEndMs + CAVE_INVENTORY_SLIDE_MS);
+    }
+
+    /**
+     * Animation simple :
+     * - entrée depuis le bas,
+     * - phase visible,
+     * - sortie vers le bas.
+     */
+    private int resolveTransientOffsetY(long now) {
+        if (!transientCaveDisplayEnabled || transientDisplayStartMs == Long.MIN_VALUE) {
+            return 0;
+        }
+        if (now < transientDisplayStartMs) {
+            return CAVE_INVENTORY_HIDDEN_OFFSET_Y;
+        }
+
+        long enterEnd = transientDisplayStartMs + CAVE_INVENTORY_SLIDE_MS;
+        if (now <= enterEnd) {
+            double progress = (now - transientDisplayStartMs) / (double) CAVE_INVENTORY_SLIDE_MS;
+            return (int) Math.round((1.0 - progress) * CAVE_INVENTORY_HIDDEN_OFFSET_Y);
+        }
+
+        if (now <= transientDisplayEndMs) {
+            return 0;
+        }
+
+        long exitEnd = transientDisplayEndMs + CAVE_INVENTORY_SLIDE_MS;
+        if (now <= exitEnd) {
+            double progress = (now - transientDisplayEndMs) / (double) CAVE_INVENTORY_SLIDE_MS;
+            return (int) Math.round(progress * CAVE_INVENTORY_HIDDEN_OFFSET_Y);
+        }
+
+        return CAVE_INVENTORY_HIDDEN_OFFSET_Y;
+    }
+
+    private float resolveTransientAlpha(long now) {
+        if (!transientCaveDisplayEnabled || transientDisplayStartMs == Long.MIN_VALUE) {
+            return 1.0f;
+        }
+        if (now < transientDisplayStartMs) {
+            return 0.0f;
+        }
+
+        long enterEnd = transientDisplayStartMs + CAVE_INVENTORY_SLIDE_MS;
+        if (now <= enterEnd) {
+            return (float) ((now - transientDisplayStartMs) / (double) CAVE_INVENTORY_SLIDE_MS);
+        }
+
+        if (now <= transientDisplayEndMs) {
+            return 1.0f;
+        }
+
+        long exitEnd = transientDisplayEndMs + CAVE_INVENTORY_SLIDE_MS;
+        if (now <= exitEnd) {
+            double progress = (now - transientDisplayEndMs) / (double) CAVE_INVENTORY_SLIDE_MS;
+            return (float) (1.0 - progress);
+        }
+
+        return 0.0f;
     }
 
     /**
@@ -159,6 +288,43 @@ public class InventoryStatusOverlay extends JPanel {
 
     public static int getWoodSlotIndex() {
         return getTotalSeedSlotCount();
+    }
+
+    public static int getSeedSlotIndex(Type seedType) {
+        if (seedType == null) {
+            return -1;
+        }
+
+        Type[] mainZoneSeedOrder = Inventaire.getMainZoneSeedSlotOrder();
+        for (int index = 0; index < mainZoneSeedOrder.length; index++) {
+            if (seedType == mainZoneSeedOrder[index]) {
+                return index;
+            }
+        }
+
+        Type[] leftZoneSeedOrder = Inventaire.getLeftZoneSeedSlotOrder();
+        for (int index = 0; index < leftZoneSeedOrder.length; index++) {
+            if (seedType == leftZoneSeedOrder[index]) {
+                return mainZoneSeedOrder.length + index;
+            }
+        }
+
+        return -1;
+    }
+
+    public static int getFacilitySlotIndex(FacilityType facilityType) {
+        if (facilityType == null) {
+            return -1;
+        }
+
+        FacilityType[] facilitySlotOrder = Inventaire.getFacilitySlotOrder();
+        for (int index = 0; index < facilitySlotOrder.length; index++) {
+            if (facilityType == facilitySlotOrder[index]) {
+                return getTotalSeedSlotCount() + 1 + index;
+            }
+        }
+
+        return -1;
     }
 
     private Rectangle[] getInventoryGroupBounds(Rectangle fieldBounds, int viewWidth, int viewHeight) {
@@ -341,17 +507,17 @@ public class InventoryStatusOverlay extends JPanel {
     }
 
     private static int getTotalSeedSlotCount() {
-        return MAIN_ZONE_SEED_ORDER.length + LEFT_ZONE_SEED_ORDER.length;
+        return Inventaire.getMainZoneSeedSlotOrder().length + Inventaire.getLeftZoneSeedSlotOrder().length;
     }
 
     private static int getResourceGroupSlotCount() {
-        return 1 + INVENTORY_FACILITY_ORDER.length;
+        return 1 + Inventaire.getFacilitySlotOrder().length;
     }
 
     private static int[] getInventoryGroupSlotCounts() {
         return new int[] {
-                LEFT_ZONE_SEED_ORDER.length,
-                MAIN_ZONE_SEED_ORDER.length,
+                Inventaire.getLeftZoneSeedSlotOrder().length,
+                Inventaire.getMainZoneSeedSlotOrder().length,
                 getResourceGroupSlotCount()
         };
     }
@@ -361,10 +527,11 @@ public class InventoryStatusOverlay extends JPanel {
     }
 
     private static int getGroupIndexForSlot(int slotIndex) {
+        int mainZoneSeedCount = Inventaire.getMainZoneSeedSlotOrder().length;
         if (slotIndex < 0 || slotIndex >= getInventorySlotCount()) {
             return -1;
         }
-        if (slotIndex < MAIN_ZONE_SEED_ORDER.length) {
+        if (slotIndex < mainZoneSeedCount) {
             return 1;
         }
         if (slotIndex < getTotalSeedSlotCount()) {
@@ -374,9 +541,10 @@ public class InventoryStatusOverlay extends JPanel {
     }
 
     private static int getSlotIndexInGroup(int slotIndex) {
+        int mainZoneSeedCount = Inventaire.getMainZoneSeedSlotOrder().length;
         int groupIndex = getGroupIndexForSlot(slotIndex);
         if (groupIndex == 0) {
-            return slotIndex - MAIN_ZONE_SEED_ORDER.length;
+            return slotIndex - mainZoneSeedCount;
         }
         if (groupIndex == 1) {
             return slotIndex;
@@ -396,21 +564,24 @@ public class InventoryStatusOverlay extends JPanel {
     }
 
     public Type getSeedTypeForSlot(int slotIndex) {
+        Type[] mainZoneSeedOrder = Inventaire.getMainZoneSeedSlotOrder();
+        Type[] leftZoneSeedOrder = Inventaire.getLeftZoneSeedSlotOrder();
         if (!isSeedSlot(slotIndex)) {
             return null;
         }
-        if (slotIndex < MAIN_ZONE_SEED_ORDER.length) {
-            return MAIN_ZONE_SEED_ORDER[slotIndex];
+        if (slotIndex < mainZoneSeedOrder.length) {
+            return mainZoneSeedOrder[slotIndex];
         }
-        return LEFT_ZONE_SEED_ORDER[slotIndex - MAIN_ZONE_SEED_ORDER.length];
+        return leftZoneSeedOrder[slotIndex - mainZoneSeedOrder.length];
     }
 
     public FacilityType getFacilityTypeForSlot(int slotIndex) {
+        FacilityType[] facilitySlotOrder = Inventaire.getFacilitySlotOrder();
         int facilityIndex = slotIndex - getTotalSeedSlotCount() - 1;
-        if (facilityIndex < 0 || facilityIndex >= INVENTORY_FACILITY_ORDER.length) {
+        if (facilityIndex < 0 || facilityIndex >= facilitySlotOrder.length) {
             return null;
         }
-        return INVENTORY_FACILITY_ORDER[facilityIndex];
+        return facilitySlotOrder[facilityIndex];
     }
 
     private boolean isSlotSelected(int slotIndex) {
@@ -460,7 +631,7 @@ public class InventoryStatusOverlay extends JPanel {
     }
 
     private FieldZone getCurrentFieldZone() {
-        if (movementModel == null || fieldPanel == null || fieldPanel.getGrilleCulture() == null) {
+        if (movementModel == null || farmFieldPanel == null || farmFieldPanel.getGrilleCulture() == null) {
             return null;
         }
 
@@ -472,8 +643,13 @@ public class InventoryStatusOverlay extends JPanel {
         Rectangle fieldBounds = getFieldBoundsInView();
         int playerCenterX = fieldBounds.x + (fieldBounds.width / 2) + playerUnit.getX();
         int playerCenterY = fieldBounds.y + (fieldBounds.height / 2) + playerUnit.getY();
-        Point playerCenterInField = SwingUtilities.convertPoint(this, playerCenterX, playerCenterY, fieldPanel);
-        Point playerCell = fieldPanel.getGridPositionAt(playerCenterInField.x, playerCenterInField.y);
+        Point playerCenterInField = SwingUtilities.convertPoint(
+                this,
+                playerCenterX,
+                playerCenterY,
+                farmFieldPanel.getMapComponent()
+        );
+        Point playerCell = farmFieldPanel.getGridPositionAt(playerCenterInField.x, playerCenterInField.y);
         if (playerCell == null) {
             return null;
         }
@@ -483,7 +659,7 @@ public class InventoryStatusOverlay extends JPanel {
          * Ainsi, le bloc du mauvais côté reste bien verrouillé
          * dès que le personnage a changé de zone, même hors d'une case plantable valide.
          */
-        return fieldPanel.getGrilleCulture().getFieldZoneAt(playerCell.x, playerCell.y);
+        return farmFieldPanel.getGrilleCulture().getFieldZoneAt(playerCell.x, playerCell.y);
     }
 
     /**

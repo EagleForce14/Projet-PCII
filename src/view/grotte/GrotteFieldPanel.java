@@ -20,7 +20,6 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.util.Objects;
 
 /**
  * Panneau d'affichage dédié à la grotte.
@@ -36,8 +35,6 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
     private static final int PREF_HEIGHT = 850;
 
     private static final Color SCENE_BACKGROUND = new Color(12, 10, 18);
-    private static final Color HIGHLIGHT_FILL = new Color(255, 206, 102, 88);
-    private static final Color HIGHLIGHT_BORDER = new Color(255, 240, 190, 228);
     private static final Color WALL_SHADOW = new Color(7, 6, 10, 118);
     private static final Color EDGE_LIGHT = new Color(255, 198, 128, 34);
     private static final Color VIGNETTE = new Color(0, 0, 0, 48);
@@ -51,6 +48,10 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
     private static final Color SHRINE_BAR_HIGHLIGHT = new Color(255, 184, 184, 210);
     private static final Color SHRINE_BAR_LABEL = new Color(255, 223, 223);
     private static final Color SHRINE_BAR_LABEL_SHADOW = new Color(60, 10, 10, 220);
+    private static final Color HEAL_ZONE_FILL = new Color(44, 172, 78, 54);
+    private static final Color HEAL_ZONE_BORDER = new Color(130, 236, 162, 160);
+    private static final Color HEAL_PLUS_COLOR = new Color(194, 255, 210, 220);
+    private static final Color HEAL_PLUS_SHADOW = new Color(14, 50, 26, 180);
 
     private final GrotteMap grotteMap;
     private final ShrineHazardState shrineHazardState;
@@ -64,7 +65,6 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
     private final Font shrineHazardTitleFont;
     private final Font shrineHazardTimerFont;
 
-    private Point highlightedCell;
     private BufferedImage staticSceneCache;
     private BufferedImage scaledHorizontalWallTile;
     private BufferedImage scaledVerticalWallTile;
@@ -176,13 +176,8 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
 
     @Override
     public void setHighlightedCell(Point highlightedCell) {
-        Point nextHighlightedCell = highlightedCell == null ? null : new Point(highlightedCell);
-        if (Objects.equals(this.highlightedCell, nextHighlightedCell)) {
-            return;
-        }
-
-        this.highlightedCell = nextHighlightedCell;
-        repaint();
+        // En grotte, la surbrillance de case est volontairement désactivée.
+        // On ignore donc les mises à jour de highlight.
     }
 
     @Override
@@ -295,7 +290,7 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
      * La hitbox est un peu resserrée par rapport au sprite pour rester naturelle.
      */
     public Rectangle getChestCollisionBounds() {
-        Rectangle roomBounds = buildLogicalAreaBounds(grotteMap.getLavaRoomBounds());
+        Rectangle roomBounds = buildLogicalAreaBounds(grotteMap.getUpperRightRoomBounds());
         if (roomBounds == null || roomBounds.width <= 0 || roomBounds.height <= 0) {
             return null;
         }
@@ -432,13 +427,13 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
                 if (grotteMap.isWallCell(column, row - 1)) {
                     drawHorizontalWallFront(g2, cellBounds, horizontalWallTexture, shadowThickness, lightThickness);
                 }
-                if (grotteMap.isWallCell(column - 1, row) && !grotteMap.isFarmExitCell(column, row)) {
+                if (grotteMap.isWallCell(column - 1, row) && !grotteMap.isActualFarmExitCell(column, row)) {
                     drawVerticalWallBorder(g2, cellBounds, verticalWallTexture, true, shadowThickness);
                 }
-                if (grotteMap.isWallCell(column + 1, row) && !grotteMap.isFarmExitCell(column, row)) {
+                if (grotteMap.isWallCell(column + 1, row) && !grotteMap.isActualFarmExitCell(column, row)) {
                     drawVerticalWallBorder(g2, cellBounds, verticalWallTexture, false, shadowThickness);
                 }
-                if (grotteMap.isWallCell(column, row + 1) && !grotteMap.isFarmExitCell(column, row)) {
+                if (grotteMap.isWallCell(column, row + 1) && !grotteMap.isActualFarmExitCell(column, row)) {
                     drawBottomWallBorder(g2, cellBounds, horizontalWallTexture, shadowThickness);
                 }
             }
@@ -661,7 +656,7 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
             return;
         }
 
-        Rectangle roomBounds = buildAreaBounds(fieldBounds, tileSize, grotteMap.getLavaRoomBounds());
+        Rectangle roomBounds = buildAreaBounds(fieldBounds, tileSize, grotteMap.getUpperRightRoomBounds());
         if (roomBounds == null || roomBounds.width <= 0 || roomBounds.height <= 0) {
             return;
         }
@@ -838,21 +833,12 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         g2.drawImage(tile, cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height, this);
     }
 
-    private void drawHighlight(Graphics2D g2, Rectangle cellBounds) {
-        g2.setColor(HIGHLIGHT_FILL);
-        g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height);
-
-        g2.setColor(HIGHLIGHT_BORDER);
-        g2.drawRect(cellBounds.x, cellBounds.y, cellBounds.width - 1, cellBounds.height - 1);
-        g2.drawRect(cellBounds.x + 1, cellBounds.y + 1, cellBounds.width - 3, cellBounds.height - 3);
-    }
-
     /**
      * Les cases touchées par la prochaine onde létale deviennent progressivement lisibles
      * pendant la fenêtre d'alerte, avec un clignotement franc sur les 10 dernières secondes.
      */
     private void drawShrineWarningCells(Graphics2D g2, Rectangle fieldBounds, int tileSize) {
-        if (shrineHazardState == null || shrineHazardState.isWarningPhase()) {
+        if (shrineHazardState == null || !shrineHazardState.isWarningPhase()) {
             return;
         }
 
@@ -938,6 +924,37 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         g2.drawString(text, textX, baselineY);
     }
 
+    /**
+     * Les zones de soin restent lisibles sans agresser l'écran :
+     * 4 cases légèrement teintées + des petits "+" verts fixes.
+     */
+    private void drawHealingZones(Graphics2D g2, Rectangle fieldBounds, int tileSize) {
+        if (grotteMap == null) {
+            return;
+        }
+
+        int plusThickness = Math.max(2, tileSize / 8);
+        int plusLength = Math.max(6, tileSize / 3);
+
+        for (Point healingCell : grotteMap.getHealingCells()) {
+            Rectangle cellBounds = buildCellBounds(fieldBounds, tileSize, healingCell.x, healingCell.y);
+            g2.setColor(HEAL_ZONE_FILL);
+            g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height);
+            g2.setColor(HEAL_ZONE_BORDER);
+            g2.drawRect(cellBounds.x, cellBounds.y, cellBounds.width - 1, cellBounds.height - 1);
+
+            int centerX = cellBounds.x + (cellBounds.width / 2);
+            int centerY = (int) Math.round(cellBounds.y + (cellBounds.height / 2.0) - (tileSize * 0.06));
+
+            g2.setColor(HEAL_PLUS_SHADOW);
+            g2.fillRect(centerX - (plusThickness / 2) + 1, centerY - (plusLength / 2) + 1, plusThickness, plusLength);
+            g2.fillRect(centerX - (plusLength / 2) + 1, centerY - (plusThickness / 2) + 1, plusLength, plusThickness);
+            g2.setColor(HEAL_PLUS_COLOR);
+            g2.fillRect(centerX - (plusThickness / 2), centerY - (plusLength / 2), plusThickness, plusLength);
+            g2.fillRect(centerX - (plusLength / 2), centerY - (plusThickness / 2), plusLength, plusThickness);
+        }
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -951,13 +968,7 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         Rectangle fieldBounds = getFieldBounds();
         int tileSize = getTileSize(fieldBounds);
 
-        if (highlightedCell != null && isFarmableCell(highlightedCell)) {
-            Rectangle highlightedBounds = getCellBounds(highlightedCell.x, highlightedCell.y);
-            if (highlightedBounds != null) {
-                drawHighlight(g2, highlightedBounds);
-            }
-        }
-
+        drawHealingZones(g2, fieldBounds, tileSize);
         drawShrineWarningCells(g2, fieldBounds, tileSize);
         drawShrineCountdownBar(g2, fieldBounds, tileSize);
 

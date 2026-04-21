@@ -31,6 +31,10 @@ public class TestCombatUnit {
         testSuite.testUnitStaysAliveWithHealth();
         testSuite.testUnitDiesWithExactDamage();
         testSuite.testZeroDamage();
+        testSuite.testCustomStats();
+        testSuite.testHealToFull();
+        testSuite.testHealthRatio();
+        testSuite.testNegativeDamageIgnored();
 
         System.out.println("\n========================================");
         System.out.println("  Résumé des tests");
@@ -172,6 +176,53 @@ public class TestCombatUnit {
         });
     }
 
+    /**
+     * Test 11 : Vérifier qu'une unité spécialisée garde bien ses statistiques propres
+     */
+    public void testCustomStats() {
+        runTest("testCustomStats", () -> {
+            CombatUnit customUnit = new CombatUnit(60, 12);
+            assertEquals("La santé max doit être 60", 60, customUnit.getMaxHealth());
+            assertEquals("La santé initiale doit suivre la santé max", 60, customUnit.getHealth());
+            assertEquals("La puissance d'attaque doit être 12", 12, customUnit.getAttackPower());
+        });
+    }
+
+    /**
+     * Test 12 : Vérifier qu'une remise à zéro restaure complètement la vie
+     */
+    public void testHealToFull() {
+        setUp();
+        runTest("testHealToFull", () -> {
+            combatUnit.receiveDamage(35);
+            assertEquals("La santé doit avoir baissé", 65, combatUnit.getHealth());
+            combatUnit.healToFull();
+            assertEquals("La santé doit revenir au maximum", CombatUnit.BASE_HEALTH, combatUnit.getHealth());
+        });
+    }
+
+    /**
+     * Test 13 : Vérifier que le ratio de vie reste cohérent
+     */
+    public void testHealthRatio() {
+        setUp();
+        runTest("testHealthRatio", () -> {
+            combatUnit.receiveDamage(25);
+            assertDoubleEquals("Le ratio doit être de 0.75", 0.75, combatUnit.getHealthRatio(), 0.0001);
+        });
+    }
+
+    /**
+     * Test 14 : Vérifier qu'un dégât négatif est ignoré
+     */
+    public void testNegativeDamageIgnored() {
+        setUp();
+        runTest("testNegativeDamageIgnored", () -> {
+            combatUnit.receiveDamage(-10);
+            assertEquals("Un dégât négatif ne doit rien changer", CombatUnit.BASE_HEALTH, combatUnit.getHealth());
+        });
+    }
+
     // ===== Helpers =====
 
     private static void runTest(String testName, Runnable test) {
@@ -200,6 +251,12 @@ public class TestCombatUnit {
     private static void assertTrue(String message, boolean condition) {
         if (!condition) {
             throw new AssertionError(message);
+        }
+    }
+
+    private static void assertDoubleEquals(String message, double expected, double actual, double tolerance) {
+        if (Math.abs(expected - actual) > tolerance) {
+            throw new AssertionError(message + " [attendu: " + expected + ", obtenu: " + actual + "]");
         }
     }
 }
