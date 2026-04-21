@@ -65,6 +65,9 @@ public class FieldObstacleMap implements MovementCollisionMap {
         if (PredefinedFieldLayout.blocksTreeSpawnInLeftRiverSection(fieldPanel, gridX, gridY)) {
             return false;
         }
+        if (fieldPanel.isFarmCaveDecorationCell(gridX, gridY)) {
+            return false;
+        }
 
         Rectangle cellBounds = fieldPanel.getLogicalCellBounds(gridX, gridY);
         boolean weepingWillow = shouldUseWeepingWillowAt(gridX);
@@ -149,6 +152,10 @@ public class FieldObstacleMap implements MovementCollisionMap {
         Rectangle entityBounds = BuildingGeometry.buildCenteredBounds(centerX, centerY, width, height);
 
         if (blockFences && intersectsRightRiverUpperDecoration(entityBounds)) {
+            return false;
+        }
+
+        if (blockFences && intersectsFarmCaveBlockingZone(entityBounds)) {
             return false;
         }
 
@@ -305,6 +312,11 @@ public class FieldObstacleMap implements MovementCollisionMap {
     private boolean intersectsBarnCourtyard(Rectangle entityBounds) {
         Rectangle barnCourtyardBounds = fieldPanel.getBarnCourtyardLogicalBounds();
         return barnCourtyardBounds != null && barnCourtyardBounds.intersects(entityBounds);
+    }
+
+    private boolean intersectsFarmCaveBlockingZone(Rectangle entityBounds) {
+        Rectangle caveBlockingBounds = fieldPanel.getFarmCaveBlockingLogicalBounds();
+        return caveBlockingBounds != null && caveBlockingBounds.intersects(entityBounds);
     }
 
     private boolean intersectsWorkshop(Rectangle entityBounds) {

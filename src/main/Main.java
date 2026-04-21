@@ -269,6 +269,7 @@ public class Main {
                 caveEnemyView,
                 grotteCombatView,
                 grotteFieldPanel,
+                fieldPanel,
                 centerPanel,
                 FARM_CARD,
                 GROTTE_CARD,

@@ -5,11 +5,13 @@ import model.enemy.EnemyPhysicsThread;
 import model.grotte.ShrineHazardThread;
 import model.grotte.combat.CaveCombatModel;
 import model.grotte.combat.CaveCombatThread;
+import model.movement.BuildingGeometry;
 import model.movement.MovementModel;
 import model.movement.PhysicsThread;
 import model.movement.Unit;
 import model.runtime.GamePauseController;
 import view.EnemyView;
+import view.FieldPanel;
 import view.MovementView;
 import view.SidebarPanel;
 import view.grotte.GrotteCombatView;
@@ -22,6 +24,7 @@ import javax.swing.Timer;
 import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -47,6 +50,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
     private final CardLayout centerLayout;
     private final JPanel centerPanel;
     private final SidebarPanel sidebarPanel;
+    private final FieldPanel farmFieldPanel;
     private final Unit farmPlayerUnit;
     private final Unit grottePlayerUnit;
     private final EnemyModel caveEnemyModel;
@@ -62,6 +66,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
     private final Timer exitCheckTimer;
 
     private JButton caveButton;
+    private boolean entryTriggered;
     private boolean exitTriggered;
 
     public GrotteController(
@@ -71,6 +76,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
             EnemyView caveEnemyView,
             GrotteCombatView grotteCombatView,
             GrotteFieldPanel grotteFieldPanel,
+            FieldPanel farmFieldPanel,
             JPanel centerPanel,
             String farmCardName,
             String grotteCardName,
@@ -91,6 +97,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         this.caveEnemyView = caveEnemyView;
         this.grotteCombatView = grotteCombatView;
         this.grotteFieldPanel = grotteFieldPanel;
+        this.farmFieldPanel = farmFieldPanel;
         this.centerPanel = centerPanel;
         this.centerLayout = centerPanel == null ? null : (CardLayout) centerPanel.getLayout();
         this.farmCardName = farmCardName;
@@ -141,7 +148,11 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
     public void actionPerformed(ActionEvent event) {
         Object source = event.getSource();
         if (source == exitCheckTimer) {
-            checkFarmExit();
+            if (isCaveSceneActive()) {
+                checkFarmExit();
+            } else {
+                checkFarmEntry();
+            }
             return;
         }
 
@@ -326,6 +337,45 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         returnToFarm();
     }
 
+    private void checkFarmEntry() {
+        if (pauseController.isPaused() || isCaveSceneActive() || farmPlayerUnit == null || farmFieldPanel == null) {
+            return;
+        }
+
+        if (!isFarmPlayerInsideCaveEntryZone()) {
+            entryTriggered = false;
+            return;
+        }
+
+        if (entryTriggered) {
+            return;
+        }
+
+        entryTriggered = true;
+        stopPlayerMovement(farmPlayerUnit);
+        showCave();
+    }
+
+    /**
+     * L'entrée grotte est une vraie zone (couloir + bouche),
+     * donc on teste l'intersection avec la hitbox du joueur,
+     * pas seulement une case de centre.
+     */
+    private boolean isFarmPlayerInsideCaveEntryZone() {
+        Rectangle caveEntryZoneBounds = farmFieldPanel.getFarmCaveEntryTriggerLogicalBounds();
+        if (caveEntryZoneBounds == null) {
+            return false;
+        }
+
+        Rectangle playerBounds = BuildingGeometry.buildCenteredBounds(
+                farmPlayerUnit.getX(),
+                farmPlayerUnit.getY(),
+                Unit.SIZE,
+                Unit.SIZE
+        );
+        return caveEntryZoneBounds.intersects(playerBounds);
+    }
+
     private void showCave() {
         if (centerLayout == null || centerPanel == null) {
             return;
@@ -353,6 +403,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         if (grotteMovementView != null) {
             grotteMovementView.requestFocusInWindow();
         }
+        exitTriggered = false;
     }
 
     private void returnToFarm() {
@@ -379,10 +430,15 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         }
         if (farmPlayerUnit != null) {
             farmPlayerUnit.exitCave();
+            Point farmReturnOffset = farmFieldPanel == null ? null : farmFieldPanel.getFarmCaveReturnOffset();
+            if (farmReturnOffset != null) {
+                farmPlayerUnit.setPosition(farmReturnOffset.x, farmReturnOffset.y);
+            }
         }
         if (farmMovementView != null) {
             farmMovementView.requestFocusInWindow();
         }
+        entryTriggered = false;
     }
 
     private void setCaveThreadsActive(boolean active) {

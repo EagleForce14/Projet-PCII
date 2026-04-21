@@ -114,6 +114,8 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private static final double VERTICAL_BUSH_UPWARD_OFFSET_RATIO = 0.03;
     private static final int VERTICAL_BUSH_LEFT_PIXEL_SHIFT = 3;
     private static final int VERTICAL_BUSH_RIGHT_PIXEL_SHIFT = 3;
+    private static final double FARM_CAVE_ENTRY_HORIZONTAL_OFFSET_TILES = 1.1;
+    private static final Color CAVE_ENTRANCE_SHADOW = new Color(8, 7, 10, 118);
 
     // Vitesse de pulsation de l'animation d'arrosage.
     // Plus la valeur est grande, plus le halo "respire" vite.
@@ -138,6 +140,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private final Image verticalBushRightTileImage;
     private final Image decorativeRiverEntryTileImage;
     private final Image decorativeRiverContinuationTileImage;
+    private final Image caveEntranceImage;
 
     // Images associées aux différents stades visuels d'une culture.
     private final Image jeunePousseImage;
@@ -207,6 +210,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         this.verticalBushRightTileImage = ImageLoader.load("/assets/bush_vertical_right.png");
         this.decorativeRiverEntryTileImage = ImageLoader.load("/assets/entreeRiviere.png");
         this.decorativeRiverContinuationTileImage = ImageLoader.load("/assets/river2.png");
+        this.caveEntranceImage = ImageLoader.load("/assets/cave_entrance.png");
         this.jeunePousseImage = ImageLoader.load("/assets/jeune_pousse.png");
         this.croissanceInterImage = ImageLoader.load("/assets/croissance_inter.png");
         this.maturiteImage = ImageLoader.load("/assets/maturite.png");
@@ -697,6 +701,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
 
     public boolean isFarmableCell(Point cell) {
         return cell != null
+                && !isFarmCaveDecorationCell(cell.x, cell.y)
                 && !isBlockedByBarn(cell)
                 && !isBlockedByStall(cell)
                 && !isBlockedByWorkshop(cell)
@@ -942,6 +947,131 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         }
 
         return new Point(gridX, gridY);
+    }
+
+    /**
+     * Variante dans le repère logique centré du champ.
+     * Elle sert au contrôleur grotte pour détecter l'entrée sans dépendre du rendu écran.
+     */
+    public Point getLogicalGridPositionAt(int logicalX, int logicalY) {
+        Rectangle fieldBounds = getFieldBounds();
+        int tileSize = getTileSize(fieldBounds);
+        int logicalStartX = -(fieldBounds.width / 2);
+        int logicalStartY = -(fieldBounds.height / 2);
+
+        int gridX = (logicalX - logicalStartX) / tileSize;
+        int gridY = (logicalY - logicalStartY) / tileSize;
+        return isInsideGrid(gridX, gridY) ? new Point(gridX, gridY) : null;
+    }
+
+    /**
+     * Les arbres ne doivent jamais apparaître sur la zone visuelle de l'entrée de grotte.
+     * Cette info est lue par les règles de placement.
+     */
+    public boolean isFarmCaveDecorationCell(int gridX, int gridY) {
+        Rectangle cellBounds = getLogicalCellBounds(gridX, gridY);
+        Rectangle caveImageBounds = getFarmCaveImageLogicalBounds();
+        return cellBounds != null
+                && caveImageBounds != null
+                && caveImageBounds.intersects(cellBounds);
+    }
+
+    /**
+     * Zone logique utilisée pour déclencher l'entrée de la grotte.
+     */
+    public Rectangle getFarmCaveEntryTriggerLogicalBounds() {
+        Rectangle triggerGridBounds = resolveFarmCaveEntryTriggerGridBounds();
+        Rectangle fieldBounds = getFieldBounds();
+        int tileSize = getTileSize(fieldBounds);
+        int logicalStartX = -(fieldBounds.width / 2);
+        int logicalStartY = -(fieldBounds.height / 2);
+        int horizontalOffset = (int) Math.round(tileSize * FARM_CAVE_ENTRY_HORIZONTAL_OFFSET_TILES);
+
+        return new Rectangle(
+                logicalStartX + (triggerGridBounds.x * tileSize) + horizontalOffset,
+                logicalStartY + (triggerGridBounds.y * tileSize),
+                triggerGridBounds.width * tileSize,
+                triggerGridBounds.height * tileSize
+        );
+    }
+
+    /**
+     * Zone de blocage élargie autour de l'entrée, utilisée uniquement
+     * par les collisions non-joueur (lapins) et par les règles de spawn d'arbres.
+     */
+    public Rectangle getFarmCaveBlockingLogicalBounds() {
+        Rectangle fieldBounds = getFieldBounds();
+        Rectangle entranceScreenBounds = computeFarmCaveEntranceScreenBounds(fieldBounds);
+        if (fieldBounds == null || entranceScreenBounds == null) {
+            return null;
+        }
+
+        int centerX = fieldBounds.x + (fieldBounds.width / 2);
+        int centerY = fieldBounds.y + (fieldBounds.height / 2);
+        int blockingPadding = Math.max(5, Math.min(entranceScreenBounds.width, entranceScreenBounds.height) / 6);
+        return new Rectangle(
+                entranceScreenBounds.x - centerX - blockingPadding,
+                entranceScreenBounds.y - centerY - blockingPadding,
+                entranceScreenBounds.width + (blockingPadding * 2),
+                entranceScreenBounds.height + (blockingPadding * 2)
+        );
+    }
+
+    /**
+     * Emprise exacte du sprite de l'entrée de grotte dans le repère logique du champ.
+     * Elle sert à marquer les cases qui contiennent visuellement un morceau de l'image.
+     */
+    public Rectangle getFarmCaveImageLogicalBounds() {
+        Rectangle fieldBounds = getFieldBounds();
+        Rectangle entranceScreenBounds = computeFarmCaveEntranceScreenBounds(fieldBounds);
+        if (fieldBounds == null || entranceScreenBounds == null) {
+            return null;
+        }
+
+        int centerX = fieldBounds.x + (fieldBounds.width / 2);
+        int centerY = fieldBounds.y + (fieldBounds.height / 2);
+        return new Rectangle(
+                entranceScreenBounds.x - centerX,
+                entranceScreenBounds.y - centerY,
+                entranceScreenBounds.width,
+                entranceScreenBounds.height
+        );
+    }
+
+    /**
+     * Position de retour depuis la grotte :
+     * on place le joueur juste à droite de l'entrée visuelle,
+     * mais hors de la zone de trigger pour éviter une ré-entrée immédiate.
+     */
+    public Point getFarmCaveReturnOffset() {
+        Rectangle mouthBounds = resolveFarmCaveMouthGridBounds();
+        Rectangle triggerBounds = resolveFarmCaveEntryTriggerGridBounds();
+        int preferredRow = mouthBounds.y;
+        int startColumn = mouthBounds.x + mouthBounds.width + 1;
+
+        int[] candidateRows = {
+                preferredRow,
+                Math.max(0, preferredRow - 1),
+                Math.min(getRowCount() - 1, preferredRow + 1)
+        };
+
+        for (int row : candidateRows) {
+            for (int xOffset = 0; xOffset < 4; xOffset++) {
+                int column = startColumn + xOffset;
+                if (!isInsideGrid(column, row) || triggerBounds.contains(column, row)) {
+                    continue;
+                }
+
+                Point candidateCell = new Point(column, row);
+                if (!isFarmableCell(candidateCell) || isFarmCaveDecorationCell(column, row)) {
+                    continue;
+                }
+
+                return getLogicalCellCenter(column, row);
+            }
+        }
+
+        return getInitialPlayerOffset();
     }
 
     /**
@@ -1892,6 +2022,85 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
                 drawBarnRightVerticalBushDecoration(g2, column, row, cellBounds);
             }
         }
+
+        drawFarmCaveEntrance(g2, fieldBounds);
+    }
+
+    /**
+     * Entrée de grotte visuelle simple côté ferme.
+     * On garde uniquement le sprite dédié, sans couloir ni murs ajoutés.
+     */
+    private void drawFarmCaveEntrance(Graphics2D g2, Rectangle fieldBounds) {
+        Rectangle entranceScreenBounds = computeFarmCaveEntranceScreenBounds(fieldBounds);
+        if (entranceScreenBounds == null) {
+            return;
+        }
+
+        g2.setColor(CAVE_ENTRANCE_SHADOW);
+        g2.fillOval(
+                entranceScreenBounds.x + Math.max(4, entranceScreenBounds.width / 8),
+                entranceScreenBounds.y + entranceScreenBounds.height - Math.max(9, entranceScreenBounds.height / 5),
+                Math.max(20, entranceScreenBounds.width - Math.max(8, entranceScreenBounds.width / 4)),
+                Math.max(7, entranceScreenBounds.height / 6)
+        );
+
+        g2.drawImage(
+                caveEntranceImage,
+                entranceScreenBounds.x,
+                entranceScreenBounds.y,
+                entranceScreenBounds.width,
+                entranceScreenBounds.height,
+                this
+        );
+    }
+
+    /**
+     * Position bas-gauche, strictement à gauche de la rivière décorative.
+     */
+    private Rectangle resolveFarmCaveMouthGridBounds() {
+        int mouthWidth = 1;
+        int mouthHeight = 1;
+        int mouthX = 0;
+        int mouthY = Math.max(0, getRowCount() - mouthHeight - 2);
+        return new Rectangle(mouthX, mouthY, mouthWidth, mouthHeight);
+    }
+
+    private Rectangle resolveFarmCaveEntryTriggerGridBounds() {
+        return resolveFarmCaveMouthGridBounds();
+    }
+
+    private Rectangle computeFarmCaveEntranceScreenBounds(Rectangle fieldBounds) {
+        Rectangle mouthGridBounds = resolveFarmCaveMouthGridBounds();
+        Rectangle mouthScreenBounds = buildScreenAreaBounds(mouthGridBounds, fieldBounds);
+        if (mouthScreenBounds == null || caveEntranceImage == null) {
+            return null;
+        }
+
+        int sourceWidth = caveEntranceImage.getWidth(this);
+        int sourceHeight = caveEntranceImage.getHeight(this);
+        if (sourceWidth <= 0 || sourceHeight <= 0) {
+            return null;
+        }
+
+        int targetHeight = Math.max(36, (int) Math.round(mouthScreenBounds.height * 1.72));
+        int targetWidth = Math.max(34, (targetHeight * sourceWidth) / sourceHeight);
+        int horizontalOffset = (int) Math.round(mouthScreenBounds.width * FARM_CAVE_ENTRY_HORIZONTAL_OFFSET_TILES);
+        int entranceX = mouthScreenBounds.x + ((mouthScreenBounds.width - targetWidth) / 2) + horizontalOffset;
+        int entranceY = mouthScreenBounds.y + mouthScreenBounds.height - targetHeight;
+        return new Rectangle(entranceX, entranceY, targetWidth, targetHeight);
+    }
+
+    private Rectangle buildScreenAreaBounds(Rectangle gridArea, Rectangle fieldBounds) {
+        if (gridArea == null || fieldBounds == null) {
+            return null;
+        }
+
+        return new Rectangle(
+                fieldBounds.x + (gridArea.x * getTileSize(fieldBounds)),
+                fieldBounds.y + (gridArea.y * getTileSize(fieldBounds)),
+                gridArea.width * getTileSize(fieldBounds),
+                gridArea.height * getTileSize(fieldBounds)
+        );
     }
 
     /**
