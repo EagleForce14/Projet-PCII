@@ -178,11 +178,6 @@ public final class CaveCombatModel {
         return playerUnit == null ? 0.0 : playerUnit.getCombatUnit().getHealthRatio();
     }
 
-    public double getPlayerFireReadiness() {
-        long elapsedMs = System.currentTimeMillis() - lastPlayerShotTime;
-        return clamp01(elapsedMs / (double) PLAYER_FIRE_COOLDOWN_MS);
-    }
-
     public double getPlayerHitFlashRatio() {
         long remainingMs = playerHitFlashUntilMs - System.currentTimeMillis();
         if (remainingMs <= 0L) {
@@ -212,7 +207,7 @@ public final class CaveCombatModel {
     /**
      * Une frame de combat :
      * 1. le joueur peut tirer,
-     * 2. les monstres agressifs peuvent riposter,
+     * 2. les monstres peuvent riposter,
      * 3. les projectiles avancent puis appliquent leurs collisions.
      */
     public void update() {
@@ -265,6 +260,7 @@ public final class CaveCombatModel {
             return normalizeVector(baseX, baseY, 0.0, 1.0);
         }
 
+        assert playerUnit != null;
         return normalizeVector(
                 autoAimTarget.getPreciseX() - playerUnit.getX(),
                 autoAimTarget.getPreciseY() - playerUnit.getY(),
