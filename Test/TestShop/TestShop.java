@@ -32,7 +32,7 @@ public class TestShop {
     @Test
     void testGetFacilitiesInitialisesTroisInstallations() {
         assertNotNull(shop.getFacilities());
-        assertEquals(4, shop.getFacilities().size());
+        assertEquals(3, shop.getFacilities().size());
         assertEquals(FacilityType.CLOTURE, shop.getFacilities().get(0).getType());
         assertEquals(20, shop.getFacilities().get(0).getQuantity());
     }
@@ -61,8 +61,8 @@ public class TestShop {
 
     @Test
     void testAddToShoppingCardRefuseQuantiteSuperieureAuStock() {
-        Facility jardinier = shop.getFacilities().get(3); // stock 10
-        assertFalse(shop.addToShoppingCard(jardinier, 15));
+        Facility cloture = shop.getFacilities().get(0); // stock 20
+        assertFalse(shop.addToShoppingCard(cloture, 25));
         assertEquals(0, shop.getShoppingCard().size());
     }
 
@@ -109,25 +109,18 @@ public class TestShop {
 
     @Test
     void testBuyProductsEchoueSiArgentInsuffisant() {
-        Money moneyPourJardinier = new Money(20);
-        Facility jardinier = shop.getFacilities().get(3); // prix 100, stock 10
+        Money lowMoney = new Money(20);
+        Facility compost = shop.getFacilities().get(2); // prix 80, stock 1
 
-        // argent du joueur et prix total du panier
-        //System.out.println("Argent du joueur : " + moneyPourJardinier.getAmount());
-        //System.out.println("Prix total du panier : " + shop.getShoppingCardTotalPrice());
-        shop.addToShoppingCard(jardinier, 1);
-        boolean resultat = shop.buyProducts(moneyPourJardinier, inventaire);
+        shop.addToShoppingCard(compost, 1);
+        boolean resultat = shop.buyProducts(lowMoney, inventaire);
 
         assertFalse(resultat);
-        assertEquals(new Money(20), moneyPourJardinier);
+        assertEquals(new Money(20), lowMoney);
 
         // pas de débit
         assertEquals(1, shop.getShoppingCard().size()); // panier intact
-        // afficher le chopping card pour debug
-        //for (CartItem f : shop.getShoppingCard()) {
-          //  System.out.println(f.getProduct().getName() + " x " + f.getQuantity() + " (prix unitaire " + f.getProduct().getPrice() + ")");
-        //}
-        assertEquals(10, jardinier.getQuantity()); // stock intact
+        assertEquals(1, compost.getQuantity()); // stock intact
         assertTrue(inventaire.getInstallations().isEmpty());
     }
 }

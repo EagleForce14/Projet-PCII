@@ -48,7 +48,7 @@ public class TestShopCatalogAndPlantingZones {
 
     /**
      * Les graines et le chemin ne doivent plus être limités par un stock de boutique.
-     * En revanche, clôture, compost et jardinier doivent garder leur plafond actuel.
+     * En revanche, clôture et compost gardent leur plafond actuel.
      */
     private static void testShopStockPolicy() {
         Shop mainShop = new Shop(ShopKind.MAIN);
@@ -67,14 +67,12 @@ public class TestShopCatalogAndPlantingZones {
         Facility chemin = findFacility(mainShop, FacilityType.CHEMIN);
         Facility cloture = findFacility(mainShop, FacilityType.CLOTURE);
         Facility compost = findFacility(mainShop, FacilityType.COMPOST);
-        Facility jardinier = findFacility(mainShop, FacilityType.JARDINIER);
 
         boolean mainSeedsUnlimited = tulipe != null && mainShop.addToShoppingCard(tulipe, 150);
         boolean stallSeedsUnlimited = nenuphar != null && stallShop.addToShoppingCard(nenuphar, 150);
         boolean pathsUnlimited = chemin != null && mainShop.addToShoppingCard(chemin, 250);
         boolean fencesStillLimited = cloture != null && !mainShop.addToShoppingCard(cloture, cloture.getQuantity() + 1);
         boolean compostStillLimited = compost != null && !mainShop.addToShoppingCard(compost, compost.getQuantity() + 1);
-        boolean gardenersStillLimited = jardinier != null && !mainShop.addToShoppingCard(jardinier, jardinier.getQuantity() + 1);
 
         boolean mainPurchaseSucceeded = mainShop.buyProducts(money, inventaire);
         boolean stallPurchaseSucceeded = stallShop.buyProducts(money, inventaire);
@@ -90,11 +88,10 @@ public class TestShopCatalogAndPlantingZones {
                 && pathsUnlimited
                 && fencesStillLimited
                 && compostStillLimited
-                && gardenersStillLimited
                 && mainPurchaseSucceeded
                 && stallPurchaseSucceeded
                 && unlimitedProductsDidNotDecrementStock) {
-            System.out.println("Test réussi : seuls clôture, compost et jardinier gardent un stock limité.");
+            System.out.println("Test réussi : seuls clôture et compost gardent un stock limité.");
             return;
         }
 

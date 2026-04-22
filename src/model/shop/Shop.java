@@ -206,8 +206,7 @@ public class Shop implements DayChangeListener {
 
         FacilityType type = ((Facility) product).getType();
         return type == FacilityType.CLOTURE
-                || type == FacilityType.COMPOST
-                || type == FacilityType.JARDINIER;
+                || type == FacilityType.COMPOST;
     }
 
     /**
@@ -351,7 +350,6 @@ public class Shop implements DayChangeListener {
         facilities.add(new Facility("Cloture", 50, 20, FacilityType.CLOTURE));
         facilities.add(new Facility("Chemin", 12, 200, FacilityType.CHEMIN));
         facilities.add(new Facility("Compost", 80, INITIAL_COMPOST_STOCK, FacilityType.COMPOST));
-        facilities.add(new Facility("Jardinier", 100, 10, FacilityType.JARDINIER));
     }
 
     private void addSeed(String name, int price, Type type) {

@@ -256,9 +256,6 @@ public final class ProductPixelArt {
             case PONT:
                 drawScaledImage(g2d, BRIDGE_IMAGE, x, y, BRIDGE_ART_MAX_SIDE * pixelSize);
                 break;
-            case JARDINIER:
-                drawGardener(g2d, x, y, pixelSize);
-                break;
             default:
                 break;
         }
@@ -341,24 +338,6 @@ public final class ProductPixelArt {
         fillGridRect(g2d, x, y, pixelSize, 3, 4, 1, 1, new Color(255, 145, 61));
     }
 
-    private static void drawGardener(Graphics2D g2d, int x, int y, int pixelSize) {
-        Color hat = new Color(170, 109, 61);
-        Color skin = new Color(238, 192, 154);
-        Color shirt = new Color(67, 121, 170);
-        Color pants = new Color(54, 76, 108);
-
-        fillPixel(g2d, x + pixelSize, y, pixelSize, hat);
-        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, hat);
-        fillPixel(g2d, x, y + pixelSize, pixelSize, hat);
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, skin);
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, skin);
-        fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, hat);
-        fillPixel(g2d, x + pixelSize, y + (2 * pixelSize), pixelSize, shirt);
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, shirt);
-        fillPixel(g2d, x + pixelSize, y + (3 * pixelSize), pixelSize, pants);
-        fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, pants);
-    }
-
     private static void drawStem(Graphics2D g2d, int x, int y, int pixelSize) {
         fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(79, 163, 78));
         fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, new Color(63, 137, 63));
@@ -370,18 +349,6 @@ public final class ProductPixelArt {
         g2d.fillRect(x, y, pixelSize, pixelSize);
     }
 
-    /**
-     * Helper unique pour dessiner une image d'objet dans l'UI.
-     *
-     * On lui passe simplement :
-     * - l'image source,
-     * - la position,
-     * - la taille cible maximale en pixels.
-     *
-     * La méthode se charge ensuite :
-     * - de respecter le ratio de l'image,
-     * - d'utiliser un rendu "nearest neighbor" pour garder un aspect net.
-     */
     private static void drawScaledImage(Graphics2D g2d, Image image, int x, int y, int maxSide) {
         if (image == null) {
             return;
