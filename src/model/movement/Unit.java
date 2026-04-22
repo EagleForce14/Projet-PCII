@@ -34,8 +34,9 @@ public class Unit {
     // Attribut pour la gestion des combats
     private final CombatUnit combatUnit;
 
-    // Attribut qui indique si l'unité est dans la grotte ou non
-    private volatile boolean inCave = false;
+    // La scene courante dit sur quelle carte la meme unite evolue.
+    // Cela evite de dupliquer l'etat du joueur entre ferme et grotte.
+    private volatile PlayerScene scene = PlayerScene.FARM;
     private volatile FacingDirection facingDirection = FacingDirection.DOWN;
 
     // Le constructeur de la classe.
@@ -154,7 +155,7 @@ public class Unit {
      * @return true si la cible est dans le rayon d'influence, false sinon.
      */
     public boolean isInInfluenceZone(int targetX, int targetY) {
-        if (inCave) {
+        if (isInCave()) {
             return false;
         }
 
@@ -169,21 +170,25 @@ public class Unit {
      * @return true si l'unité est dans la grotte, false sinon.
      */
     public boolean isInCave() {
-        return inCave;
+        return scene == PlayerScene.CAVE;
     }
 
     /** 
-     * Méthode qui permet de faire rentrer l'unité dans la grotte 
+     * La meme unite reste vivante, on change seulement sa scene courante.
      */
     public void enterCave() {
-        inCave = true;
+        scene = PlayerScene.CAVE;
     }
 
     /** 
-     * Méthode qui permet de faire sortir l'unité de la grotte 
+     * Retour a la scene de ferme sans recréer un nouveau joueur.
      */
     public void exitCave() {
-        inCave = false;
+        scene = PlayerScene.FARM;
+    }
+
+    public PlayerScene getScene() {
+        return scene;
     }
 
     public void setMoveUp(boolean moveUp, boolean updateFacing) {

@@ -62,6 +62,17 @@ public class ZoneCulture {
         labouree = true;
     }
 
+    /**
+     * Remet la case à l'état herbe seulement si elle est vide.
+     * On évite ainsi toute perte silencieuse d'une culture en place.
+     */
+    public void remettreEnHerbe() {
+        if (culture != null) {
+            throw new IllegalStateException("Impossible de remettre en herbe une case qui contient une culture.");
+        }
+        labouree = false;
+    }
+
     public boolean isLabouree() {
         return labouree;
     }

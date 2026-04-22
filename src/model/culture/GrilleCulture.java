@@ -242,6 +242,13 @@ public class GrilleCulture {
                 && !isLabourBlockedByAdjacentFence(x, y);
     }
 
+    /** Dit si une case labourée peut être remise en herbe. */
+    public boolean canRemettreEnHerbeCell(int x, int y) {
+        return estDansGrille(x, y)
+                && isLabouree(x, y)
+                && getCulture(x, y) == null;
+    }
+
     /**
      * La barre de vie ne doit pas encombrer le champ en permanence.
      * On la montre donc juste après un coup, sauf en état critique :
@@ -381,6 +388,14 @@ public class GrilleCulture {
      */
     public void labourerCaseSansObjectif(int x, int y) {
         labourerCaseInterne(x, y, false);
+    }
+
+    /** Inverse du labourage sur une case vide. */
+    public void remettreEnHerbeCase(int x, int y) {
+        if (!canRemettreEnHerbeCell(x, y)) {
+            throw new IllegalStateException("Impossible de remettre en herbe cette case.");
+        }
+        grille[x][y].remettreEnHerbe();
     }
 
     private void labourerCaseInterne(int x, int y, boolean compterObjectif) {

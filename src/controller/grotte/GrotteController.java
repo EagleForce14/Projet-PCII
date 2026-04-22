@@ -6,8 +6,8 @@ import model.grotte.ShrineHazardThread;
 import model.grotte.combat.CaveCombatModel;
 import model.grotte.combat.CaveCombatThread;
 import model.movement.BuildingGeometry;
+import model.movement.MovementCollisionMap;
 import model.movement.MovementModel;
-import model.movement.PhysicsThread;
 import model.movement.Unit;
 import model.runtime.GamePauseController;
 import view.EnemyView;
@@ -20,7 +20,6 @@ import view.grotte.GrotteFieldPanel;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
-import javax.swing.Timer;
 import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.Point;
@@ -40,9 +39,6 @@ import java.awt.event.MouseListener;
  * et bascule ferme <-> grotte.
  */
 public final class GrotteController implements KeyListener, MouseListener, ActionListener {
-    private static final int EXIT_CHECK_DELAY_MS = 35;
-
-    private final MovementModel movementModel;
     private final GamePauseController pauseController;
     private final GrotteFieldPanel grotteFieldPanel;
     private final EnemyView caveEnemyView;
@@ -51,11 +47,11 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
     private final JPanel centerPanel;
     private final SidebarPanel sidebarPanel;
     private final FieldPanel farmFieldPanel;
-    private final Unit farmPlayerUnit;
-    private final Unit grottePlayerUnit;
+    private final Unit playerUnit;
+    private final MovementCollisionMap farmCollisionMap;
+    private final MovementCollisionMap caveCollisionMap;
     private final EnemyModel caveEnemyModel;
     private final CaveCombatModel caveCombatModel;
-    private final PhysicsThread cavePhysicsThread;
     private final EnemyPhysicsThread caveEnemyPhysicsThread;
     private final CaveCombatThread caveCombatThread;
     private final ShrineHazardThread shrineHazardThread;
@@ -63,14 +59,13 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
     private final MovementView grotteMovementView;
     private final String farmCardName;
     private final String grotteCardName;
-    private final Timer exitCheckTimer;
 
     private JButton caveButton;
     private boolean entryTriggered;
     private boolean exitTriggered;
+    private volatile boolean transitionCheckQueued;
 
     public GrotteController(
-            MovementModel movementModel,
             MovementView farmMovementView,
             MovementView grotteMovementView,
             EnemyView caveEnemyView,
@@ -81,16 +76,15 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
             String farmCardName,
             String grotteCardName,
             SidebarPanel sidebarPanel,
-            Unit farmPlayerUnit,
-            Unit grottePlayerUnit,
+            Unit playerUnit,
+            MovementCollisionMap farmCollisionMap,
+            MovementCollisionMap caveCollisionMap,
             EnemyModel caveEnemyModel,
             CaveCombatModel caveCombatModel,
-            PhysicsThread cavePhysicsThread,
             EnemyPhysicsThread caveEnemyPhysicsThread,
             CaveCombatThread caveCombatThread,
             ShrineHazardThread shrineHazardThread
     ) {
-        this.movementModel = movementModel;
         this.pauseController = GamePauseController.getInstance();
         this.farmMovementView = farmMovementView;
         this.grotteMovementView = grotteMovementView;
@@ -103,11 +97,11 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         this.farmCardName = farmCardName;
         this.grotteCardName = grotteCardName;
         this.sidebarPanel = sidebarPanel;
-        this.farmPlayerUnit = farmPlayerUnit;
-        this.grottePlayerUnit = grottePlayerUnit;
+        this.playerUnit = playerUnit;
+        this.farmCollisionMap = farmCollisionMap;
+        this.caveCollisionMap = caveCollisionMap;
         this.caveEnemyModel = caveEnemyModel;
         this.caveCombatModel = caveCombatModel;
-        this.cavePhysicsThread = cavePhysicsThread;
         this.caveEnemyPhysicsThread = caveEnemyPhysicsThread;
         this.caveCombatThread = caveCombatThread;
         this.shrineHazardThread = shrineHazardThread;
@@ -115,9 +109,6 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         registerInputLayers();
         bindCaveButton();
         markActiveCard(farmCardName);
-
-        this.exitCheckTimer = new Timer(EXIT_CHECK_DELAY_MS, this);
-        this.exitCheckTimer.start();
     }
 
     private void registerInputLayers() {
@@ -146,19 +137,18 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
 
     @Override
     public void actionPerformed(ActionEvent event) {
-        Object source = event.getSource();
-        if (source == exitCheckTimer) {
-            if (isCaveSceneActive()) {
-                checkFarmExit();
-            } else {
-                checkFarmEntry();
-            }
+        if (event.getSource() == caveButton) {
+            toggleCaveScene();
+        }
+    }
+
+    public void checkSceneTransitionFromCurrentPosition() {
+        if (pauseController.isPaused() || transitionCheckQueued) {
             return;
         }
 
-        if (source == caveButton) {
-            toggleCaveScene();
-        }
+        transitionCheckQueued = true;
+        SwingUtilities.invokeLater(this::runQueuedTransitionCheck);
     }
 
     @Override
@@ -167,7 +157,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
             return;
         }
 
-        Unit player = movementModel.getPlayerUnit();
+        Unit player = playerUnit;
         if (player == null) {
             return;
         }
@@ -193,7 +183,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
 
     @Override
     public void keyReleased(KeyEvent event) {
-        Unit player = movementModel.getPlayerUnit();
+        Unit player = playerUnit;
         if (player == null) {
             return;
         }
@@ -294,8 +284,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
             return;
         }
 
-        stopPlayerMovement(farmPlayerUnit);
-        stopPlayerMovement(grottePlayerUnit);
+        stopPlayerMovement(playerUnit);
         stopPlayerFire();
         if (isCaveSceneActive()) {
             returnToFarm();
@@ -305,12 +294,30 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         showCave();
     }
 
+    /**
+     * Le déplacement du joueur est calculé dans le thread physique,
+     * mais la bascule de carte et le focus restent des opérations Swing.
+     * On revalide donc le trigger sur l'EDT avec la position la plus récente.
+     */
+    private void runQueuedTransitionCheck() {
+        transitionCheckQueued = false;
+        if (pauseController.isPaused()) {
+            return;
+        }
+
+        if (isCaveSceneActive()) {
+            checkFarmExit();
+        } else {
+            checkFarmEntry();
+        }
+    }
+
     private void checkFarmExit() {
         if (pauseController.isPaused() || !isCaveSceneActive()) {
             return;
         }
 
-        Unit player = movementModel.getPlayerUnit();
+        Unit player = playerUnit;
         if (player == null) {
             return;
         }
@@ -332,13 +339,11 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         exitTriggered = true;
         stopPlayerMovement(player);
         stopPlayerFire();
-        Point spawnOffset = grotteFieldPanel.getInitialPlayerOffset();
-        player.setPosition(spawnOffset.x, spawnOffset.y);
         returnToFarm();
     }
 
     private void checkFarmEntry() {
-        if (pauseController.isPaused() || isCaveSceneActive() || farmPlayerUnit == null || farmFieldPanel == null) {
+        if (pauseController.isPaused() || isCaveSceneActive() || playerUnit == null || farmFieldPanel == null) {
             return;
         }
 
@@ -352,7 +357,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         }
 
         entryTriggered = true;
-        stopPlayerMovement(farmPlayerUnit);
+        stopPlayerMovement(playerUnit);
         showCave();
     }
 
@@ -368,8 +373,8 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         }
 
         Rectangle playerBounds = BuildingGeometry.buildCenteredBounds(
-                farmPlayerUnit.getX(),
-                farmPlayerUnit.getY(),
+                playerUnit.getX(),
+                playerUnit.getY(),
                 Unit.SIZE,
                 Unit.SIZE
         );
@@ -387,11 +392,14 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
             sidebarPanel.setCaveMode(true);
         }
 
-        if (farmPlayerUnit != null) {
-            farmPlayerUnit.exitCave();
-        }
-        if (grottePlayerUnit != null) {
-            grottePlayerUnit.enterCave();
+        if (playerUnit != null) {
+            Point caveSpawnOffset = grotteFieldPanel.getInitialPlayerOffset();
+            stopPlayerMovement(playerUnit);
+            playerUnit.setFieldObstacleMap(caveCollisionMap);
+            if (caveSpawnOffset != null) {
+                playerUnit.setPosition(caveSpawnOffset.x, caveSpawnOffset.y);
+            }
+            playerUnit.enterCave();
         }
         if (caveEnemyModel != null) {
             caveEnemyModel.enterCave();
@@ -417,6 +425,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
             sidebarPanel.setCaveMode(false);
         }
 
+        stopPlayerMovement(playerUnit);
         stopPlayerFire();
         setCaveThreadsActive(false);
         if (caveCombatModel != null) {
@@ -425,14 +434,12 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         if (caveEnemyModel != null) {
             caveEnemyModel.exitCave();
         }
-        if (grottePlayerUnit != null) {
-            grottePlayerUnit.exitCave();
-        }
-        if (farmPlayerUnit != null) {
-            farmPlayerUnit.exitCave();
+        if (playerUnit != null) {
+            playerUnit.exitCave();
+            playerUnit.setFieldObstacleMap(farmCollisionMap);
             Point farmReturnOffset = farmFieldPanel == null ? null : farmFieldPanel.getFarmCaveReturnOffset();
             if (farmReturnOffset != null) {
-                farmPlayerUnit.setPosition(farmReturnOffset.x, farmReturnOffset.y);
+                playerUnit.setPosition(farmReturnOffset.x, farmReturnOffset.y);
             }
         }
         if (farmMovementView != null) {
@@ -442,9 +449,6 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
     }
 
     private void setCaveThreadsActive(boolean active) {
-        if (cavePhysicsThread != null) {
-            cavePhysicsThread.setThreadActive(active);
-        }
         if (caveEnemyPhysicsThread != null) {
             caveEnemyPhysicsThread.setThreadActive(active);
         }

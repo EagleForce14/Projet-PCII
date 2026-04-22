@@ -166,18 +166,13 @@ public class Main {
         GrotteFieldPanel grotteFieldPanel = new GrotteFieldPanel(grotteMap, shrineHazardState);
         configureOverlayAlignment(grotteFieldPanel);
 
-        MovementModel grotteMovementModel = new MovementModel();
-        Point grotteInitialOffset = grotteFieldPanel.getInitialPlayerOffset();
-        Unit grottePlayerUnit = new Unit(grotteInitialOffset.x, grotteInitialOffset.y);
         GrotteObstacleMap grotteObstacleMap = new GrotteObstacleMap(grotteMap, grotteFieldPanel);
-        grottePlayerUnit.setFieldObstacleMap(grotteObstacleMap);
-        grotteMovementModel.setPlayerUnit(grottePlayerUnit);
 
         EnemyModel caveEnemyModel = EnemyModel.createCaveModel(grotteMap);
-        caveEnemyModel.setPlayer(grottePlayerUnit);
+        caveEnemyModel.setPlayer(playerUnit);
         caveEnemyModel.setMovementCollisionMap(grotteObstacleMap);
         CaveCombatModel caveCombatModel = new CaveCombatModel(
-                grottePlayerUnit,
+                playerUnit,
                 caveEnemyModel,
                 grotteObstacleMap,
                 jour,
@@ -185,7 +180,7 @@ public class Main {
                 grotteMap
         );
 
-        MovementView grotteMovementView = new MovementView(grotteMovementModel, grotteFieldPanel);
+        MovementView grotteMovementView = new MovementView(model, grotteFieldPanel);
         configureOverlayAlignment(grotteMovementView);
 
         EnemyView caveEnemyView = new EnemyView(caveEnemyModel, grotteFieldPanel);
@@ -196,7 +191,7 @@ public class Main {
         InventoryStatusOverlay caveInventoryStatusOverlay = new InventoryStatusOverlay(
                 grotteFieldPanel,
                 inventaire,
-                grotteMovementModel
+                model
         );
         // En grotte, l'inventaire ne doit pas rester affiché en permanence.
         // On active donc le mode "transient" : apparition brève après un pickup, puis disparition animée.
@@ -227,7 +222,6 @@ public class Main {
         frame.setGlassPane(shopOverlay);
 
         PhysicsThread physicsThread = new PhysicsThread(model);
-        PhysicsThread grottePhysicsThread = new PhysicsThread(grotteMovementModel, false);
         EnemyPhysicsThread enemyPhysicsThread = new EnemyPhysicsThread(enemyModel);
         EnemyPhysicsThread caveEnemyPhysicsThread = new EnemyPhysicsThread(caveEnemyModel, false);
         CaveCombatThread caveCombatThread = new CaveCombatThread(caveCombatModel, false);
@@ -235,7 +229,7 @@ public class Main {
         TreeThread treeThread = new TreeThread(treeManager, fieldObstacleMap, playerUnit, enemyModel);
         ShrineHazardThread shrineHazardThread = new ShrineHazardThread(
                 shrineHazardState,
-                grottePlayerUnit,
+                playerUnit,
                 grotteFieldPanel,
                 jour
         );
@@ -243,7 +237,7 @@ public class Main {
                 jour,
                 grilleCulture,
                 physicsThread,
-                grottePhysicsThread,
+                null,
                 enemyPhysicsThread,
                 caveEnemyPhysicsThread,
                 caveCombatThread,
@@ -278,8 +272,7 @@ public class Main {
                 workshopOverlay
         );
 
-        new GrotteController(
-                grotteMovementModel,
+        GrotteController grotteController = new GrotteController(
                 movementView,
                 grotteMovementView,
                 caveEnemyView,
@@ -291,14 +284,15 @@ public class Main {
                 GROTTE_CARD,
                 actionSidebarPanel,
                 playerUnit,
-                grottePlayerUnit,
+                fieldObstacleMap,
+                grotteObstacleMap,
                 caveEnemyModel,
                 caveCombatModel,
-                grottePhysicsThread,
                 caveEnemyPhysicsThread,
                 caveCombatThread,
                 shrineHazardThread
         );
+        physicsThread.setGrotteController(grotteController);
 
         if (firstLaunch) {
             frame.pack();
@@ -321,7 +315,6 @@ public class Main {
         enemyModel.setViewportSize(gamePanel.getWidth(), gamePanel.getHeight());
 
         physicsThread.start();
-        grottePhysicsThread.start();
         enemyPhysicsThread.start();
         caveEnemyPhysicsThread.start();
         caveCombatThread.start();

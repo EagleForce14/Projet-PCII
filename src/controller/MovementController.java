@@ -110,9 +110,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     }
 
     /**
-     * Labourer transforme simplement une case d'herbe en case cultivable.
-     * On reste volontairement alignés avec les autres actions :
-     * le bouton agit sur la case actuellement occupée par le joueur.
+     * Action contextuelle sur la case active :
+     * - "Labourer" si la case est en herbe,
+     * - "Remettre en herbe" si la case est labourée mais vide.
      */
     private void labourerCaseActive(ActionEvent event) {
         if (pauseController.isPaused()) {
@@ -120,13 +120,20 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         }
 
         Point activeFieldCell = model.getActiveFieldCell();
-        if (activeFieldCell == null
-                || !fieldPanel.isFarmableCell(activeFieldCell)
-                || !grilleCulture.canLabourCell(activeFieldCell.x, activeFieldCell.y)) {
+        if (activeFieldCell == null || !fieldPanel.isFarmableCell(activeFieldCell)) {
             return;
         }
 
-        grilleCulture.labourerCase(activeFieldCell.x, activeFieldCell.y);
+        int x = activeFieldCell.x;
+        int y = activeFieldCell.y;
+        if (grilleCulture.canLabourCell(x, y)) {
+            grilleCulture.labourerCase(x, y);
+            return;
+        }
+
+        if (grilleCulture.canRemettreEnHerbeCell(x, y)) {
+            grilleCulture.remettreEnHerbeCase(x, y);
+        }
     }
 
     /**

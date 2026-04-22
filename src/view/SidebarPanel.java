@@ -43,8 +43,10 @@ import java.util.Map;
 public class SidebarPanel extends JPanel {
     public static final int SIDEBAR_WIDTH = 320;
     private static final int ACTIONS_CONTENT_HEIGHT = 620;
-    private static final int BUTTONS_GRID_HEIGHT = 170;
-    // Largeur de wrapping des intitulés d'objectifs (retour à la ligne natif via JTextArea).
+    private static final int BUTTONS_GRID_HEIGHT = 250;
+    private static final float LABOUR_BUTTON_DEFAULT_FONT_SIZE = 13.5f;
+    private static final float LABOUR_BUTTON_COMPACT_FONT_SIZE = 11.5f;
+    // Largeur de wrapping des intitulés d'objectifs
     private static final int OBJECTIVE_TITLE_WRAP_WIDTH = 270;
 
     // Le chemin pour accéder à la police personnalisée
@@ -108,6 +110,7 @@ public class SidebarPanel extends JPanel {
     private boolean currentBridgeEnabledState;
     private boolean currentBridgeVisibleState;
     private boolean currentBridgeHintVisibleState;
+    private String currentLabourButtonLabel;
     private String currentCompostButtonLabel;
     private boolean currentLabourWarningVisibleState;
     private boolean caveMode;
@@ -170,7 +173,11 @@ public class SidebarPanel extends JPanel {
         buttonsGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, BUTTONS_GRID_HEIGHT));
 
         // On crée les boutons en appliquant le style visuel.
-        labourButton = createStyledButton("Labourer", new Color(124, 83, 48, 255), 13.5f);
+        labourButton = createStyledButton(
+                "Labourer",
+                new Color(124, 83, 48, 255),
+                LABOUR_BUTTON_DEFAULT_FONT_SIZE
+        );
         plantButton = createStyledButton("Planter", new Color(139, 69, 19, 255), 13.5f);
         harvestButton = createStyledButton("Recolter", new Color(160, 82, 45, 255), 13.5f);
         waterButton = createStyledButton("Arroser", new Color(205, 133, 63, 255), 13.5f);
@@ -419,6 +426,7 @@ public class SidebarPanel extends JPanel {
                 false,
                 false,
                 false,
+                "Labourer",
                 "Poser compost",
                 false
         );
@@ -534,6 +542,7 @@ public class SidebarPanel extends JPanel {
                         false,
                         false,
                         false,
+                        "Labourer",
                         "Poser compost",
                         false
                 );
@@ -541,7 +550,6 @@ public class SidebarPanel extends JPanel {
             return;
         }
 
-        boolean shouldEnableLabour = canLabourActiveCell();
         boolean shouldEnablePlant = canPlantActiveCell();
         boolean shouldEnableHarvest = canHarvestActiveCell();
         boolean shouldEnableClean = canCleanActiveCell();
@@ -555,9 +563,11 @@ public class SidebarPanel extends JPanel {
         boolean shouldShowCutTreeAction = shouldShowCutTreeAction();
         boolean shouldEnableCutTree = shouldShowCutTreeAction;
         boolean shouldShowBridgeHint = shouldShowBridgeAction;
+        String labourButtonLabel = shouldShowRemettreEnHerbeAction() ? "Remettre en herbe" : "Labourer";
+        boolean shouldEnableLabourAction = canUseLabourButtonOnActiveCell();
         String compostButtonLabel = shouldShowRemiserCompostAction() ? "Remiser compost" : "Poser compost";
         boolean shouldShowLabourWarning = shouldShowAdjacentFenceLabourWarning();
-        if (shouldEnableLabour != currentLabourEnabledState
+        if (shouldEnableLabourAction != currentLabourEnabledState
                 || shouldEnablePlant != currentPlantEnabledState
                 || shouldEnableHarvest != currentHarvestEnabledState
                 || shouldEnableClean != currentCleanEnabledState
@@ -571,10 +581,11 @@ public class SidebarPanel extends JPanel {
                 || shouldEnableBridge != currentBridgeEnabledState
                 || shouldShowBridgeAction != currentBridgeVisibleState
                 || shouldShowBridgeHint != currentBridgeHintVisibleState
+                || !labourButtonLabel.equals(currentLabourButtonLabel)
                 || !compostButtonLabel.equals(currentCompostButtonLabel)
                 || shouldShowLabourWarning != currentLabourWarningVisibleState) {
             applyButtonsEnabledState(
-                    shouldEnableLabour,
+                    shouldEnableLabourAction,
                     shouldEnablePlant,
                     shouldEnableHarvest,
                     shouldEnableClean,
@@ -588,6 +599,7 @@ public class SidebarPanel extends JPanel {
                     shouldEnableBridge,
                     shouldShowBridgeAction,
                     shouldShowBridgeHint,
+                    labourButtonLabel,
                     compostButtonLabel,
                     shouldShowLabourWarning
             );
@@ -605,6 +617,7 @@ public class SidebarPanel extends JPanel {
                                           boolean compostEnabled, boolean compostVisible,
                                           boolean cutTreeEnabled, boolean cutTreeVisible,
                                           boolean bridgeEnabled, boolean bridgeVisible, boolean bridgeHintVisible,
+                                          String labourButtonLabel,
                                           String compostButtonLabel,
                                           boolean labourWarningVisible) {
         currentLabourEnabledState = labourEnabled;
@@ -621,10 +634,19 @@ public class SidebarPanel extends JPanel {
         currentBridgeEnabledState = bridgeEnabled;
         currentBridgeVisibleState = bridgeVisible;
         currentBridgeHintVisibleState = bridgeHintVisible;
+        currentLabourButtonLabel = labourButtonLabel;
         currentCompostButtonLabel = compostButtonLabel;
         currentLabourWarningVisibleState = labourWarningVisible;
 
         labourButton.setEnabled(labourEnabled);
+        boolean compactLabourLabel = "Remettre en herbe".equals(labourButtonLabel);
+        labourButton.setFont(CustomFontLoader.loadFont(
+                FONT_PATH,
+                compactLabourLabel ? LABOUR_BUTTON_COMPACT_FONT_SIZE : LABOUR_BUTTON_DEFAULT_FONT_SIZE
+        ));
+        labourButton.setText(compactLabourLabel
+                ? "<html><center>Remettre<br>en herbe</center></html>"
+                : labourButtonLabel);
         plantButton.setEnabled(plantEnabled);
         harvestButton.setEnabled(harvestEnabled);
         waterButton.setEnabled(waterEnabled);
@@ -655,6 +677,22 @@ public class SidebarPanel extends JPanel {
         }
 
         return grilleCulture.canLabourCell(activeFieldCell.x, activeFieldCell.y);
+    }
+
+    private boolean canRemettreEnHerbeActiveCell() {
+        Point activeFieldCell = movementModel.getActiveFieldCell();
+        if (activeFieldCell == null || !fieldPanel.isFarmableCell(activeFieldCell)) {
+            return false;
+        }
+        return grilleCulture.canRemettreEnHerbeCell(activeFieldCell.x, activeFieldCell.y);
+    }
+
+    private boolean shouldShowRemettreEnHerbeAction() {
+        return canRemettreEnHerbeActiveCell();
+    }
+
+    private boolean canUseLabourButtonOnActiveCell() {
+        return canLabourActiveCell() || canRemettreEnHerbeActiveCell();
     }
 
     /**
