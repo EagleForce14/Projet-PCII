@@ -61,7 +61,6 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
     private final Image horizontalWallTile;
     private final Image verticalWallTile;
     private final Image shrineStatueImage;
-    private final Image caveChestImage;
     private final Font shrineHazardTitleFont;
     private final Font shrineHazardTimerFont;
 
@@ -84,7 +83,6 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         this.horizontalWallTile = GrotteTileFactory.createHorizontalWallTile();
         this.verticalWallTile = GrotteTileFactory.createVerticalWallTile();
         this.shrineStatueImage = GrotteTileFactory.createShrineStatueImage();
-        this.caveChestImage = GrotteTileFactory.createCaveChestImage();
         this.shrineHazardTitleFont = CustomFontLoader.loadFont(FONT_PATH, 10.5f);
         this.shrineHazardTimerFont = CustomFontLoader.loadFont(FONT_PATH, 9.0f);
         setPreferredSize(new Dimension(PREF_WIDTH, PREF_HEIGHT));
@@ -286,44 +284,6 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
     }
 
     /**
-     * Le coffre reste décoratif visuellement, mais il doit aussi bloquer le joueur.
-     * La hitbox est un peu resserrée par rapport au sprite pour rester naturelle.
-     */
-    public Rectangle getChestCollisionBounds() {
-        Rectangle roomBounds = buildLogicalAreaBounds(grotteMap.getUpperRightRoomBounds());
-        if (roomBounds == null || roomBounds.width <= 0 || roomBounds.height <= 0) {
-            return null;
-        }
-
-        int tileSize = getLogicalTileSize();
-        if (tileSize <= 0) {
-            return null;
-        }
-
-        int drawWidth = Math.max((int) Math.round(tileSize * 1.35), (int) Math.round(tileSize * 1.5));
-        int sourceWidth = caveChestImage == null ? 0 : caveChestImage.getWidth(null);
-        int sourceHeight = caveChestImage == null ? 0 : caveChestImage.getHeight(null);
-        if (sourceWidth <= 0 || sourceHeight <= 0) {
-            return null;
-        }
-
-        int drawHeight = Math.max(tileSize, (int) Math.round(drawWidth * (sourceHeight / (double) sourceWidth)));
-        int rightPadding = Math.max(tileSize + (tileSize / 2), (int) Math.round(tileSize * 1.45));
-        int topPadding = Math.max((int) Math.round(tileSize * 0.85), 14);
-        int drawX = roomBounds.x + roomBounds.width - drawWidth - rightPadding;
-        int drawY = roomBounds.y + topPadding;
-
-        int collisionInsetX = Math.max(4, drawWidth / 8);
-        int collisionInsetY = Math.max(4, drawHeight / 5);
-        return new Rectangle(
-                drawX + collisionInsetX,
-                drawY + collisionInsetY,
-                Math.max(8, drawWidth - (collisionInsetX * 2)),
-                Math.max(8, drawHeight - collisionInsetY - Math.max(4, drawHeight / 8))
-        );
-    }
-
-    /**
      * La statue du sanctuaire est décorative, mais elle doit aussi bloquer le passage.
      * La hitbox reste volontairement un peu plus petite que le sprite
      * pour garder une sensation naturelle autour du socle.
@@ -385,7 +345,6 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         drawRockLayer(g2, fieldBounds, tileSize);
         drawWalkableGroundLayer(g2, fieldBounds, tileSize);
         drawRockEdgeRelief(g2, fieldBounds, tileSize);
-        drawUpperRoomChest(g2, fieldBounds, tileSize);
         drawShrineStatue(g2, fieldBounds, tileSize);
         drawVignette(g2);
     }
@@ -645,43 +604,6 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
                 statueBounds.height,
                 this
         );
-    }
-
-    /**
-     * Le coffre reste volontairement simple :
-     * un seul élément décoratif posé au fond d'une salle haute proche du sanctuaire.
-     */
-    private void drawUpperRoomChest(Graphics2D g2, Rectangle fieldBounds, int tileSize) {
-        if (caveChestImage == null) {
-            return;
-        }
-
-        Rectangle roomBounds = buildAreaBounds(fieldBounds, tileSize, grotteMap.getUpperRightRoomBounds());
-        if (roomBounds == null || roomBounds.width <= 0 || roomBounds.height <= 0) {
-            return;
-        }
-
-        int sourceWidth = caveChestImage.getWidth(null);
-        int sourceHeight = caveChestImage.getHeight(null);
-        if (sourceWidth <= 0 || sourceHeight <= 0) {
-            return;
-        }
-
-        int drawWidth = Math.max((int) Math.round(tileSize * 1.35), (int) Math.round(tileSize * 1.5));
-        int drawHeight = Math.max(tileSize, (int) Math.round(drawWidth * (sourceHeight / (double) sourceWidth)));
-        int rightPadding = Math.max(tileSize + (tileSize / 2), (int) Math.round(tileSize * 1.45));
-        int topPadding = Math.max((int) Math.round(tileSize * 0.85), 14);
-        int drawX = roomBounds.x + roomBounds.width - drawWidth - rightPadding;
-        int drawY = roomBounds.y + topPadding;
-
-        g2.setColor(new Color(0, 0, 0, 52));
-        g2.fillOval(
-                drawX + Math.max(4, drawWidth / 8),
-                drawY + drawHeight - Math.max(6, tileSize / 5),
-                Math.max(12, drawWidth - Math.max(8, drawWidth / 4)),
-                Math.max(6, tileSize / 4)
-        );
-        g2.drawImage(caveChestImage, drawX, drawY, drawWidth, drawHeight, this);
     }
 
     private void drawVignette(Graphics2D g2) {

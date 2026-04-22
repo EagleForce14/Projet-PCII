@@ -126,10 +126,6 @@ public final class GrotteTileFactory {
         return ImageLoader.load("/assets/statue_grotte.png");
     }
 
-    public static Image createCaveChestImage() {
-        return ImageLoader.load("/assets/coffre_grotte.png");
-    }
-
     public static BufferedImage createWaterRoomOverlay(int width, int height) {
         BufferedImage image = createTransparentCanvas(width, height);
         Graphics2D g2 = createPixelGraphics(image);
@@ -150,7 +146,6 @@ public final class GrotteTileFactory {
                 scale(height, 0.46));
 
         drawCrystalCluster(g2, scale(width, 0.13), scale(height, 0.52), Math.max(24, scale(width, 0.12)));
-        drawChest(g2, scale(width, 0.48), scale(height, 0.22), scale(width, 0.16), scale(height, 0.11));
         drawSmallPlant(g2, scale(width, 0.20), scale(height, 0.78), scale(width, 0.08), new Color(167, 89, 55));
         drawSmallPlant(g2, scale(width, 0.77), scale(height, 0.70), scale(width, 0.06), new Color(167, 89, 55));
         g2.dispose();
@@ -356,17 +351,6 @@ public final class GrotteTileFactory {
         g2.fillRect(x + 1, y + height / 3, Math.max(2, width - 2), Math.max(4, height - height / 3 - 1));
         g2.setColor(CRYSTAL_LIGHT);
         g2.fillRect(x + width / 3, y, Math.max(2, width / 3), Math.max(4, height / 3));
-    }
-
-    private static void drawChest(Graphics2D g2, int x, int y, int width, int height) {
-        g2.setColor(WOOD_DARK);
-        g2.fillRect(x, y, width, height);
-        g2.setColor(WOOD_MID);
-        g2.fillRect(x + 2, y + 2, Math.max(4, width - 4), Math.max(4, height - 4));
-        g2.setColor(WOOD_LIGHT);
-        g2.fillRect(x + 2, y + 2, Math.max(4, width - 4), Math.max(2, height / 4));
-        g2.setColor(new Color(189, 153, 79));
-        g2.fillRect(x + width / 2 - 2, y + height / 4, 4, Math.max(4, height / 2));
     }
 
     private static void drawStatue(Graphics2D g2, int x, int y, int width, int height) {

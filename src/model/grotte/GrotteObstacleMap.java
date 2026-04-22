@@ -56,11 +56,6 @@ public final class GrotteObstacleMap implements MovementCollisionMap {
             return false;
         }
 
-        Rectangle chestBounds = grotteFieldPanel.getChestCollisionBounds();
-        if (chestBounds != null && chestBounds.intersects(entityBounds)) {
-            return false;
-        }
-
         return true;
     }
 

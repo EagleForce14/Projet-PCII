@@ -290,8 +290,6 @@ public class EnemyModel {
         addSelectedCornerPosts(posts, 2, grotteMap.getUpperRightRoomBounds(), true, true, true, true);
         addSelectedCornerPosts(posts, 3, grotteMap.getLowerLeftRoomBounds(), true, false, true, true);
         addSelectedCornerPosts(posts, 4, grotteMap.getLowerRightRoomBounds(), false, true, true, true);
-
-        addLavaChestPosts(posts, 2, grotteMap.getUpperRightRoomBounds());
         return posts;
     }
 
@@ -331,25 +329,6 @@ public class EnemyModel {
         if (includeBottomRight) {
             posts.add(new CaveGuardPost(roomIndex, new Rectangle(right, bottom, postWidth, postHeight)));
         }
-    }
-
-    /**
-     * Le coffre actuel est dans la salle de lave, vers le coin haut droit.
-     * On ajoute donc deux zones de garde serrées autour de cette zone.
-     */
-    private void addLavaChestPosts(List<CaveGuardPost> posts, int roomIndex, Rectangle lavaRoomBounds) {
-        if (lavaRoomBounds == null) {
-            return;
-        }
-
-        int postWidth = Math.max(2, Math.min(2, lavaRoomBounds.width - 2));
-        int postHeight = Math.max(2, Math.min(2, lavaRoomBounds.height - 2));
-        int nearChestX = lavaRoomBounds.x + lavaRoomBounds.width - postWidth - 2;
-        int topGuardY = lavaRoomBounds.y + 1;
-        int innerGuardY = lavaRoomBounds.y + Math.max(2, (lavaRoomBounds.height / 2) - 1);
-
-        posts.add(new CaveGuardPost(roomIndex, new Rectangle(nearChestX, topGuardY, postWidth, postHeight)));
-        posts.add(new CaveGuardPost(roomIndex, new Rectangle(nearChestX - 2, innerGuardY, postWidth, postHeight)));
     }
 
     /**
