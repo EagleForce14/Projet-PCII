@@ -38,15 +38,11 @@ import view.workshop.WorkshopOverlay;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.OverlayLayout;
-import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Point;
-import java.awt.Rectangle;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 
 public class Main {
     private static final Dimension GAME_AREA_MINIMUM_SIZE = new Dimension(960, 690);
@@ -73,12 +69,12 @@ public class Main {
         return frame;
     }
 
+    // L'écran d'accueil est un panneau simple qui recouvre toute la fenêtre.
     private static void installHomeScreen(JFrame frame) {
-        JPanel homePreviewPanel = buildFrozenHomeScreenPanel();
+        // On passe une référence à la JFrame pour pouvoir lancer une nouvelle partie depuis l'écran d'accueil, sans recréer une nouvelle fenêtre.
         HomeScreenPanel homeScreenPanel = new HomeScreenPanel(
                 () -> installNewGame(frame, true),
-                frame::dispose,
-                homePreviewPanel
+                frame::dispose
         );
 
         frame.setContentPane(homeScreenPanel);
@@ -87,116 +83,6 @@ public class Main {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
         homeScreenPanel.requestFocusInWindow();
-    }
-
-    /**
-     * Construit une ferme de debut de partie figee, sans sidebar ni topbar.
-     */
-    private static JPanel buildFrozenHomeScreenPanel() {
-        Jour jour = new Jour();
-        GrilleCulture grilleCulture = new GrilleCulture(jour.getGestionnaireObjectifs());
-        TreeManager treeManager = new TreeManager(grilleCulture);
-        FieldPanel fieldPanel = new FieldPanel(grilleCulture, treeManager);
-        FieldObstacleMap fieldObstacleMap = new FieldObstacleMap(treeManager, fieldPanel);
-        fieldPanel.setFieldObstacleMap(fieldObstacleMap);
-
-        MovementModel movementModel = new MovementModel();
-        Point initialPlayerOffset = fieldPanel.getInitialPlayerOffset();
-        Unit playerUnit = new Unit(initialPlayerOffset.x, initialPlayerOffset.y);
-        playerUnit.setFieldObstacleMap(fieldObstacleMap);
-        movementModel.setPlayerUnit(playerUnit);
-
-        EnemyModel enemyModel = new EnemyModel();
-        enemyModel.setPlayer(playerUnit);
-        enemyModel.setGrilleCulture(grilleCulture);
-        enemyModel.setFieldObstacleMap(fieldObstacleMap);
-
-        MovementView movementView = new MovementView(movementModel, fieldPanel);
-        configureOverlayAlignment(movementView);
-
-        EnemyView enemyView = new EnemyView(enemyModel, fieldPanel);
-        configureOverlayAlignment(enemyView);
-
-        EnvironmentView environmentView = new EnvironmentView(
-                fieldPanel,
-                treeManager,
-                null,
-                null,
-                null
-        );
-        configureOverlayAlignment(environmentView);
-
-        JPanel fieldLayer = createFieldLayer(fieldPanel);
-        JPanel gamePanel = createOverlayGamePanel(
-                movementView,
-                enemyView,
-                environmentView,
-                fieldLayer
-        );
-        TreeThread treePreview = new TreeThread(treeManager, fieldObstacleMap, playerUnit, enemyModel);
-
-        final boolean[] previewInitialized = {false};
-        Runnable initializePreview = () -> {
-            if (previewInitialized[0]) {
-                return;
-            }
-
-            int previewWidth = gamePanel.getWidth();
-            int previewHeight = gamePanel.getHeight();
-            if (previewWidth <= 0 || previewHeight <= 0) {
-                return;
-            }
-
-            gamePanel.doLayout();
-            Rectangle previewFieldBounds = fieldPanel.getFieldBounds();
-            if (previewFieldBounds == null || previewFieldBounds.width <= 0 || previewFieldBounds.height <= 0) {
-                return;
-            }
-
-            previewInitialized[0] = true;
-
-            PredefinedFieldLayout.apply(fieldPanel);
-            treePreview.installerArbresInitiaux();
-
-            Point safeInitialPlayerOffset = findSafeInitialPlayerOffset(fieldPanel, fieldObstacleMap);
-            playerUnit.setPosition(safeInitialPlayerOffset.x, safeInitialPlayerOffset.y);
-
-            enemyModel.setViewportSize(previewWidth, previewHeight);
-            enemyModel.setFieldSize(previewFieldBounds.width, previewFieldBounds.height);
-            seedHomePreviewRabbits(enemyModel);
-
-            gamePanel.repaint();
-        };
-
-        gamePanel.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent event) {
-                initializePreview.run();
-            }
-        });
-        SwingUtilities.invokeLater(initializePreview);
-
-        return gamePanel;
-    }
-
-    /**
-     * Simule quelques ticks pour afficher des lapins deja presents sur l'ecran d'accueil.
-     */
-    private static void seedHomePreviewRabbits(EnemyModel enemyModel) {
-        if (enemyModel == null) {
-            return;
-        }
-
-        final int desiredRabbitCount = 2;
-        final int maxSpawnTicks = 900;
-        for (int tick = 0; tick < maxSpawnTicks && enemyModel.getEnemyUnits().size() < desiredRabbitCount; tick++) {
-            enemyModel.update();
-        }
-
-        // Laisse le temps aux lapins apparus hors ecran d'entrer dans la zone visible.
-        for (int tick = 0; tick < 160; tick++) {
-            enemyModel.update();
-        }
     }
 
     public static void installNewGame(JFrame frame, boolean firstLaunch) {
