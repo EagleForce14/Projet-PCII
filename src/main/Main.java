@@ -279,6 +279,7 @@ public class Main {
                 grotteCombatView,
                 grotteFieldPanel,
                 fieldPanel,
+                jour,
                 centerPanel,
                 FARM_CARD,
                 GROTTE_CARD,

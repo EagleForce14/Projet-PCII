@@ -10,6 +10,7 @@ import model.movement.MovementCollisionMap;
 import model.movement.MovementModel;
 import model.movement.Unit;
 import model.runtime.GamePauseController;
+import model.runtime.Jour;
 import view.EnemyView;
 import view.FieldPanel;
 import view.MovementView;
@@ -47,6 +48,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
     private final JPanel centerPanel;
     private final SidebarPanel sidebarPanel;
     private final FieldPanel farmFieldPanel;
+    private final Jour jour;
     private final Unit playerUnit;
     private final MovementCollisionMap farmCollisionMap;
     private final MovementCollisionMap caveCollisionMap;
@@ -72,6 +74,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
             GrotteCombatView grotteCombatView,
             GrotteFieldPanel grotteFieldPanel,
             FieldPanel farmFieldPanel,
+            Jour jour,
             JPanel centerPanel,
             String farmCardName,
             String grotteCardName,
@@ -92,6 +95,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         this.grotteCombatView = grotteCombatView;
         this.grotteFieldPanel = grotteFieldPanel;
         this.farmFieldPanel = farmFieldPanel;
+        this.jour = jour;
         this.centerPanel = centerPanel;
         this.centerLayout = centerPanel == null ? null : (CardLayout) centerPanel.getLayout();
         this.farmCardName = farmCardName;
@@ -391,6 +395,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         if (sidebarPanel != null) {
             sidebarPanel.setCaveMode(true);
         }
+        if (jour != null) {
+            jour.setTempsFige(true);
+        }
 
         if (playerUnit != null) {
             Point caveSpawnOffset = grotteFieldPanel.getInitialPlayerOffset();
@@ -423,6 +430,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         markActiveCard(farmCardName);
         if (sidebarPanel != null) {
             sidebarPanel.setCaveMode(false);
+        }
+        if (jour != null) {
+            jour.setTempsFige(false);
         }
 
         stopPlayerMovement(playerUnit);

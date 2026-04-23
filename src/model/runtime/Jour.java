@@ -20,7 +20,9 @@ public class Jour extends Thread {
     private volatile boolean partieTerminee;
     private volatile DefeatCause defeatCause;
     private volatile long elapsedInCurrentDayMs;
+    private volatile boolean tempsFige;
     private final GamePauseController pauseController;
+    private final Object freezeLock;
 
     /** Attribut représentant le gestionnaire d'objectifs */
     private GestionnaireObjectifs gestionnaireObjectifs;
@@ -35,7 +37,9 @@ public class Jour extends Thread {
         this.partieTerminee = false;
         this.defeatCause = DefeatCause.NONE;
         this.elapsedInCurrentDayMs = 0L;
+        this.tempsFige = false;
         this.pauseController = GamePauseController.getInstance();
+        this.freezeLock = new Object();
         this.gestionnaireObjectifs = new GestionnaireObjectifs(this);
 
     }
@@ -90,6 +94,23 @@ public class Jour extends Thread {
      */
     public long getTempsRestantAvantProchainJourMs() {
         return Math.max(0L, DELAI_JOUR - elapsedInCurrentDayMs);
+    }
+
+    /**
+     * Dans la grotte, le chrono journalier doit s'immobiliser :
+     * aucun nouveau jour ne peut être évalué tant que le joueur y reste.
+     */
+    public void setTempsFige(boolean tempsFige) {
+        synchronized (freezeLock) {
+            this.tempsFige = tempsFige;
+            if (!tempsFige) {
+                freezeLock.notifyAll();
+            }
+        }
+    }
+
+    public boolean isTempsFige() {
+        return tempsFige;
     }
 
     /** Méthode pour arrêter le thread */
@@ -162,6 +183,10 @@ public class Jour extends Thread {
     private void waitUntilNextDayBoundary() throws InterruptedException {
         while (actif && elapsedInCurrentDayMs < DELAI_JOUR) {
             pauseController.awaitIfPaused();
+            attendreSiTempsFige();
+            if (!actif) {
+                return;
+            }
 
             long remainingMs = DELAI_JOUR - elapsedInCurrentDayMs;
             long chunkMs = Math.min(remainingMs, PAS_MISE_A_JOUR_PROGRESSION_MS);
@@ -169,6 +194,14 @@ public class Jour extends Thread {
             Thread.sleep(chunkMs);
             long elapsedChunkMs = Math.max(1L, System.currentTimeMillis() - startMs);
             elapsedInCurrentDayMs = Math.min(DELAI_JOUR, elapsedInCurrentDayMs + elapsedChunkMs);
+        }
+    }
+
+    private void attendreSiTempsFige() throws InterruptedException {
+        synchronized (freezeLock) {
+            while (actif && tempsFige) {
+                freezeLock.wait();
+            }
         }
     }
 }

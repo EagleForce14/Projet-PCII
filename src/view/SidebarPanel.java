@@ -84,6 +84,7 @@ public class SidebarPanel extends JPanel {
     private final JPanel objectivesContentPanel;
     private final JPanel dayValidationContentPanel;
     private final JPanel dayValidationCardPanel;
+    private final JLabel objectivesInfoLabel;
 
     // Références directes vers les widgets objectifs pour mises à jour incrémentales.
     private final Map<TypeObjectif, JTextArea> objectiveTitleLabelsByType;
@@ -302,6 +303,16 @@ public class SidebarPanel extends JPanel {
         objectivesCardPanel.setAlignmentX(LEFT_ALIGNMENT);
         JPanel objectivesCardRow = createSidebarCardRow(objectivesCardPanel);
 
+        objectivesInfoLabel = new JLabel(
+                "<html>Dans la grotte, le temps est figé.<br>"
+                        + "Les objectifs non réalisés n'entraînent aucune pénalité tant que vous y restez.</html>"
+        );
+        objectivesInfoLabel.setForeground(new Color(196, 230, 255));
+        objectivesInfoLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 10.5f));
+        objectivesInfoLabel.setBorder(BorderFactory.createEmptyBorder(8, 8, 0, 2));
+        objectivesInfoLabel.setVisible(false);
+        objectivesInfoLabel.setAlignmentX(LEFT_ALIGNMENT);
+
         // Panel contenant la liste des objectifs.
         objectivesContentPanel = new JPanel();
         objectivesContentPanel.setOpaque(false);
@@ -309,6 +320,7 @@ public class SidebarPanel extends JPanel {
         objectivesContentPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 6, 2));
         objectivesContentPanel.setAlignmentX(LEFT_ALIGNMENT);
 
+        objectivesCardPanel.add(objectivesInfoLabel, BorderLayout.NORTH);
         objectivesCardPanel.add(objectivesContentPanel, BorderLayout.CENTER);
 
         // Carte du bilan: style distinct + couleurs dynamiques selon validation du jour.
@@ -333,17 +345,21 @@ public class SidebarPanel extends JPanel {
                 g2d.fillRoundRect(0, 0, width - 8, height - 8, 16, 16);
 
                 // Bande supérieure qui change de couleur selon l'état de validation du jour.
-                Color dynamicBandColor = currentDayValidatedState
-                    ? new Color(72, 150, 83, 230)
-                    : new Color(166, 68, 68, 230);
+                Color dynamicBandColor = caveMode
+                        ? new Color(74, 116, 162, 230)
+                        : (currentDayValidatedState
+                            ? new Color(72, 150, 83, 230)
+                            : new Color(166, 68, 68, 230));
                 g2d.setColor(dynamicBandColor);
                 g2d.fillRoundRect(0, 0, width - 8, 18, 16, 16);
                 g2d.fillRect(0, 8, width - 8, 10);
 
                 // Bordure dynamique verte (validé) ou rouge (non validé).
-                Color dynamicBorderColor = currentDayValidatedState
-                        ? new Color(96, 214, 126, 255)
-                        : new Color(232, 98, 98, 255);
+                Color dynamicBorderColor = caveMode
+                        ? new Color(148, 201, 255, 255)
+                        : (currentDayValidatedState
+                            ? new Color(96, 214, 126, 255)
+                            : new Color(232, 98, 98, 255));
                 g2d.setColor(dynamicBorderColor);
                 g2d.drawRoundRect(0, 0, width - 9, height - 9, 16, 16);
                 g2d.dispose();
@@ -511,6 +527,7 @@ public class SidebarPanel extends JPanel {
      */
     private void syncFromModel() {
         if (caveMode) {
+            refreshObjectivesDisplay();
             if (currentLabourEnabledState
                     || currentPlantEnabledState
                     || currentHarvestEnabledState
@@ -909,6 +926,15 @@ public class SidebarPanel extends JPanel {
                     .append(';');
         }
         snapshotBuilder
+                .append("CAVE|")
+                .append(caveMode)
+                .append(';')
+                .append("INFO|")
+                .append(caveMode)
+                .append(';')
+                .append("DAY_STATE|")
+                .append(caveMode)
+                .append(';')
                 .append("DAY|")
                 .append(validatedObjectivesForSnapshot)
                 .append('/')
@@ -944,18 +970,30 @@ public class SidebarPanel extends JPanel {
             progressionLabel.setForeground(isReached ? new Color(172, 227, 143) : new Color(236, 229, 212));
         }
 
+        objectivesInfoLabel.setVisible(caveMode);
+
         // Mise à jour du bilan du jour (texte + couleur d'état).
         // Synthèse métier: le jour est validé si le seuil minimal est atteint.
         boolean isDayValidated = validatedObjectives >= effectiveMinimum;
         boolean shouldRepaintDayValidationCard = isDayValidated != currentDayValidatedState;
         currentDayValidatedState = isDayValidated;
 
-        String dayValidationState = isDayValidated ? "Validee" : "En cours";
-        dayValidationProgressLabel.setText(
-                "Objectifs valides : " + validatedObjectives + " / " + effectiveMinimum
-        );
-        dayValidationStatusLabel.setText("Statut : " + dayValidationState);
-        dayValidationStatusLabel.setForeground(isDayValidated ? new Color(172, 227, 143) : new Color(255, 196, 118));
+        if (caveMode) {
+            dayValidationTitleLabel.setText("Bilan du jour figé");
+            dayValidationProgressLabel.setText(
+                    "Progression conservée : " + validatedObjectives + " / " + effectiveMinimum
+            );
+            dayValidationStatusLabel.setText("Statut : temps figé");
+            dayValidationStatusLabel.setForeground(new Color(182, 222, 255));
+        } else {
+            String dayValidationState = isDayValidated ? "Validee" : "En cours";
+            dayValidationTitleLabel.setText("Bilan du jour");
+            dayValidationProgressLabel.setText(
+                    "Objectifs valides : " + validatedObjectives + " / " + effectiveMinimum
+            );
+            dayValidationStatusLabel.setText("Statut : " + dayValidationState);
+            dayValidationStatusLabel.setForeground(isDayValidated ? new Color(172, 227, 143) : new Color(255, 196, 118));
+        }
 
         // Repaint minimal pour garder l'UI fluide sans clignotement.
         // repaint (sans revalidate) suffit ici: la structure n'a pas changé, seul le contenu textuel évolue.
@@ -1118,6 +1156,7 @@ public class SidebarPanel extends JPanel {
 
         this.caveMode = caveMode;
         caveButton.setText(caveMode ? "Retour ferme" : "Aller grotte");
+        refreshObjectivesDisplay();
         repaint();
     }
 
