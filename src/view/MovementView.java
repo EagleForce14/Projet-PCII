@@ -14,6 +14,10 @@ import java.util.List;
  * On réalise une interface graphique très simple afin de mieux tester la fonctionnalité
  */
 public class MovementView extends JPanel {
+    private static final int FARM_INTERACTION_FOOTPRINT_HORIZONTAL_INSET = 5;
+    private static final int FARM_INTERACTION_FOOTPRINT_BOTTOM_INSET = 2;
+    private static final int FARM_INTERACTION_FOOTPRINT_HEIGHT = 12;
+
     // Le modèle contenant la liste des unités à afficher
     private final MovementModel model;
     private final PlayableMapPanel mapPanel;
@@ -74,10 +78,11 @@ public class MovementView extends JPanel {
             int drawY = centerY - (Unit.SIZE / 2) + u.getY();
 
             // La case active est calculée à partir du rectangle réel du joueur,
-            // sans tenir compte du cercle d'influence. Un chevauchement entre deux
-            // cases annule donc la surbrillance.
+            // mais en ferme on utilise surtout la "zone des pieds" du jardinier.
+            // Cela rend la sélection plus tolérante : il n'est plus nécessaire
+            // de faire rentrer tout le sprite dans une seule case pour agir.
             if (u == playerUnit) {
-                Rectangle playerBounds = new Rectangle(drawX, drawY, Unit.SIZE, Unit.SIZE);
+                Rectangle playerBounds = buildInteractionBounds(drawX, drawY, u.isInCave());
                 Rectangle playerBoundsInField = SwingUtilities.convertRectangle(this, playerBounds, mapPanel.getMapComponent());
                 highlightedCell = mapPanel.getFullyOccupiedCell(playerBoundsInField);
 
@@ -119,6 +124,21 @@ public class MovementView extends JPanel {
         model.setActiveFieldCell(highlightedCell);
         mapPanel.setHighlightedCell(highlightedCell);
         g2d.dispose();
+    }
+
+    private Rectangle buildInteractionBounds(int drawX, int drawY, boolean inCave) {
+        if (inCave) {
+            return new Rectangle(drawX, drawY, Unit.SIZE, Unit.SIZE);
+        }
+
+        int footprintX = drawX + FARM_INTERACTION_FOOTPRINT_HORIZONTAL_INSET;
+        int footprintWidth = Math.max(
+                1,
+                Unit.SIZE - (FARM_INTERACTION_FOOTPRINT_HORIZONTAL_INSET * 2)
+        );
+        int footprintHeight = Math.min(Unit.SIZE, FARM_INTERACTION_FOOTPRINT_HEIGHT);
+        int footprintY = drawY + Unit.SIZE - footprintHeight - FARM_INTERACTION_FOOTPRINT_BOTTOM_INSET;
+        return new Rectangle(footprintX, footprintY, footprintWidth, footprintHeight);
     }
 
     private void drawUnit(Graphics2D g2d, Unit unit, int drawX, int drawY) {
