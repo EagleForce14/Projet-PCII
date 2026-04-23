@@ -12,6 +12,29 @@ import javax.imageio.ImageIO;
 public class ImageLoader {
 
     /**
+     * Charge une image sans journaliser d'erreur si elle est absente.
+     * Utile pour tester plusieurs variantes de nommage d'un même sprite.
+     */
+    public static Image loadOptional(String path) {
+        try {
+            URL imageUrl = ImageLoader.class.getResource(path);
+
+            if (imageUrl != null) {
+                return ImageIO.read(imageUrl);
+            }
+
+            File file = new File("src" + path);
+            if (file.exists()) {
+                return ImageIO.read(file);
+            }
+        } catch (IOException e) {
+            return null;
+        }
+
+        return null;
+    }
+
+    /**
      * Charge une image à partir de son chemin.
      * Cette méthode tente d'abord de charger l'image en tant que ressource du classpath,
      * ce qui est la méthode standard pour les applications Java.
@@ -20,26 +43,9 @@ public class ImageLoader {
      * @return L'objet Image chargé, ou null si le chargement a échoué.
      */
     public static Image load(String path) {
-        Image image = null;
-        try {
-            // Essayer de charger depuis le classpath
-            URL imageUrl = ImageLoader.class.getResource(path);
-            
-            if (imageUrl != null) {
-                image = ImageIO.read(imageUrl);
-            } else {
-                // Si l'image n'est pas trouvée dans le classpath, essayer le système de fichiers local
-                // C'est utile si l'exécution se fait depuis la racine du projet sans que src soit dans le classpath
-                File file = new File("src" + path);
-                if (file.exists()) {
-                    image = ImageIO.read(file);
-                } else {
-                    System.err.println("Image non trouvée : " + path);
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("Erreur d'entrée/sortie lors du chargement de l'image : " + path);
-            e.printStackTrace();
+        Image image = loadOptional(path);
+        if (image == null) {
+            System.err.println("Image non trouvée : " + path);
         }
         return image;
     }

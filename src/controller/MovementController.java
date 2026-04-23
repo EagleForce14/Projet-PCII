@@ -128,6 +128,10 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         int y = activeFieldCell.y;
         if (grilleCulture.canLabourCell(x, y)) {
             grilleCulture.labourerCase(x, y);
+            Unit player = model.getPlayerUnit();
+            if (player != null) {
+                player.playActionAnimation(Unit.SpriteAnimation.LABOURER);
+            }
             fieldPanel.refreshStaticTerrain();
             return;
         }
@@ -135,6 +139,10 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         if (grilleCulture.canRemettreEnHerbeCell(x, y)) {
             grilleCulture.remettreEnHerbeCase(x, y);
             fieldPanel.refreshStaticTerrain();
+            Unit player = model.getPlayerUnit();
+            if (player != null) {
+                player.playActionAnimation(Unit.SpriteAnimation.LABOURER);
+            }
         }
     }
 
@@ -162,6 +170,10 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         }
 
         grilleCulture.planterCulture(activeFieldCell.x, activeFieldCell.y, selectedSeedType, inventaire);
+        Unit player = model.getPlayerUnit();
+        if (player != null) {
+            player.playActionAnimation(Unit.SpriteAnimation.PLANTER);
+        }
         if (!inventaire.possedeGraine(selectedSeedType)) {
             model.clearSelectedInventoryItem();
             inventoryStatusOverlay.repaint();
@@ -192,14 +204,18 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         // On calcule le gain associé.
         int gain = grilleCulture.recolterCulture(activeFieldCell.x, activeFieldCell.y);
 
+        Unit player = model.getPlayerUnit();
+        if (player != null) {
+            player.playActionAnimation(Unit.SpriteAnimation.RECOLTER);
+        }
+
         // Le portefeuille du joueur est mis à jour à part pour garder une logique bien découpée.
-        Unit playerUnit = model.getPlayerUnit();
-        if (playerUnit == null) {
+        if (player == null) {
             playerMoney.credit(gain);
             return;
         }
 
-        playerMoney.creditFromWorld(gain, playerUnit.getX(), playerUnit.getY());
+        playerMoney.creditFromWorld(gain, player.getX(), player.getY());
     }
 
     /**
