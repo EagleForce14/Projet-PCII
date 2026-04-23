@@ -16,7 +16,7 @@ public final class PredefinedFieldLayout {
     private static final int FIRST_TILLED_ROW = 5;
     private static final int TILLED_STRIP_COUNT = 4;
     private static final int TILLED_ROW_STEP = 2;
-    private static final int LEFT_TILLED_CLEARANCE_RADIUS = 1;
+    private static final int LEFT_TILLED_CLEARANCE_RADIUS = 2;
 
     private PredefinedFieldLayout() {
         // Classe utilitaire.

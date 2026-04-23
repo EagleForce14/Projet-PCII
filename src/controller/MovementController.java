@@ -128,11 +128,13 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         int y = activeFieldCell.y;
         if (grilleCulture.canLabourCell(x, y)) {
             grilleCulture.labourerCase(x, y);
+            fieldPanel.refreshStaticTerrain();
             return;
         }
 
         if (grilleCulture.canRemettreEnHerbeCell(x, y)) {
             grilleCulture.remettreEnHerbeCase(x, y);
+            fieldPanel.refreshStaticTerrain();
         }
     }
 
