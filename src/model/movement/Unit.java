@@ -10,6 +10,39 @@ public class Unit {
     public static final int NORMAL_SPEED = 3;
     public static final int PATH_SPEED = 5;
 
+    /**
+     * Etat visuel du jardinier pour la vue principale.
+     */
+    public enum SpriteAnimation {
+        IDLE(1, false),
+        WALK_DOWN(4, false),
+        WALK_RIGHT(4, false),
+        WALK_LEFT(4, false),
+        WALK_UP(5, false),
+        LABOURER(5, true),
+        PLANTER(3, true),
+        RECOLTER(3, true);
+
+        private final int frameCount;
+        private final boolean oneShot;
+
+        SpriteAnimation(int frameCount, boolean oneShot) {
+            this.frameCount = frameCount;
+            this.oneShot = oneShot;
+        }
+
+        public int getFrameCount() {
+            return frameCount;
+        }
+
+        public boolean isOneShot() {
+            return oneShot;
+        }
+    }
+
+    private static final int WALK_FRAME_DELAY = 4;
+    private static final int ACTION_FRAME_DELAY = 4;
+
     // On rappelle que volatile assure que les modifications sont immédiatement visibles par tous les threads
     private volatile int x;
     private volatile int y;
@@ -38,6 +71,9 @@ public class Unit {
     // Cela evite de dupliquer l'etat du joueur entre ferme et grotte.
     private volatile PlayerScene scene = PlayerScene.FARM;
     private volatile FacingDirection facingDirection = FacingDirection.DOWN;
+    private volatile SpriteAnimation spriteAnimation = SpriteAnimation.IDLE;
+    private volatile int animationFrameIndex = 0;
+    private volatile int animationTick = 0;
 
     // Le constructeur de la classe.
     public Unit(int x, int y) {
@@ -48,6 +84,11 @@ public class Unit {
 
     // On met à jour la position selon le flag activé
     public synchronized void updatePosition() {
+        if (spriteAnimation.isOneShot()) {
+            updateOneShotAnimation();
+            return;
+        }
+
         int stepX = 0;
         int stepY = 0;
         if (moveUp) {
@@ -76,6 +117,12 @@ public class Unit {
 
         x = nextX;
         y = nextY;
+
+        if (stepX != 0 || stepY != 0) {
+            updateWalkingAnimation();
+        } else {
+            setIdleAnimation();
+        }
     }
 
     // Getters et Setters
@@ -103,6 +150,21 @@ public class Unit {
         moveRight = false;
     }
 
+    /**
+     * Lance une animation d'action en une seule fois.
+     * A la fin de la sequence, l'unite revient automatiquement à l'immobile.
+     */
+    public synchronized void playActionAnimation(SpriteAnimation animation) {
+        if (animation == null || !animation.isOneShot()) {
+            return;
+        }
+
+        stopMovement();
+        spriteAnimation = animation;
+        animationFrameIndex = 0;
+        animationTick = 0;
+    }
+
     // Force l'unité à rester dans les bornes visibles de la fenêtre.
     public synchronized void clampPosition(int minX, int maxX, int minY, int maxY) {
         x = Math.max(minX, Math.min(x, maxX));
@@ -122,6 +184,14 @@ public class Unit {
 
     public FacingDirection getFacingDirection() {
         return facingDirection;
+    }
+
+    public synchronized SpriteAnimation getSpriteAnimation() {
+        return spriteAnimation;
+    }
+
+    public synchronized int getAnimationFrameIndex() {
+        return animationFrameIndex;
     }
 
     public void setFacingDirection(FacingDirection facingDirection) {
@@ -217,5 +287,63 @@ public class Unit {
         if (moveRight && updateFacing) {
             setFacingDirection(FacingDirection.RIGHT);
         }
+    }
+
+    private void updateWalkingAnimation() {
+        SpriteAnimation desiredAnimation = resolveWalkingAnimation();
+        if (spriteAnimation != desiredAnimation) {
+            spriteAnimation = desiredAnimation;
+            animationFrameIndex = 0;
+            animationTick = 0;
+        }
+
+        animationTick++;
+        if (animationTick < WALK_FRAME_DELAY) {
+            return;
+        }
+
+        animationTick = 0;
+        animationFrameIndex = (animationFrameIndex + 1) % spriteAnimation.getFrameCount();
+    }
+
+    private void updateOneShotAnimation() {
+        animationTick++;
+        if (animationTick < ACTION_FRAME_DELAY) {
+            return;
+        }
+
+        animationTick = 0;
+        if (animationFrameIndex < spriteAnimation.getFrameCount() - 1) {
+            animationFrameIndex++;
+            return;
+        }
+
+        spriteAnimation = SpriteAnimation.IDLE;
+        animationFrameIndex = 0;
+    }
+
+    private void setIdleAnimation() {
+        if (spriteAnimation != SpriteAnimation.IDLE) {
+            spriteAnimation = SpriteAnimation.IDLE;
+            animationFrameIndex = 0;
+            animationTick = 0;
+        }
+    }
+
+    private SpriteAnimation resolveWalkingAnimation() {
+        if (moveUp) {
+            return SpriteAnimation.WALK_UP;
+        }
+        if (moveDown) {
+            return SpriteAnimation.WALK_DOWN;
+        }
+        if (moveLeft) {
+            return SpriteAnimation.WALK_LEFT;
+        }
+        if (moveRight) {
+            return SpriteAnimation.WALK_RIGHT;
+        }
+
+        return SpriteAnimation.IDLE;
     }
 }

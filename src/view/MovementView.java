@@ -6,6 +6,8 @@ import model.movement.Unit;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.List;
 
 /**
@@ -15,10 +17,12 @@ public class MovementView extends JPanel {
     // Le modèle contenant la liste des unités à afficher
     private final MovementModel model;
     private final PlayableMapPanel mapPanel;
+    private final Map<Unit.SpriteAnimation, Image[]> gardenerSprites;
 
     public MovementView(MovementModel model, PlayableMapPanel mapPanel) {
         this.model = model;
         this.mapPanel = mapPanel;
+        this.gardenerSprites = loadGardenerSprites();
         this.setOpaque(false);
         this.setDoubleBuffered(true); // Petite optimisation pour éviter les clignotements
         this.setFocusable(true); // Pour recevoir les événements clavier
@@ -123,12 +127,18 @@ public class MovementView extends JPanel {
             return;
         }
 
-        drawFarmGardener(g2d, drawX, drawY);
+        drawFarmGardener(g2d, unit, drawX, drawY);
     }
 
-    private void drawFarmGardener(Graphics2D g2d, int drawX, int drawY) {
+    private void drawFarmGardener(Graphics2D g2d, Unit unit, int drawX, int drawY) {
         g2d.setColor(new Color(0, 0, 0, 55));
         g2d.fillOval(drawX + 4, drawY + Unit.SIZE - 7, Unit.SIZE - 8, 8);
+
+        Image sprite = resolveGardenerSprite(unit);
+        if (sprite != null) {
+            g2d.drawImage(sprite, drawX, drawY, Unit.SIZE, Unit.SIZE, null);
+            return;
+        }
 
         g2d.setColor(new Color(83, 122, 64));
         g2d.fillRoundRect(drawX + 5, drawY + 5, Unit.SIZE - 10, Unit.SIZE - 8, 9, 9);
@@ -138,6 +148,64 @@ public class MovementView extends JPanel {
         g2d.fillRoundRect(drawX + 6, drawY + 2, Unit.SIZE - 12, 6, 6, 6);
         g2d.setColor(new Color(38, 29, 21));
         g2d.drawRoundRect(drawX + 5, drawY + 5, Unit.SIZE - 11, Unit.SIZE - 9, 9, 9);
+    }
+
+    private Map<Unit.SpriteAnimation, Image[]> loadGardenerSprites() {
+        Map<Unit.SpriteAnimation, Image[]> sprites = new EnumMap<>(Unit.SpriteAnimation.class);
+        sprites.put(Unit.SpriteAnimation.IDLE, new Image[] {
+                loadSprite("/assets/Immobile/JardinierImmobile.png", "/assets/Immobile/FermierImmobile.png", "/assets/Immobile/fermierImmobile.png")
+        });
+        sprites.put(Unit.SpriteAnimation.WALK_DOWN, loadSequence("MarcheBas", "JardinierDesc", "FermierDesc", 4));
+        sprites.put(Unit.SpriteAnimation.WALK_RIGHT, loadSequence("MarcheDroite", "JardinierDroite", "FermierDroite", 4));
+        sprites.put(Unit.SpriteAnimation.WALK_LEFT, loadSequence("MarcheGauche", "JardinierGauche", "FermierGauche", 4));
+        sprites.put(Unit.SpriteAnimation.WALK_UP, loadSequence("MarcheHaut", "JardinierMonte", "FermierMonte", 5));
+        sprites.put(Unit.SpriteAnimation.LABOURER, loadSequence("Labourer", "JardinierLabourer", "FermierLabourer", 5));
+        sprites.put(Unit.SpriteAnimation.PLANTER, loadSequence("Planter", "JardinierPlanter", "FermierPlanter", 3));
+        sprites.put(Unit.SpriteAnimation.RECOLTER, loadSequence("Recolter", "JardinierRecolter", "FermierRecolter", 3));
+        return sprites;
+    }
+
+    private Image[] loadSequence(String folderName, String jardinierPrefix, String fermierPrefix, int frameCount) {
+        Image[] frames = new Image[frameCount];
+        for (int index = 1; index <= frameCount; index++) {
+            frames[index - 1] = loadSprite(
+                    "/assets/" + folderName + "/" + jardinierPrefix + index + ".png",
+                    "/assets/" + folderName + "/" + fermierPrefix + index + ".png"
+            );
+        }
+        return frames;
+    }
+
+    private Image loadSprite(String... candidatePaths) {
+        for (String candidatePath : candidatePaths) {
+            Image sprite = ImageLoader.loadOptional(candidatePath);
+            if (sprite != null) {
+                return sprite;
+            }
+        }
+
+        return null;
+    }
+
+    private Image resolveGardenerSprite(Unit unit) {
+        Image[] frames = gardenerSprites.get(unit.getSpriteAnimation());
+        if (frames == null || frames.length == 0) {
+            return null;
+        }
+
+        int frameIndex = Math.max(0, Math.min(unit.getAnimationFrameIndex(), frames.length - 1));
+        Image sprite = frames[frameIndex];
+        if (sprite != null) {
+            return sprite;
+        }
+
+        for (Image frame : frames) {
+            if (frame != null) {
+                return frame;
+            }
+        }
+
+        return null;
     }
 
     /**
