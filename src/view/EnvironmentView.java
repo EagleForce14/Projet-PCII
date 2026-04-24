@@ -49,6 +49,7 @@ public class EnvironmentView extends JPanel {
     private static final Color WOOD_REWARD_GLOW = new Color(255, 229, 149, 120);
     private static final Color WOOD_REWARD_PARACHUTE = new Color(255, 247, 225, 220);
     private static final Color MONEY_REWARD_GLOW = new Color(255, 206, 108, 125);
+    private static SharedAssets sharedAssets;
 
     private final FieldPanel fieldPanel;
     private final TreeManager treeManager;
@@ -85,36 +86,58 @@ public class EnvironmentView extends JPanel {
             Money playerMoney,
             TopBarPanel topBarPanel
     ) {
+        SharedAssets assets = getSharedAssets();
         this.fieldPanel = fieldPanel;
         this.treeManager = treeManager;
         this.workshopConstructionManager = workshopConstructionManager;
         this.playerMoney = playerMoney;
         this.topBarPanel = topBarPanel;
-        this.barnImage = ImageLoader.load("/assets/barn.png");
-        this.stallImage = ImageLoader.load("/assets/echoppe.png");
-        this.workshopImage = ImageLoader.load("/assets/menuiserie.png");
-        this.bridgeImage = ImageLoader.load("/assets/bridge.png");
-        this.woodImage = ImageLoader.load("/assets/wood.png");
-        this.treeImage = ImageLoader.load("/assets/arbre.png");
-        this.alternateTreeImage = ImageLoader.load("/assets/arbre2.png");
-        this.weepingWillowImage = ImageLoader.load("/assets/Saule pleureur.png");
-        this.trunkImage = ImageLoader.load("/assets/tronc_arbre.png");
-        this.darkTrunkImage = ImageLoader.load("/assets/tronc_sombre.png");
-        this.treeGroundShadowImage = createShadowImage(treeImage, TREE_GROUND_SHADOW_COLOR);
-        this.alternateTreeGroundShadowImage = createShadowImage(alternateTreeImage, TREE_GROUND_SHADOW_COLOR);
-        this.weepingWillowGroundShadowImage = createShadowImage(weepingWillowImage, TREE_GROUND_SHADOW_COLOR);
-        this.trunkGroundShadowImage = createShadowImage(trunkImage, TREE_GROUND_SHADOW_COLOR);
-        this.darkTrunkGroundShadowImage = createShadowImage(darkTrunkImage, TREE_GROUND_SHADOW_COLOR);
-        this.treeShadowImage = createShadowImage(treeImage, TREE_GLOBAL_SHADOW_COLOR);
-        this.alternateTreeShadowImage = createShadowImage(alternateTreeImage, TREE_GLOBAL_SHADOW_COLOR);
-        this.weepingWillowShadowImage = createShadowImage(weepingWillowImage, TREE_GLOBAL_SHADOW_COLOR);
-        this.trunkShadowImage = createShadowImage(trunkImage, TREE_GLOBAL_SHADOW_COLOR);
-        this.darkTrunkShadowImage = createShadowImage(darkTrunkImage, TREE_GLOBAL_SHADOW_COLOR);
-        this.progressFont = CustomFontLoader.loadFont(FONT_PATH, 8.0f);
+        this.barnImage = assets.barnImage;
+        this.stallImage = assets.stallImage;
+        this.workshopImage = assets.workshopImage;
+        this.bridgeImage = assets.bridgeImage;
+        this.woodImage = assets.woodImage;
+        this.treeImage = assets.treeImage;
+        this.alternateTreeImage = assets.alternateTreeImage;
+        this.weepingWillowImage = assets.weepingWillowImage;
+        this.trunkImage = assets.trunkImage;
+        this.darkTrunkImage = assets.darkTrunkImage;
+        this.treeGroundShadowImage = assets.treeGroundShadowImage;
+        this.alternateTreeGroundShadowImage = assets.alternateTreeGroundShadowImage;
+        this.weepingWillowGroundShadowImage = assets.weepingWillowGroundShadowImage;
+        this.trunkGroundShadowImage = assets.trunkGroundShadowImage;
+        this.darkTrunkGroundShadowImage = assets.darkTrunkGroundShadowImage;
+        this.treeShadowImage = assets.treeShadowImage;
+        this.alternateTreeShadowImage = assets.alternateTreeShadowImage;
+        this.weepingWillowShadowImage = assets.weepingWillowShadowImage;
+        this.trunkShadowImage = assets.trunkShadowImage;
+        this.darkTrunkShadowImage = assets.darkTrunkShadowImage;
+        this.progressFont = assets.progressFont;
         this.setOpaque(false);
         this.setDoubleBuffered(true);
     }
 
+    /**
+     * Force le chargement des images partagées de décor avant le premier affichage.
+     */
+    public static void warmupSharedAssets() {
+        getSharedAssets();
+    }
+
+    /**
+     * Renvoie le paquet d'images et de polices communes à toutes les instances de cette vue.
+     */
+    private static synchronized SharedAssets getSharedAssets() {
+        if (sharedAssets == null) {
+            sharedAssets = new SharedAssets();
+        }
+        return sharedAssets;
+    }
+
+    /**
+     * Dessine les éléments fixes du monde :
+     * arbres, bâtiments, ponts et différentes animations visuelles liées au décor.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -172,9 +195,7 @@ public class EnvironmentView extends JPanel {
     }
 
     /**
-     * Les ponts posés deviennent des éléments fixes du décor.
-     * On les dessine donc ici, dans la même couche que les autres éléments
-     * environnementaux, tout en laissant le joueur passer visuellement au-dessus.
+     * Dessine tous les ponts déjà placés sur la carte.
      */
     private void drawPlacedBridges(Graphics2D g2) {
         if (bridgeImage == null || fieldPanel == null) {
@@ -200,8 +221,7 @@ public class EnvironmentView extends JPanel {
     }
 
     /**
-     * La progression est rendue dans la vue d'environnement pour rester visuellement liée
-     * à la menuiserie, au-dessus du bâtiment et devant le décor.
+     * Dessine la barre de progression de construction du pont au-dessus de la menuiserie.
      */
     private void drawWorkshopConstructionProgress(Graphics2D g2) {
         if (workshopConstructionManager == null || !workshopConstructionManager.isConstructionInProgress()) {
@@ -264,9 +284,7 @@ public class EnvironmentView extends JPanel {
     }
 
     /**
-     * Affiche l'avancement de coupe directement au-dessus de chaque arbre entamé.
-     * On réutilise volontairement le même gabarit de barre que pour d'autres objets du jeu
-     * afin que le joueur lise immédiatement la progression.
+     * Dessine une barre de progression au-dessus de chaque arbre en train d'être coupé.
      */
     private void drawTreeCuttingProgress(Graphics2D g2) {
         if (treeManager == null) {
@@ -312,9 +330,8 @@ public class EnvironmentView extends JPanel {
     }
 
     /**
-     * La disparition de l'arbre n'est pas sèche :
-     * on garde un flash court et quelques éclats,
-     * dans le même esprit lisible que la casse des clôtures.
+     * Dessine les petits effets lumineux et les éclats qui apparaissent
+     * quand un arbre vient d'être abattu.
      */
     private void drawTreeFellingEffects(Graphics2D g2) {
         if (treeManager == null) {
@@ -328,8 +345,7 @@ public class EnvironmentView extends JPanel {
     }
 
     /**
-     * L'icône de bois suit une trajectoire rapide et arquée jusqu'à l'inventaire.
-     * La petite canopée blanche sert juste à suggérer l'idée d'un "parachute".
+     * Dessine les animations des morceaux de bois qui volent jusqu'à l'inventaire.
      */
     private void drawWoodRewardEffects(Graphics2D g2) {
         if (treeManager == null) {
@@ -357,9 +373,7 @@ public class EnvironmentView extends JPanel {
     }
 
     /**
-     * Les gains d'argent sont volontairement plus simples que le bois :
-     * une grosse pièce pixel-art qui remonte directement
-     * vers le compteur d'argent du HUD.
+     * Dessine les animations des pièces qui montent jusqu'au compteur d'argent.
      */
     private void drawMoneyRewardEffects(Graphics2D g2) {
         if (playerMoney == null || topBarPanel == null) {
@@ -381,7 +395,9 @@ public class EnvironmentView extends JPanel {
         }
     }
 
-    // Pour dessiner plusieurs arbres
+    /**
+     * Dessine tous les arbres visibles avec leur image et leurs ombres.
+     */
     private void drawTrees(Graphics2D g2) {
         for (TreeInstance tree : treeManager.getTreesSnapshot()) {
             Rectangle cellBounds = fieldPanel.getCellBounds(tree.getGridX(), tree.getGridY());
@@ -402,6 +418,9 @@ public class EnvironmentView extends JPanel {
         }
     }
 
+    /**
+     * Calcule le rectangle exact à l'écran occupé par un arbre ou un tronc.
+     */
     private Rectangle getRenderedTreeBounds(TreeInstance tree, Rectangle cellBounds) {
         if (tree == null || cellBounds == null) {
             return null;
@@ -414,10 +433,17 @@ public class EnvironmentView extends JPanel {
         return computeTreeBounds(getTrunkImage(tree), cellBounds, TreeGeometry.TRUNK_TILE_SCALE, 0.50, 0.50);
     }
 
+    /**
+     * Renvoie l'image à afficher pour un arbre :
+     * arbre adulte ou tronc selon son état.
+     */
     private Image getDisplayedTreeImage(TreeInstance tree) {
         return tree != null && tree.isMature() ? getMatureTreeImage(tree) : getTrunkImage(tree);
     }
 
+    /**
+     * Calcule la zone d'affichage d'un arbre adulte dans sa case.
+     */
     private Rectangle computeMatureTreeBounds(Image image, Rectangle cellBounds, boolean weepingWillow) {
         return computeTreeBounds(
                 image,
@@ -429,8 +455,8 @@ public class EnvironmentView extends JPanel {
     }
 
     /**
-     * Le tronc et l'arbre mature partagent le même centre de case,
-     * mais l'arbre mature s'ancre plus haut pour que sa base reste sur cette case.
+     * Calcule où une image doit être dessinée dans une case,
+     * avec son échelle et son point d'ancrage.
      */
     private Rectangle computeTreeBounds(
             Image image,
@@ -466,7 +492,9 @@ public class EnvironmentView extends JPanel {
         return new Rectangle(drawX, drawY, drawWidth, drawHeight);
     }
 
-    // Pour dessiner l'arbre
+    /**
+     * Dessine une image d'arbre ou de tronc dans le rectangle prévu.
+     */
     private void drawTree(Graphics2D g2, Image image, Rectangle drawBounds) {
         if (image == null || drawBounds == null) {
             return;
@@ -484,8 +512,7 @@ public class EnvironmentView extends JPanel {
     }
 
     /**
-     * Ombre au sol basée sur la silhouette de l'arbre, fortement aplatie.
-     * Cela garde une forme proche du sprite tout en restant visiblement posée au sol.
+     * Dessine l'ombre aplatie d'un arbre directement au sol.
      */
     private void drawTreeShadow(
             Graphics2D g2,
@@ -528,8 +555,7 @@ public class EnvironmentView extends JPanel {
     }
 
     /**
-     * Ajoute une ombre portée très légère derrière tout le sprite.
-     * L'offset reste faible pour éviter un effet trop dramatique.
+     * Dessine une ombre légère derrière tout l'arbre pour mieux le détacher du décor.
      */
     private void drawGlobalTreeShadow(Graphics2D g2, Image shadowImage, Rectangle drawBounds, boolean mature) {
         if (shadowImage == null || drawBounds == null) {
@@ -550,6 +576,9 @@ public class EnvironmentView extends JPanel {
         );
     }
 
+    /**
+     * Choisit l'image correcte pour un arbre adulte selon sa variante visuelle.
+     */
     private Image getMatureTreeImage(TreeInstance tree) {
         if (tree.usesWeepingWillowSprite() && weepingWillowImage != null) {
             return weepingWillowImage;
@@ -562,6 +591,9 @@ public class EnvironmentView extends JPanel {
         return treeImage;
     }
 
+    /**
+     * Choisit l'ombre au sol adaptée à la variante de l'arbre adulte.
+     */
     private BufferedImage getTreeGroundShadowImage(TreeInstance tree) {
         if (tree.usesWeepingWillowSprite() && weepingWillowGroundShadowImage != null) {
             return weepingWillowGroundShadowImage;
@@ -574,6 +606,9 @@ public class EnvironmentView extends JPanel {
         return treeGroundShadowImage;
     }
 
+    /**
+     * Choisit l'ombre générale adaptée à la variante de l'arbre adulte.
+     */
     private BufferedImage getTreeShadowImage(TreeInstance tree) {
         if (tree.usesWeepingWillowSprite() && weepingWillowShadowImage != null) {
             return weepingWillowShadowImage;
@@ -586,6 +621,9 @@ public class EnvironmentView extends JPanel {
         return treeShadowImage;
     }
 
+    /**
+     * Choisit l'image de tronc adaptée à la variante de l'arbre.
+     */
     private Image getTrunkImage(TreeInstance tree) {
         if (tree.usesWeepingWillowSprite() && darkTrunkImage != null) {
             return darkTrunkImage;
@@ -594,6 +632,9 @@ public class EnvironmentView extends JPanel {
         return trunkImage;
     }
 
+    /**
+     * Choisit l'ombre au sol adaptée à un tronc.
+     */
     private BufferedImage getTrunkGroundShadowImage(TreeInstance tree) {
         if (tree.usesWeepingWillowSprite() && darkTrunkGroundShadowImage != null) {
             return darkTrunkGroundShadowImage;
@@ -602,6 +643,9 @@ public class EnvironmentView extends JPanel {
         return trunkGroundShadowImage;
     }
 
+    /**
+     * Choisit l'ombre générale adaptée à un tronc.
+     */
     private BufferedImage getTrunkShadowImage(TreeInstance tree) {
         if (tree.usesWeepingWillowSprite() && darkTrunkShadowImage != null) {
             return darkTrunkShadowImage;
@@ -610,20 +654,24 @@ public class EnvironmentView extends JPanel {
         return trunkShadowImage;
     }
 
-    private BufferedImage createShadowImage(Image image, Color shadowColor) {
+    /**
+     * Fabrique une silhouette colorée à partir d'une image existante.
+     * Cette méthode sert à créer les différentes ombres des arbres.
+     */
+    private static BufferedImage createShadowImage(Image image, Color shadowColor) {
         if (image == null) {
             return null;
         }
 
-        int width = image.getWidth(this);
-        int height = image.getHeight(this);
+        int width = image.getWidth(null);
+        int height = image.getHeight(null);
         if (width <= 0 || height <= 0) {
             return null;
         }
 
         BufferedImage shadowImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         Graphics2D shadowGraphics = shadowImage.createGraphics();
-        shadowGraphics.drawImage(image, 0, 0, this);
+        shadowGraphics.drawImage(image, 0, 0, null);
         shadowGraphics.setComposite(AlphaComposite.SrcIn);
         shadowGraphics.setColor(shadowColor);
         shadowGraphics.fillRect(0, 0, width, height);
@@ -631,13 +679,43 @@ public class EnvironmentView extends JPanel {
         return shadowImage;
     }
 
+    /**
+     * Regroupe toutes les images de décor partagées entre les différentes parties.
+     */
+    private static final class SharedAssets {
+        private final Image barnImage = ImageLoader.load("/assets/barn.png");
+        private final Image stallImage = ImageLoader.load("/assets/echoppe.png");
+        private final Image workshopImage = ImageLoader.load("/assets/menuiserie.png");
+        private final Image bridgeImage = ImageLoader.load("/assets/bridge.png");
+        private final Image woodImage = ImageLoader.load("/assets/wood.png");
+        private final Image treeImage = ImageLoader.load("/assets/arbre.png");
+        private final Image alternateTreeImage = ImageLoader.load("/assets/arbre2.png");
+        private final Image weepingWillowImage = ImageLoader.load("/assets/Saule pleureur.png");
+        private final Image trunkImage = ImageLoader.load("/assets/tronc_arbre.png");
+        private final Image darkTrunkImage = ImageLoader.load("/assets/tronc_sombre.png");
+        private final BufferedImage treeGroundShadowImage = createShadowImage(treeImage, TREE_GROUND_SHADOW_COLOR);
+        private final BufferedImage alternateTreeGroundShadowImage = createShadowImage(alternateTreeImage, TREE_GROUND_SHADOW_COLOR);
+        private final BufferedImage weepingWillowGroundShadowImage = createShadowImage(weepingWillowImage, TREE_GROUND_SHADOW_COLOR);
+        private final BufferedImage trunkGroundShadowImage = createShadowImage(trunkImage, TREE_GROUND_SHADOW_COLOR);
+        private final BufferedImage darkTrunkGroundShadowImage = createShadowImage(darkTrunkImage, TREE_GROUND_SHADOW_COLOR);
+        private final BufferedImage treeShadowImage = createShadowImage(treeImage, TREE_GLOBAL_SHADOW_COLOR);
+        private final BufferedImage alternateTreeShadowImage = createShadowImage(alternateTreeImage, TREE_GLOBAL_SHADOW_COLOR);
+        private final BufferedImage weepingWillowShadowImage = createShadowImage(weepingWillowImage, TREE_GLOBAL_SHADOW_COLOR);
+        private final BufferedImage trunkShadowImage = createShadowImage(trunkImage, TREE_GLOBAL_SHADOW_COLOR);
+        private final BufferedImage darkTrunkShadowImage = createShadowImage(darkTrunkImage, TREE_GLOBAL_SHADOW_COLOR);
+        private final Font progressFont = CustomFontLoader.loadFont(FONT_PATH, 8.0f);
+    }
+
+    /**
+     * Convertit la zone du champ dans le repère de cette vue.
+     */
     private Rectangle getFieldBoundsInView() {
         return SwingUtilities.convertRectangle(fieldPanel, fieldPanel.getFieldBounds(), this);
     }
 
     /**
-     * Valide en un seul endroit les prérequis communs aux effets
-     * ancrés sur une case du terrain.
+     * Renvoie la case écran d'un effet lié à une case du terrain,
+     * ou `null` si l'effet est déjà terminé.
      */
     private Rectangle resolveGridEffectCellBounds(int gridX, int gridY, double progress) {
         if (progress >= 1.0) {
@@ -647,6 +725,9 @@ public class EnvironmentView extends JPanel {
         return fieldPanel.getCellBounds(gridX, gridY);
     }
 
+    /**
+     * Dessine l'explosion visuelle très courte qui apparaît quand un arbre tombe.
+     */
     private void drawTreeFellingEffect(Graphics2D g2, TreeFellingEffect effect, long now) {
         if (effect == null) {
             return;
@@ -690,6 +771,9 @@ public class EnvironmentView extends JPanel {
         effectGraphics.dispose();
     }
 
+    /**
+     * Dessine l'animation d'un morceau de bois qui part d'un arbre et rejoint l'inventaire.
+     */
     private void drawWoodRewardEffect(Graphics2D g2, WoodRewardEffect effect, int destinationX, int destinationY, long now) {
         if (effect == null) {
             return;
@@ -722,6 +806,9 @@ public class EnvironmentView extends JPanel {
         rewardGraphics.dispose();
     }
 
+    /**
+     * Dessine l'animation d'une récompense en argent qui rejoint le compteur du HUD.
+     */
     private void drawMoneyRewardEffect(
             Graphics2D g2,
             MoneyRewardEffect effect,
@@ -765,6 +852,9 @@ public class EnvironmentView extends JPanel {
         rewardGraphics.dispose();
     }
 
+    /**
+     * Dessine un petit débris carré projeté lors de la chute d'un arbre.
+     */
     private void drawTreeShard(Graphics2D g2, int centerX, int centerY, int directionX, int directionY, int distance, int size, double progress) {
         int drawX = centerX + (directionX * distance) - (size / 2);
         int drawY = centerY + (directionY * distance) - (size / 2);
@@ -773,6 +863,9 @@ public class EnvironmentView extends JPanel {
         g2.fillRect(drawX, drawY, size, size);
     }
 
+    /**
+     * Dessine plusieurs débris autour du centre d'un effet de chute d'arbre.
+     */
     private void drawStandardBurstShards(Graphics2D g2, int centerX, int centerY, int debrisDistance, int debrisSize, double progress) {
         drawTreeShard(g2, centerX, centerY, -1, -1, debrisDistance, debrisSize, progress);
         drawTreeShard(g2, centerX, centerY, 1, -1, debrisDistance, debrisSize, progress);
@@ -782,6 +875,9 @@ public class EnvironmentView extends JPanel {
         drawTreeShard(g2, centerX, centerY, 0, 1, debrisDistance + 5, debrisSize, progress);
     }
 
+    /**
+     * Dessine l'icône de bois utilisée pendant l'animation de récompense.
+     */
     private void drawWoodRewardIcon(Graphics2D g2, int iconX, int iconY, int iconSize) {
         if (woodImage != null) {
             g2.drawImage(woodImage, iconX, iconY, iconSize, iconSize, this);
@@ -791,6 +887,9 @@ public class EnvironmentView extends JPanel {
         ProductPixelArt.drawWoodResource(g2, iconX, iconY, 4);
     }
 
+    /**
+     * Écrit un texte avec une petite ombre pour qu'il reste lisible sur le décor.
+     */
     private void drawShadowedText(Graphics2D g2, String text, int x, int y, Color textColor, Color shadowColor) {
         g2.setColor(shadowColor);
         g2.drawString(text, x + 1, y + 1);
@@ -798,6 +897,9 @@ public class EnvironmentView extends JPanel {
         g2.drawString(text, x, y);
     }
 
+    /**
+     * Renvoie le point situé au centre d'un rectangle.
+     */
     private Point getBoundsCenter(Rectangle bounds) {
         return new Point(bounds.x + (bounds.width / 2), bounds.y + (bounds.height / 2));
     }

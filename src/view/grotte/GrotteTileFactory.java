@@ -17,6 +17,12 @@ import view.ImageLoader;
  */
 public final class GrotteTileFactory {
     private static final int BASE_TILE_SIZE = 48;
+    private static Image[] rockTilesCache;
+    private static Image[] roomFloorTilesCache;
+    private static Image[] pathTilesCache;
+    private static Image horizontalWallTileCache;
+    private static Image verticalWallTileCache;
+    private static Image shrineStatueImageCache;
 
     private static final Color ROCK_BACKGROUND = new Color(28, 23, 35);
     private static final Color ROCK_OUTLINE = new Color(18, 14, 22);
@@ -74,58 +80,130 @@ public final class GrotteTileFactory {
     private static final Color WEB = new Color(202, 202, 202, 160);
     private static final Color COIN = new Color(238, 193, 68);
 
+    /**
+     * Empêche de créer un objet de cette classe.
+     * Toutes ses méthodes servent seulement à fabriquer des images.
+     */
     private GrotteTileFactory() {
     }
 
-    public static Image[] createRockTiles() {
-        return new Image[] {
+    /**
+     * Renvoie les tuiles de roche de base utilisées dans la grotte.
+     */
+    public static synchronized Image[] createRockTiles() {
+        if (rockTilesCache != null) {
+            return rockTilesCache;
+        }
+
+        rockTilesCache = new Image[] {
                 createRockTile(0),
                 createRockTile(1),
                 createRockTile(2)
         };
+        return rockTilesCache;
     }
 
-    public static Image[] createRoomFloorTiles() {
-        return new Image[] {
+    /**
+     * Renvoie les tuiles de sol utilisées dans les salles de la grotte.
+     */
+    public static synchronized Image[] createRoomFloorTiles() {
+        if (roomFloorTilesCache != null) {
+            return roomFloorTilesCache;
+        }
+
+        roomFloorTilesCache = new Image[] {
                 createRoomFloorTile(0),
                 createRoomFloorTile(1),
                 createRoomFloorTile(2)
         };
+        return roomFloorTilesCache;
     }
 
-    public static Image[] createPathTiles() {
+    /**
+     * Renvoie la tuile de chemin en pierre.
+     * Si l'image dédiée n'existe pas, la méthode utilise une dalle simple de secours.
+     */
+    public static synchronized Image[] createPathTiles() {
+        if (pathTilesCache != null) {
+            return pathTilesCache;
+        }
+
         Image stonePathTile = ImageLoader.load("/assets/stone_grotte.png");
         if (stonePathTile != null) {
-            return new Image[] { stonePathTile };
-        }
-
+            pathTilesCache = new Image[] { stonePathTile };
+        } else {
         // Si l'asset manque, on retombe sur une dalle neutre de salle
         // plutôt que sur l'ancienne génération procédurale du chemin.
-        return new Image[] { createRoomFloorTile(0) };
+            pathTilesCache = new Image[] { createRoomFloorTile(0) };
+        }
+
+        return pathTilesCache;
     }
 
-    public static Image createHorizontalWallTile() {
+    /**
+     * Renvoie l'image utilisée pour les murs horizontaux.
+     */
+    public static synchronized Image createHorizontalWallTile() {
+        if (horizontalWallTileCache != null) {
+            return horizontalWallTileCache;
+        }
+
         Image wallTile = ImageLoader.load("/assets/grotte_mur_droit.png");
         if (wallTile != null) {
-            return wallTile;
+            horizontalWallTileCache = wallTile;
+            return horizontalWallTileCache;
         }
 
-        return ImageLoader.load("/assets/grotte_mur_vertical.png");
+        horizontalWallTileCache = ImageLoader.load("/assets/grotte_mur_vertical.png");
+        return horizontalWallTileCache;
     }
 
-    public static Image createVerticalWallTile() {
+    /**
+     * Renvoie l'image utilisée pour les murs verticaux.
+     */
+    public static synchronized Image createVerticalWallTile() {
+        if (verticalWallTileCache != null) {
+            return verticalWallTileCache;
+        }
+
         Image wallTile = ImageLoader.load("/assets/grotte_mur_vertical.png");
         if (wallTile != null) {
-            return wallTile;
+            verticalWallTileCache = wallTile;
+            return verticalWallTileCache;
         }
 
-        return ImageLoader.load("/assets/grotte_mur_droit.png");
+        verticalWallTileCache = ImageLoader.load("/assets/grotte_mur_droit.png");
+        return verticalWallTileCache;
     }
 
-    public static Image createShrineStatueImage() {
-        return ImageLoader.load("/assets/statue_grotte.png");
+    /**
+     * Renvoie la statue placée dans la salle du sanctuaire.
+     */
+    public static synchronized Image createShrineStatueImage() {
+        if (shrineStatueImageCache != null) {
+            return shrineStatueImageCache;
+        }
+
+        shrineStatueImageCache = ImageLoader.load("/assets/statue_grotte.png");
+        return shrineStatueImageCache;
     }
 
+    /**
+     * Déclenche le chargement anticipé des principaux visuels statiques de la grotte.
+     */
+    public static void warmupSharedTiles() {
+        createRockTiles();
+        createRoomFloorTiles();
+        createPathTiles();
+        createHorizontalWallTile();
+        createVerticalWallTile();
+        createShrineStatueImage();
+    }
+
+    /**
+     * Dessine le décor supplémentaire de la salle d'eau :
+     * cascade, bassin, cristaux et plantes.
+     */
     public static BufferedImage createWaterRoomOverlay(int width, int height) {
         BufferedImage image = createTransparentCanvas(width, height);
         Graphics2D g2 = createPixelGraphics(image);
@@ -152,6 +230,9 @@ public final class GrotteTileFactory {
         return image;
     }
 
+    /**
+     * Dessine le décor supplémentaire de la salle du sanctuaire.
+     */
     public static BufferedImage createShrineRoomOverlay(int width, int height) {
         BufferedImage image = createTransparentCanvas(width, height);
         Graphics2D g2 = createPixelGraphics(image);
@@ -169,6 +250,9 @@ public final class GrotteTileFactory {
         return image;
     }
 
+    /**
+     * Dessine le décor supplémentaire de la salle de lave.
+     */
     public static BufferedImage createLavaRoomOverlay(int width, int height) {
         BufferedImage image = createTransparentCanvas(width, height);
         Graphics2D g2 = createPixelGraphics(image);
@@ -193,6 +277,9 @@ public final class GrotteTileFactory {
         return image;
     }
 
+    /**
+     * Dessine le décor supplémentaire de la salle d'atelier.
+     */
     public static BufferedImage createWorkshopRoomOverlay(int width, int height) {
         BufferedImage image = createTransparentCanvas(width, height);
         Graphics2D g2 = createPixelGraphics(image);
@@ -206,6 +293,9 @@ public final class GrotteTileFactory {
         return image;
     }
 
+    /**
+     * Dessine le décor supplémentaire de la salle de stockage.
+     */
     public static BufferedImage createStorageRoomOverlay(int width, int height) {
         BufferedImage image = createTransparentCanvas(width, height);
         Graphics2D g2 = createPixelGraphics(image);
@@ -223,6 +313,9 @@ public final class GrotteTileFactory {
         return image;
     }
 
+    /**
+     * Fabrique une tuile de roche en assemblant plusieurs petits blocs.
+     */
     private static BufferedImage createRockTile(int variant) {
         BufferedImage image = createTransparentCanvas(BASE_TILE_SIZE, BASE_TILE_SIZE);
         fill(image, ROCK_BACKGROUND);
@@ -241,6 +334,9 @@ public final class GrotteTileFactory {
         return image;
     }
 
+    /**
+     * Fabrique une tuile de sol de salle avec plusieurs briques et fissures légères.
+     */
     private static BufferedImage createRoomFloorTile(int variant) {
         BufferedImage image = createTransparentCanvas(BASE_TILE_SIZE, BASE_TILE_SIZE);
         fill(image, ROOM_FLOOR_BACKGROUND);
@@ -259,6 +355,9 @@ public final class GrotteTileFactory {
         return image;
     }
 
+    /**
+     * Dessine un bloc de roche avec quelques ombres et lumières simples.
+     */
     private static void paintBoulder(BufferedImage image, int x, int y, int width, int height, int variant) {
         Color fill = variant % 2 == 0 ? ROCK_DARK : ROCK_MID;
         Color light = variant % 3 == 0 ? ROCK_HIGHLIGHT : ROCK_LIGHT;
@@ -273,6 +372,9 @@ public final class GrotteTileFactory {
         putPixel(image, x + Math.max(2, (width * 2) / 3), y + Math.max(2, (height * 2) / 3), darker(fill, 10));
     }
 
+    /**
+     * Dessine une brique rectangulaire avec un contour et des reflets.
+     */
     private static void paintBrick(BufferedImage image, int x, int y, int width, int height, Color fill, Color light) {
         fillRect(image, x, y, width, height, PATH_GROUT);
         fillRect(image, x + 1, y + 1, Math.max(1, width - 2), Math.max(1, height - 2), fill);
@@ -282,6 +384,9 @@ public final class GrotteTileFactory {
         fillRect(image, x + width - 2, y + 2, 1, Math.max(1, height - 4), darker(fill, 18));
     }
 
+    /**
+     * Ajoute de petits points de détail pour éviter que la roche paraisse trop uniforme.
+     */
     private static void drawSpeckles(BufferedImage image, int variant, Color bright, Color dark) {
         for (int i = 0; i < 12; i++) {
             int x = Math.floorMod((i * 7) + (variant * 5), image.getWidth());
@@ -290,6 +395,9 @@ public final class GrotteTileFactory {
         }
     }
 
+    /**
+     * Trace les lignes de joint entre les grandes briques du sol.
+     */
     private static void drawJointShadows(BufferedImage image, Color groutColor) {
         fillRect(image, 0, 14, image.getWidth(), 1, groutColor);
         fillRect(image, 0, 29, image.getWidth(), 1, groutColor);
@@ -297,6 +405,9 @@ public final class GrotteTileFactory {
         fillRect(image, 30, 0, 1, image.getHeight(), groutColor);
     }
 
+    /**
+     * Dessine une fissure simple dans une dalle du sol.
+     */
     private static void drawFloorCrack(BufferedImage image, int startX, int startY, int length) {
         for (int i = 0; i < length; i++) {
             int x = Math.min(image.getWidth() - 2, startX + i);
@@ -308,6 +419,9 @@ public final class GrotteTileFactory {
         }
     }
 
+    /**
+     * Assombrit la moitié basse d'une image pour lui donner un peu de profondeur.
+     */
     private static void shadeLowerHalf(BufferedImage image, Color shadow) {
         for (int y = image.getHeight() / 2; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
@@ -316,6 +430,9 @@ public final class GrotteTileFactory {
         }
     }
 
+    /**
+     * Dessine un bassin d'eau avec quelques reflets et pierres de passage.
+     */
     private static void drawPool(Graphics2D g2, int x, int y, int width, int height) {
         g2.setColor(new Color(WATER_LIGHT.getRed(), WATER_LIGHT.getGreen(), WATER_LIGHT.getBlue(), 38));
         g2.fillOval(x - width / 8, y - height / 8, width + width / 4, height + height / 4);
@@ -331,6 +448,9 @@ public final class GrotteTileFactory {
         drawSteppingStone(g2, x + (width * 2 / 3), y + (height * 3 / 4), Math.max(15, width / 10), Math.max(11, height / 11));
     }
 
+    /**
+     * Dessine une petite pierre sur laquelle on pourrait imaginer marcher au-dessus de l'eau.
+     */
     private static void drawSteppingStone(Graphics2D g2, int x, int y, int width, int height) {
         g2.setColor(new Color(96, 91, 97));
         g2.fillRoundRect(x, y, width, height, Math.max(6, width / 3), Math.max(6, height / 2));
@@ -338,12 +458,18 @@ public final class GrotteTileFactory {
         g2.fillRect(x + 2, y + 2, Math.max(2, width - 5), 2);
     }
 
+    /**
+     * Dessine plusieurs cristaux rapprochés pour former un petit groupe.
+     */
     private static void drawCrystalCluster(Graphics2D g2, int x, int y, int size) {
         drawCrystal(g2, x, y + size / 4, size / 3, size / 2);
         drawCrystal(g2, x + size / 4, y, size / 2, size);
         drawCrystal(g2, x + size / 2, y + size / 5, size / 3, size / 2);
     }
 
+    /**
+     * Dessine un cristal unique.
+     */
     private static void drawCrystal(Graphics2D g2, int x, int y, int width, int height) {
         g2.setColor(CRYSTAL_DARK);
         g2.fillRect(x, y + height / 3, width, Math.max(4, height - height / 3));
@@ -353,6 +479,9 @@ public final class GrotteTileFactory {
         g2.fillRect(x + width / 3, y, Math.max(2, width / 3), Math.max(4, height / 3));
     }
 
+    /**
+     * Dessine la grande statue centrale de la salle du sanctuaire.
+     */
     private static void drawStatue(Graphics2D g2, int x, int y, int width, int height) {
         int baseHeight = Math.max(14, height / 5);
         g2.setColor(PATH_DARK);
@@ -375,6 +504,9 @@ public final class GrotteTileFactory {
         g2.fillRect(x + width * 11 / 16, bodyY + height / 10, width / 8, height / 2);
     }
 
+    /**
+     * Dessine quelques os décoratifs au sol.
+     */
     private static void drawBones(Graphics2D g2, int x, int y, int size) {
         g2.setColor(BONE);
         g2.fillRect(x, y, size / 2, Math.max(4, size / 8));
@@ -387,6 +519,9 @@ public final class GrotteTileFactory {
         g2.fillRect(x + size / 4, y + size / 2, Math.max(6, size / 4), Math.max(4, size / 9));
     }
 
+    /**
+     * Dessine une zone de lave avec des reflets plus clairs au milieu.
+     */
     private static void drawLavaPool(Graphics2D g2, int x, int y, int width, int height) {
         g2.setColor(new Color(LAVA_LIGHT.getRed(), LAVA_LIGHT.getGreen(), LAVA_LIGHT.getBlue(), 52));
         g2.fillOval(x - width / 8, y - height / 8, width + width / 4, height + height / 3);
@@ -400,6 +535,9 @@ public final class GrotteTileFactory {
         g2.fillRect(x + width / 2, y + height / 2, width / 4, Math.max(4, height / 9));
     }
 
+    /**
+     * Dessine un piédestal avec une gemme au sommet.
+     */
     private static void drawPedestal(Graphics2D g2, int x, int y, int width, int height) {
         g2.setColor(PATH_DARK);
         g2.fillRect(x, y + height / 3, width, height - height / 3);
@@ -416,6 +554,9 @@ public final class GrotteTileFactory {
         g2.fillRect(gemX + 2, gemY + 2, Math.max(2, gemSize / 3), Math.max(2, gemSize / 3));
     }
 
+    /**
+     * Dessine un petit pont de pierre dans la salle de lave.
+     */
     private static void drawStoneBridge(Graphics2D g2, int x, int y, int width, int height) {
         g2.setColor(PATH_DARK);
         g2.fillRect(x, y, width, height);
@@ -426,6 +567,9 @@ public final class GrotteTileFactory {
         }
     }
 
+    /**
+     * Dessine une étagère avec quelques objets colorés.
+     */
     private static void drawShelf(Graphics2D g2, int x, int y, int width, int height) {
         g2.setColor(WOOD_DARK);
         g2.fillRect(x, y, width, height);
@@ -442,6 +586,9 @@ public final class GrotteTileFactory {
         g2.fillRect(x + width * 2 / 3, y + height / 2, Math.max(4, width / 8), Math.max(6, height / 5));
     }
 
+    /**
+     * Dessine un établi en bois.
+     */
     private static void drawWorkbench(Graphics2D g2, int x, int y, int width, int height) {
         g2.setColor(WOOD_DARK);
         g2.fillRect(x, y, width, height / 3);
@@ -451,6 +598,9 @@ public final class GrotteTileFactory {
         g2.fillRect(x + 2, y + 2, Math.max(4, width - 4), Math.max(4, height / 6));
     }
 
+    /**
+     * Dessine un chaudron avec son contenu et une petite flamme.
+     */
     private static void drawCauldron(Graphics2D g2, int x, int y, int width, int height) {
         g2.setColor(POT_DARK);
         g2.fillOval(x, y + height / 5, width, height * 3 / 5);
@@ -464,6 +614,9 @@ public final class GrotteTileFactory {
         g2.fillRect(x + width / 3 + 2, y + height * 4 / 5 + 1, Math.max(3, width / 5 - 4), Math.max(2, height / 10));
     }
 
+    /**
+     * Dessine une porte fermée dans la salle de stockage.
+     */
     private static void drawDoor(Graphics2D g2, int x, int y, int width, int height) {
         g2.setColor(new Color(58, 41, 28));
         g2.fillRoundRect(x, y, width, height, Math.max(8, width / 2), Math.max(8, width / 2));
@@ -473,6 +626,9 @@ public final class GrotteTileFactory {
         g2.fillRect(x + width * 3 / 4, y + height / 2, 3, 3);
     }
 
+    /**
+     * Dessine une caisse de stockage en bois.
+     */
     private static void drawCrate(Graphics2D g2, int x, int y, int width, int height) {
         g2.setColor(WOOD_DARK);
         g2.fillRect(x, y, width, height);
@@ -484,6 +640,9 @@ public final class GrotteTileFactory {
         g2.fillRect(x + width * 2 / 3, y + 2, 2, Math.max(4, height - 4));
     }
 
+    /**
+     * Dessine un petit tas de pièces.
+     */
     private static void drawCoinPile(Graphics2D g2, int x, int y, int size) {
         g2.setColor(new Color(COIN.getRed(), COIN.getGreen(), COIN.getBlue(), 65));
         g2.fillOval(x - size / 3, y - size / 4, size + size / 2, size);
@@ -493,6 +652,9 @@ public final class GrotteTileFactory {
         }
     }
 
+    /**
+     * Dessine une toile d'araignée simple dans un coin.
+     */
     private static void drawCobweb(Graphics2D g2, int x, int y, int size) {
         g2.setColor(WEB);
         g2.drawLine(x, y, x + size, y + size);
@@ -502,6 +664,9 @@ public final class GrotteTileFactory {
         g2.drawRect(x + size / 4, y + size / 4, size / 2, size / 2);
     }
 
+    /**
+     * Dessine une petite plante décorative.
+     */
     private static void drawSmallPlant(Graphics2D g2, int x, int y, int size, Color color) {
         g2.setColor(color);
         g2.fillRect(x, y, Math.max(3, size / 4), Math.max(4, size / 3));
@@ -509,6 +674,9 @@ public final class GrotteTileFactory {
         g2.fillRect(x + Math.max(2, size / 4), y + size / 6, Math.max(3, size / 4), Math.max(4, size / 3));
     }
 
+    /**
+     * Dessine une torche avec sa poignée, sa flamme et son halo lumineux.
+     */
     private static void drawTorch(Graphics2D g2, int x, int y, int size) {
         g2.setColor(FLAME_GLOW);
         g2.fillOval(x - size, y - size, size * 3, size * 3);
@@ -526,10 +694,16 @@ public final class GrotteTileFactory {
         g2.fillRect(x + size / 2 - 2, y + 4, 4, Math.max(4, size / 4));
     }
 
+    /**
+     * Crée une image transparente de la taille demandée.
+     */
     private static BufferedImage createTransparentCanvas(int width, int height) {
         return new BufferedImage(Math.max(1, width), Math.max(1, height), BufferedImage.TYPE_INT_ARGB);
     }
 
+    /**
+     * Prépare un contexte de dessin adapté au style pixel-art.
+     */
     private static Graphics2D createPixelGraphics(BufferedImage image) {
         Graphics2D g2 = image.createGraphics();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
@@ -537,6 +711,9 @@ public final class GrotteTileFactory {
         return g2;
     }
 
+    /**
+     * Remplit toute une image avec une seule couleur.
+     */
     private static void fill(BufferedImage image, Color color) {
         Graphics2D g2 = createPixelGraphics(image);
         g2.setColor(color);
@@ -544,6 +721,9 @@ public final class GrotteTileFactory {
         g2.dispose();
     }
 
+    /**
+     * Remplit un rectangle directement dans une image pixel par pixel.
+     */
     private static void fillRect(BufferedImage image, int x, int y, int width, int height, Color color) {
         int startX = Math.max(0, x);
         int startY = Math.max(0, y);
@@ -556,11 +736,17 @@ public final class GrotteTileFactory {
         }
     }
 
+    /**
+     * Remplit un rectangle via l'objet de dessin `Graphics2D`.
+     */
     private static void fillRect(Graphics2D g2, int x, int y, int width, int height, Color color) {
         g2.setColor(color);
         g2.fillRect(x, y, Math.max(1, width), Math.max(1, height));
     }
 
+    /**
+     * Colore un pixel unique si sa position est bien à l'intérieur de l'image.
+     */
     private static void putPixel(BufferedImage image, int x, int y, Color color) {
         if (x < 0 || y < 0 || x >= image.getWidth() || y >= image.getHeight()) {
             return;
@@ -569,6 +755,9 @@ public final class GrotteTileFactory {
         image.setRGB(x, y, color.getRGB());
     }
 
+    /**
+     * Renvoie une version plus sombre d'une couleur donnée.
+     */
     private static Color darker(Color color, int delta) {
         return new Color(
                 Math.max(0, color.getRed() - delta),
@@ -578,6 +767,9 @@ public final class GrotteTileFactory {
         );
     }
 
+    /**
+     * Mélange deux couleurs selon le poids demandé pour la seconde couleur.
+     */
     private static Color blend(Color first, Color second, double secondWeight) {
         double firstWeight = 1.0 - secondWeight;
         return new Color(
@@ -588,10 +780,16 @@ public final class GrotteTileFactory {
         );
     }
 
+    /**
+     * Convertit un ratio en taille réelle à partir d'une taille de référence.
+     */
     private static int scale(int size, double ratio) {
         return Math.max(1, (int) Math.round(size * ratio));
     }
 
+    /**
+     * Garde une composante de couleur dans l'intervalle valide entre 0 et 255.
+     */
     private static int clamp(int value) {
         return Math.max(0, Math.min(255, value));
     }

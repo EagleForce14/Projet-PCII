@@ -20,6 +20,8 @@ public class MovementView extends JPanel {
     private static final double GARDENER_BASE_RENDER_SCALE = 1.25;
     private static final double GARDENER_WALK_RENDER_SCALE = 1.32;
     private static final double GARDENER_ACTION_RENDER_SCALE = 1.45;
+    private static Map<Unit.SpriteAnimation, Image[]> sharedGardenerSprites;
+    private static Map<Unit.SpriteAnimation, Image[]> sharedCaveExplorerSprites;
 
     // Le modèle contenant la liste des unités à afficher
     private final MovementModel model;
@@ -27,17 +29,32 @@ public class MovementView extends JPanel {
     private final Map<Unit.SpriteAnimation, Image[]> gardenerSprites;
     private final Map<Unit.SpriteAnimation, Image[]> caveExplorerSprites;
 
+    /**
+     * Prépare la vue qui affiche le joueur et les autres unités mobiles sur la carte.
+     */
     public MovementView(MovementModel model, PlayableMapPanel mapPanel) {
         this.model = model;
         this.mapPanel = mapPanel;
-        this.gardenerSprites = loadGardenerSprites();
-        this.caveExplorerSprites = loadCaveExplorerSprites();
+        this.gardenerSprites = getSharedGardenerSprites();
+        this.caveExplorerSprites = getSharedCaveExplorerSprites();
         this.setOpaque(false);
         this.setDoubleBuffered(true); // Petite optimisation pour éviter les clignotements
         this.setFocusable(true); // Pour recevoir les événements clavier
     }
 
-    // On boucle sur toutes les unités du modèle pour les dessiner.
+    /**
+     * Force le chargement des sprites partagés du personnage principal
+     * et de sa version utilisée dans la grotte.
+     */
+    public static void warmupSharedSprites() {
+        getSharedGardenerSprites();
+        getSharedCaveExplorerSprites();
+    }
+
+    /**
+     * Redessine toutes les unités visibles, met à jour la case active du joueur
+     * et ajuste aussi la vitesse de déplacement selon le terrain.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g); // Toujours appeler super pour nettoyer le fond
@@ -131,6 +148,10 @@ public class MovementView extends JPanel {
         g2d.dispose();
     }
 
+    /**
+     * Calcule la zone de collision utilisée pour savoir sur quelle case agit le joueur.
+     * Dans la ferme, on utilise surtout la zone des pieds du personnage.
+     */
     private Rectangle buildInteractionBounds(int drawX, int drawY, boolean inCave) {
         if (inCave) {
             return new Rectangle(drawX, drawY, Unit.SIZE, Unit.SIZE);
@@ -146,6 +167,9 @@ public class MovementView extends JPanel {
         return new Rectangle(footprintX, footprintY, footprintWidth, footprintHeight);
     }
 
+    /**
+     * Choisit automatiquement le bon style de dessin selon la zone où se trouve l'unité.
+     */
     private void drawUnit(Graphics2D g2d, Unit unit, int drawX, int drawY) {
         if (unit.isInCave()) {
             drawCaveExplorer(g2d, unit, drawX, drawY);
@@ -155,6 +179,10 @@ public class MovementView extends JPanel {
         drawFarmGardener(g2d, unit, drawX, drawY);
     }
 
+    /**
+     * Dessine le personnage de la ferme avec son ombre et son sprite,
+     * ou un petit dessin simple si aucun sprite n'est disponible.
+     */
     private void drawFarmGardener(Graphics2D g2d, Unit unit, int drawX, int drawY) {
         int renderSize = resolveGardenerRenderSize(unit.getSpriteAnimation());
         int renderX = drawX - ((renderSize - Unit.SIZE) / 2);
@@ -179,6 +207,10 @@ public class MovementView extends JPanel {
         g2d.drawRoundRect(renderX + 5, renderY + 5, renderSize - 11, renderSize - 9, 9, 9);
     }
 
+    /**
+     * Donne la taille d'affichage du personnage selon son animation en cours.
+     * Les actions prennent un peu plus de place pour être plus lisibles.
+     */
     private int resolveGardenerRenderSize(Unit.SpriteAnimation animation) {
         if (animation == Unit.SpriteAnimation.LABOURER
                 || animation == Unit.SpriteAnimation.PLANTER
@@ -196,7 +228,31 @@ public class MovementView extends JPanel {
         return Math.max(Unit.SIZE, (int) Math.round(Unit.SIZE * GARDENER_BASE_RENDER_SCALE));
     }
 
-    private Map<Unit.SpriteAnimation, Image[]> loadGardenerSprites() {
+    /**
+     * Renvoie la banque de sprites partagée du personnage de la ferme.
+     * Les sprites sont chargés une seule fois puis réutilisés partout.
+     */
+    private static synchronized Map<Unit.SpriteAnimation, Image[]> getSharedGardenerSprites() {
+        if (sharedGardenerSprites == null) {
+            sharedGardenerSprites = loadGardenerSprites();
+        }
+        return sharedGardenerSprites;
+    }
+
+    /**
+     * Renvoie la banque de sprites partagée du personnage utilisé dans la grotte.
+     */
+    private static synchronized Map<Unit.SpriteAnimation, Image[]> getSharedCaveExplorerSprites() {
+        if (sharedCaveExplorerSprites == null) {
+            sharedCaveExplorerSprites = loadCaveExplorerSprites();
+        }
+        return sharedCaveExplorerSprites;
+    }
+
+    /**
+     * Charge toutes les animations du personnage quand il se déplace ou agit dans la ferme.
+     */
+    private static Map<Unit.SpriteAnimation, Image[]> loadGardenerSprites() {
         Map<Unit.SpriteAnimation, Image[]> sprites = new EnumMap<>(Unit.SpriteAnimation.class);
         sprites.put(Unit.SpriteAnimation.IDLE, new Image[] {
                 loadSprite("/assets/Immobile/JardinierImmobile.png", "/assets/Immobile/FermierImmobile.png", "/assets/Immobile/fermierImmobile.png")
@@ -211,7 +267,10 @@ public class MovementView extends JPanel {
         return sprites;
     }
 
-    private Map<Unit.SpriteAnimation, Image[]> loadCaveExplorerSprites() {
+    /**
+     * Charge toutes les animations du personnage lorsqu'il est dans la grotte.
+     */
+    private static Map<Unit.SpriteAnimation, Image[]> loadCaveExplorerSprites() {
         Map<Unit.SpriteAnimation, Image[]> sprites = new EnumMap<>(Unit.SpriteAnimation.class);
         sprites.put(Unit.SpriteAnimation.IDLE, new Image[] {
                 loadSprite("/assets/Immobile/JardinierImmobileGun.png")
@@ -223,7 +282,10 @@ public class MovementView extends JPanel {
         return sprites;
     }
 
-    private Image[] loadSequence(String folderName, String jardinierPrefix, String fermierPrefix, int frameCount) {
+    /**
+     * Charge une suite d'images qui forment une animation complète.
+     */
+    private static Image[] loadSequence(String folderName, String jardinierPrefix, String fermierPrefix, int frameCount) {
         Image[] frames = new Image[frameCount];
         for (int index = 1; index <= frameCount; index++) {
             frames[index - 1] = loadSprite(
@@ -234,7 +296,10 @@ public class MovementView extends JPanel {
         return frames;
     }
 
-    private Image loadSprite(String... candidatePaths) {
+    /**
+     * Essaie plusieurs chemins possibles et renvoie la première image trouvée.
+     */
+    private static Image loadSprite(String... candidatePaths) {
         for (String candidatePath : candidatePaths) {
             Image sprite = ImageLoader.loadOptional(candidatePath);
             if (sprite != null) {
@@ -245,6 +310,10 @@ public class MovementView extends JPanel {
         return null;
     }
 
+    /**
+     * Choisit l'image exacte à afficher pour le personnage de la ferme
+     * en fonction de son animation et de sa frame courante.
+     */
     private Image resolveGardenerSprite(Unit unit) {
         Image[] frames = gardenerSprites.get(unit.getSpriteAnimation());
         if (frames == null || frames.length == 0) {
@@ -266,6 +335,10 @@ public class MovementView extends JPanel {
         return null;
     }
 
+    /**
+     * Choisit l'image exacte à afficher pour le personnage de la grotte.
+     * Si l'animation demandée n'existe pas, la méthode cherche un remplacement lisible.
+     */
     private Image resolveCaveExplorerSprite(Unit unit) {
         Unit.SpriteAnimation animation = unit.getSpriteAnimation();
         Image[] frames = caveExplorerSprites.get(animation);
@@ -295,6 +368,9 @@ public class MovementView extends JPanel {
         return null;
     }
 
+    /**
+     * Convertit une direction simple en animation de marche correspondante.
+     */
     private Unit.SpriteAnimation resolveWalkingAnimationForFacing(FacingDirection facingDirection) {
         if (facingDirection == FacingDirection.UP) {
             return Unit.SpriteAnimation.WALK_UP;
@@ -309,8 +385,8 @@ public class MovementView extends JPanel {
     }
 
     /**
-     * Le joueur de la grotte garde volontairement un look très lisible :
-     * corps sombre, visière claire et petit canon orienté dans la direction courante.
+     * Dessine le personnage de la grotte avec son sprite si disponible,
+     * ou avec une version dessinée directement en code sinon.
      */
     private void drawCaveExplorer(Graphics2D g2d, Unit unit, int drawX, int drawY) {
         int renderSize = resolveGardenerRenderSize(unit.getSpriteAnimation());

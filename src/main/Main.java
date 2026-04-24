@@ -50,11 +50,18 @@ public class Main {
     private static final String FARM_CARD = "farm";
     private static final String GROTTE_CARD = "grotte";
 
+    /**
+     * Point d'entrée du programme.
+     * La méthode crée la fenêtre principale puis affiche l'écran d'accueil.
+     */
     public static void main(String[] args) {
         JFrame frame = createFrame();
         installHomeScreen(frame);
     }
 
+    /**
+     * Prépare la fenêtre principale du jeu avec sa taille minimale et sa taille idéale.
+     */
     private static JFrame createFrame() {
         JFrame frame = new JFrame("Projet PCII");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -69,8 +76,13 @@ public class Main {
         return frame;
     }
 
-    // L'écran d'accueil est un panneau simple qui recouvre toute la fenêtre.
+    /**
+     * Affiche l'écran d'accueil dans la fenêtre.
+     * C'est depuis cet écran que le joueur peut démarrer une nouvelle partie.
+     */
     private static void installHomeScreen(JFrame frame) {
+        GameStartupWarmup.startAsync();
+
         // On passe une référence à la JFrame pour pouvoir lancer une nouvelle partie depuis l'écran d'accueil, sans recréer une nouvelle fenêtre.
         HomeScreenPanel homeScreenPanel = new HomeScreenPanel(
                 () -> installNewGame(frame, true),
@@ -85,6 +97,10 @@ public class Main {
         homeScreenPanel.requestFocusInWindow();
     }
 
+    /**
+     * Construit toute une nouvelle partie :
+     * modèles, vues, contrôleurs, overlays et threads de jeu.
+     */
     public static void installNewGame(JFrame frame, boolean firstLaunch) {
         /*
          * Le contrôleur de pause est un singleton partagé entre les sessions.
@@ -327,8 +343,8 @@ public class Main {
     }
 
     /**
-     * Les arbres initiaux étant posés après la création du joueur,
-     * on choisit ici la case libre la plus proche du centre avant de lancer les threads.
+     * Cherche une position de départ sûre pour le joueur.
+     * La méthode parcourt la carte et garde la case libre la plus proche de la position voulue.
      */
     private static Point findSafeInitialPlayerOffset(FieldPanel fieldPanel, FieldObstacleMap fieldObstacleMap) {
         Point preferredOffset = fieldPanel.getInitialPlayerOffset();
@@ -353,18 +369,28 @@ public class Main {
         return bestOffset;
     }
 
+    /**
+     * Vérifie si le joueur peut occuper une position donnée sans traverser un obstacle.
+     */
     private static boolean canSpawnPlayerAt(Point position, FieldObstacleMap fieldObstacleMap) {
         return position != null
                 && Barn.canOccupyCenteredBox(position.x, position.y, Unit.SIZE, Unit.SIZE)
                 && (fieldObstacleMap == null || fieldObstacleMap.canOccupyCenteredBox(position.x, position.y, Unit.SIZE, Unit.SIZE));
     }
 
+    /**
+     * Calcule la distance au carré entre deux points.
+     * On utilise cette version pour comparer les distances sans faire de racine carrée.
+     */
     private static long squaredDistance(Point a, Point b) {
         long deltaX = (long) a.x - b.x;
         long deltaY = (long) a.y - b.y;
         return (deltaX * deltaX) + (deltaY * deltaY);
     }
 
+    /**
+     * Crée le panneau principal qui recevra les différentes couches du jeu.
+     */
     private static JPanel createGamePanel() {
         JPanel gamePanel = new BackgroundPanel(null);
         gamePanel.setMinimumSize(GAME_AREA_MINIMUM_SIZE);
@@ -373,8 +399,7 @@ public class Main {
     }
 
     /**
-     * Toutes les couches superposées utilisent le même centrage dans l'OverlayLayout.
-     * On évite ainsi de répéter les deux mêmes affectations partout dans `Main`.
+     * Place un composant au centre quand il est utilisé dans un `OverlayLayout`.
      */
     private static void configureOverlayAlignment(Component component) {
         if (component == null) {
@@ -388,8 +413,8 @@ public class Main {
     }
 
     /**
-     * Le fond jouable repose systématiquement sur un panneau transparent en BorderLayout.
-     * On factorise cette construction pour la ferme et la grotte.
+     * Crée une couche transparente qui contient la carte de la scène.
+     * Cette couche sert de base pour empiler ensuite les autres éléments visuels.
      */
     private static JPanel createFieldLayer(Component mapComponent) {
         JPanel fieldLayer = new JPanel(new BorderLayout());
@@ -400,9 +425,8 @@ public class Main {
     }
 
     /**
-     * Petit helper de composition :
-     * on garde l'ordre des couches explicite à l'appel,
-     * tout en évitant de recopier le même boilerplate pour chaque scène.
+     * Assemble plusieurs couches graphiques dans un seul panneau superposé.
+     * L'ordre des paramètres correspond à l'ordre d'ajout des couches.
      */
     private static JPanel createOverlayGamePanel(Component... layers) {
         JPanel gamePanel = createGamePanel();
@@ -417,6 +441,10 @@ public class Main {
         return gamePanel;
     }
 
+    /**
+     * Ajoute l'overlay de fin de partie au-dessus d'une scène donnée
+     * et le place tout devant dans l'ordre d'affichage.
+     */
     private static GameOverOverlay installGameOverOverlay(JPanel gamePanel, Jour jour) {
         GameOverOverlay gameOverOverlay = new GameOverOverlay(jour);
         gamePanel.add(gameOverOverlay);

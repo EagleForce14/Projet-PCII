@@ -3,6 +3,8 @@ package view;
 import java.awt.Color;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Fabrique des tuiles de terrain.
@@ -14,12 +16,69 @@ import java.awt.image.BufferedImage;
 public final class TerrainTileFactory {
     private static final int GRASS_PIXEL_TILE_SIZE = 16;
     private static final String GRASS_SYMBOLS = "0123456789ABCDEFGHIJKLMNOPQR";
+    private static final Map<Integer, Image[]> GRASS_TILE_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Integer, Image[]> SOIL_TILE_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Integer, Image[]> STONE_WITH_GRASS_TILE_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Integer, Image[]> RIVER_TILE_CACHE = new ConcurrentHashMap<>();
 
+    /**
+     * Empêche d'instancier cette classe.
+     * Toutes les méthodes sont statiques.
+     */
     private TerrainTileFactory() {
         // Classe utilitaire : on interdit l'instanciation.
     }
 
+    /**
+     * Renvoie la ou les tuiles d'herbe utilisées pour le terrain.
+     */
     public static Image[] createGrassTiles(int pixelSize) {
+        return GRASS_TILE_CACHE.computeIfAbsent(pixelSize, TerrainTileFactory::buildGrassTiles);
+    }
+
+    /**
+     * Renvoie la ou les tuiles de terre utilisées pour les zones labourées.
+     */
+    public static Image[] createSoilTiles(int pixelSize) {
+        return SOIL_TILE_CACHE.computeIfAbsent(pixelSize, TerrainTileFactory::buildSoilTiles);
+    }
+
+    /**
+     * Renvoie la tuile qui mélange pierre et herbe.
+     * Elle sert aux chemins et à certaines zones non cultivables.
+     */
+    public static Image[] createStoneWithGrass(int pixelSize) {
+        return STONE_WITH_GRASS_TILE_CACHE.computeIfAbsent(
+                pixelSize,
+                ignored -> new Image[] { ImageLoader.load("/assets/stone_with_grass.png") }
+        );
+    }
+
+    /**
+     * Renvoie la tuile de rivière utilisée sur la carte.
+     */
+    public static Image[] createRiverTiles(int pixelSize) {
+        return RIVER_TILE_CACHE.computeIfAbsent(
+                pixelSize,
+                ignored -> new Image[] { ImageLoader.load("/assets/river.png") }
+        );
+    }
+
+    /**
+     * Charge à l'avance les tuiles partagées les plus utilisées.
+     */
+    public static void warmupSharedTiles() {
+        createGrassTiles(GRASS_PIXEL_TILE_SIZE);
+        createSoilTiles(GRASS_PIXEL_TILE_SIZE);
+        createStoneWithGrass(GRASS_PIXEL_TILE_SIZE);
+        createRiverTiles(GRASS_PIXEL_TILE_SIZE);
+    }
+
+    /**
+     * Construit les tuiles d'herbe.
+     * Si une vraie image existe dans les assets, elle est utilisée en priorité.
+     */
+    private static Image[] buildGrassTiles(int pixelSize) {
         Image grassTile = ImageLoader.load("/assets/grass.png");
         if (grassTile != null) {
             return new Image[] { grassTile };
@@ -28,7 +87,11 @@ public final class TerrainTileFactory {
         return new Image[] { createReferenceGrassTile(pixelSize) };
     }
 
-    public static Image[] createSoilTiles(int pixelSize) {
+    /**
+     * Construit les tuiles de terre.
+     * Si l'image existe dans les assets, elle est utilisée telle quelle.
+     */
+    private static Image[] buildSoilTiles(int pixelSize) {
         Image soilTile = ImageLoader.load("/assets/Terre.png");
         if (soilTile != null) {
             return new Image[] { soilTile };
@@ -41,32 +104,8 @@ public final class TerrainTileFactory {
     }
 
     /**
-     * Sol mixte pierre + herbe partagé par les chemins
-     * et par la zone désactivée autour de la boutique principale (à droite).
-     */
-    public static Image[] createStoneWithGrass(int pixelSize) {
-        return new Image[] {
-                ImageLoader.load("/assets/stone_with_grass.png")
-        };
-    }
-
-    /**
-     * La rivière repose uniquement sur son sprite dédié.
-     * On évite volontairement toute génération procédurale ici
-     * pour rester parfaitement fidèle à l'image fournie.
-     */
-    public static Image[] createRiverTiles(int pixelSize) {
-        return new Image[] {
-                ImageLoader.load("/assets/river.png")
-        };
-    }
-
-    /**
-     * 1) on aplatit une partie de la grande variation de lumiere
-     *    pour réduire l'impression de surface courbee,
-     * 2) on casse légèrement la direction dominante,
-     * 3) on resserre un peu la palette et on groupe les pixels
-     *    pour obtenir un effet plus sprite / pixel art.
+     * Fabrique une tuile d'herbe en code quand aucune image d'herbe n'est disponible.
+     * La méthode construit d'abord une grande texture, puis la transforme en petite tuile pixel-art.
      */
     private static BufferedImage createReferenceGrassTile(int pixelSize) {
         Color[] sourcePalette = {
@@ -206,6 +245,10 @@ public final class TerrainTileFactory {
      *
      * Le poids du pixel d'origine reste majoritaire.
      */
+    /**
+     * Mélange légèrement la texture d'herbe avec ses rotations
+     * pour casser les grandes directions visibles dans le motif.
+     */
     private static BufferedImage blendGrassWithRotations(BufferedImage source, Color[] palette) {
         int width = source.getWidth();
         int height = source.getHeight();
@@ -251,6 +294,10 @@ public final class TerrainTileFactory {
      * On moyenne chaque bloc pour garder le "dessin" global de l'ancienne herbe,
      * mais le passage sur une petite grille rend naturellement la lecture plus pixel art.
      */
+    /**
+     * Réduit une grande texture en une petite tuile 16x16.
+     * Cela donne une apparence plus proche d'un vrai sprite de terrain.
+     */
     private static BufferedImage downscaleGrassTile(BufferedImage source, Color[] palette) {
         BufferedImage result = createTransparentTile(TerrainTileFactory.GRASS_PIXEL_TILE_SIZE);
         double scale = (double) source.getWidth() / TerrainTileFactory.GRASS_PIXEL_TILE_SIZE;
@@ -294,6 +341,9 @@ public final class TerrainTileFactory {
      * Ce passage ne change pas le style de base.
      * Il rend juste les paquets de vert un peu plus francs,
      * ce qui rapproche la tuile de la lecture de la terre.
+     */
+    /**
+     * Regroupe légèrement les pixels voisins pour donner un rendu plus compact et plus lisible.
      */
     private static BufferedImage clusterGrassPixels(BufferedImage source, Color[] palette) {
         int width = source.getWidth();
@@ -347,6 +397,9 @@ public final class TerrainTileFactory {
      *
      * Cela laisse vivre les details fins,
      * mais ca reduit l'effet de grande vague visible quand la tuile se repete.
+     */
+    /**
+     * Réduit les contrastes trop marqués qui donnent une impression de relief arrondi à l'herbe.
      */
     private static BufferedImage neutralizeGrassCurvature(BufferedImage source, Color[] palette) {
         int width = source.getWidth();
@@ -459,6 +512,10 @@ public final class TerrainTileFactory {
 //        }
 //    }
 
+    /**
+     * Redimensionne une image sans lisser les pixels.
+     * C'est important pour conserver un rendu net en pixel-art.
+     */
     private static BufferedImage scaleNearest(BufferedImage source, int pixelSize) {
         if (pixelSize == source.getWidth()) {
             return source;
@@ -475,18 +532,30 @@ public final class TerrainTileFactory {
         return scaled;
     }
 
+    /**
+     * Crée une image transparente carrée de la taille demandée.
+     */
     private static BufferedImage createTransparentTile(int pixelSize) {
         return new BufferedImage(pixelSize, pixelSize, BufferedImage.TYPE_INT_ARGB);
     }
 
+    /**
+     * Calcule la luminosité approximative d'une couleur.
+     */
     private static double getLuminance(Color color) {
         return (0.299 * color.getRed()) + (0.587 * color.getGreen()) + (0.114 * color.getBlue());
     }
 
+    /**
+     * Empêche une composante de couleur de sortir de l'intervalle autorisé entre 0 et 255.
+     */
     private static int clampColor(int value) {
         return Math.max(0, Math.min(255, value));
     }
 
+    /**
+     * Cherche dans une palette la couleur la plus proche de la couleur demandée.
+     */
     private static Color findNearestPaletteColor(Color target, Color[] palette) {
         Color best = palette[0];
         long bestDistance = Long.MAX_VALUE;
@@ -503,11 +572,17 @@ public final class TerrainTileFactory {
         return best;
     }
 
+    /**
+     * Calcule un modulo toujours positif, même si la valeur de départ est négative.
+     */
     private static int floorMod(int value, int modulo) {
         int result = value % modulo;
         return result < 0 ? result + modulo : result;
     }
 
+    /**
+     * Colore un seul pixel d'une image si sa position est valide.
+     */
     private static void paintPixel(BufferedImage image, int x, int y, Color color) {
         if (x < 0 || y < 0 || x >= image.getWidth() || y >= image.getHeight()) {
             return;
