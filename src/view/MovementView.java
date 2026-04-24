@@ -17,16 +17,21 @@ public class MovementView extends JPanel {
     private static final int FARM_INTERACTION_FOOTPRINT_HORIZONTAL_INSET = 5;
     private static final int FARM_INTERACTION_FOOTPRINT_BOTTOM_INSET = 2;
     private static final int FARM_INTERACTION_FOOTPRINT_HEIGHT = 12;
+    private static final double GARDENER_BASE_RENDER_SCALE = 1.25;
+    private static final double GARDENER_WALK_RENDER_SCALE = 1.32;
+    private static final double GARDENER_ACTION_RENDER_SCALE = 1.45;
 
     // Le modèle contenant la liste des unités à afficher
     private final MovementModel model;
     private final PlayableMapPanel mapPanel;
     private final Map<Unit.SpriteAnimation, Image[]> gardenerSprites;
+    private final Map<Unit.SpriteAnimation, Image[]> caveExplorerSprites;
 
     public MovementView(MovementModel model, PlayableMapPanel mapPanel) {
         this.model = model;
         this.mapPanel = mapPanel;
         this.gardenerSprites = loadGardenerSprites();
+        this.caveExplorerSprites = loadCaveExplorerSprites();
         this.setOpaque(false);
         this.setDoubleBuffered(true); // Petite optimisation pour éviter les clignotements
         this.setFocusable(true); // Pour recevoir les événements clavier
@@ -151,23 +156,44 @@ public class MovementView extends JPanel {
     }
 
     private void drawFarmGardener(Graphics2D g2d, Unit unit, int drawX, int drawY) {
+        int renderSize = resolveGardenerRenderSize(unit.getSpriteAnimation());
+        int renderX = drawX - ((renderSize - Unit.SIZE) / 2);
+        int renderY = drawY - (renderSize - Unit.SIZE);
+
         g2d.setColor(new Color(0, 0, 0, 55));
         g2d.fillOval(drawX + 4, drawY + Unit.SIZE - 7, Unit.SIZE - 8, 8);
 
         Image sprite = resolveGardenerSprite(unit);
         if (sprite != null) {
-            g2d.drawImage(sprite, drawX, drawY, Unit.SIZE, Unit.SIZE, null);
+            g2d.drawImage(sprite, renderX, renderY, renderSize, renderSize, null);
             return;
         }
 
         g2d.setColor(new Color(83, 122, 64));
-        g2d.fillRoundRect(drawX + 5, drawY + 5, Unit.SIZE - 10, Unit.SIZE - 8, 9, 9);
+        g2d.fillRoundRect(renderX + 5, renderY + 5, renderSize - 10, renderSize - 8, 9, 9);
         g2d.setColor(new Color(229, 209, 171));
-        g2d.fillRoundRect(drawX + 8, drawY + 7, Unit.SIZE - 16, 10, 6, 6);
+        g2d.fillRoundRect(renderX + 8, renderY + 7, renderSize - 16, 10, 6, 6);
         g2d.setColor(new Color(82, 52, 34));
-        g2d.fillRoundRect(drawX + 6, drawY + 2, Unit.SIZE - 12, 6, 6, 6);
+        g2d.fillRoundRect(renderX + 6, renderY + 2, renderSize - 12, 6, 6, 6);
         g2d.setColor(new Color(38, 29, 21));
-        g2d.drawRoundRect(drawX + 5, drawY + 5, Unit.SIZE - 11, Unit.SIZE - 9, 9, 9);
+        g2d.drawRoundRect(renderX + 5, renderY + 5, renderSize - 11, renderSize - 9, 9, 9);
+    }
+
+    private int resolveGardenerRenderSize(Unit.SpriteAnimation animation) {
+        if (animation == Unit.SpriteAnimation.LABOURER
+                || animation == Unit.SpriteAnimation.PLANTER
+                || animation == Unit.SpriteAnimation.RECOLTER) {
+            return Math.max(Unit.SIZE, (int) Math.round(Unit.SIZE * GARDENER_ACTION_RENDER_SCALE));
+        }
+
+        if (animation == Unit.SpriteAnimation.WALK_DOWN
+                || animation == Unit.SpriteAnimation.WALK_RIGHT
+                || animation == Unit.SpriteAnimation.WALK_LEFT
+                || animation == Unit.SpriteAnimation.WALK_UP) {
+            return Math.max(Unit.SIZE, (int) Math.round(Unit.SIZE * GARDENER_WALK_RENDER_SCALE));
+        }
+
+        return Math.max(Unit.SIZE, (int) Math.round(Unit.SIZE * GARDENER_BASE_RENDER_SCALE));
     }
 
     private Map<Unit.SpriteAnimation, Image[]> loadGardenerSprites() {
@@ -182,6 +208,18 @@ public class MovementView extends JPanel {
         sprites.put(Unit.SpriteAnimation.LABOURER, loadSequence("Labourer", "JardinierLabourer", "FermierLabourer", 5));
         sprites.put(Unit.SpriteAnimation.PLANTER, loadSequence("Planter", "JardinierPlanter", "FermierPlanter", 3));
         sprites.put(Unit.SpriteAnimation.RECOLTER, loadSequence("Recolter", "JardinierRecolter", "FermierRecolter", 3));
+        return sprites;
+    }
+
+    private Map<Unit.SpriteAnimation, Image[]> loadCaveExplorerSprites() {
+        Map<Unit.SpriteAnimation, Image[]> sprites = new EnumMap<>(Unit.SpriteAnimation.class);
+        sprites.put(Unit.SpriteAnimation.IDLE, new Image[] {
+                loadSprite("/assets/Immobile/JardinierImmobileGun.png")
+        });
+        sprites.put(Unit.SpriteAnimation.WALK_DOWN, loadSequence("MarcheBas", "JardinierBasGun", "JardinierBasGun", 4));
+        sprites.put(Unit.SpriteAnimation.WALK_RIGHT, loadSequence("MarcheDroite", "JardinierDroiteGun", "JardinierDroiteGun", 4));
+        sprites.put(Unit.SpriteAnimation.WALK_LEFT, loadSequence("MarcheGauche", "JardinierGaucheGun", "JardinierGaucheGun", 4));
+        sprites.put(Unit.SpriteAnimation.WALK_UP, loadSequence("MarcheHaut", "JardinierHautGun", "JardinierHautGun", 4));
         return sprites;
     }
 
@@ -228,43 +266,101 @@ public class MovementView extends JPanel {
         return null;
     }
 
+    private Image resolveCaveExplorerSprite(Unit unit) {
+        Unit.SpriteAnimation animation = unit.getSpriteAnimation();
+        Image[] frames = caveExplorerSprites.get(animation);
+
+        if (frames == null || frames.length == 0) {
+            frames = caveExplorerSprites.get(resolveWalkingAnimationForFacing(unit.getFacingDirection()));
+        }
+        if (frames == null || frames.length == 0) {
+            frames = caveExplorerSprites.get(Unit.SpriteAnimation.IDLE);
+        }
+        if (frames == null || frames.length == 0) {
+            return null;
+        }
+
+        int frameIndex = Math.max(0, Math.min(unit.getAnimationFrameIndex(), frames.length - 1));
+        Image sprite = frames[frameIndex];
+        if (sprite != null) {
+            return sprite;
+        }
+
+        for (Image frame : frames) {
+            if (frame != null) {
+                return frame;
+            }
+        }
+
+        return null;
+    }
+
+    private Unit.SpriteAnimation resolveWalkingAnimationForFacing(FacingDirection facingDirection) {
+        if (facingDirection == FacingDirection.UP) {
+            return Unit.SpriteAnimation.WALK_UP;
+        }
+        if (facingDirection == FacingDirection.LEFT) {
+            return Unit.SpriteAnimation.WALK_LEFT;
+        }
+        if (facingDirection == FacingDirection.RIGHT) {
+            return Unit.SpriteAnimation.WALK_RIGHT;
+        }
+        return Unit.SpriteAnimation.WALK_DOWN;
+    }
+
     /**
      * Le joueur de la grotte garde volontairement un look très lisible :
      * corps sombre, visière claire et petit canon orienté dans la direction courante.
      */
     private void drawCaveExplorer(Graphics2D g2d, Unit unit, int drawX, int drawY) {
+        int renderSize = resolveGardenerRenderSize(unit.getSpriteAnimation());
+        int renderX = drawX - ((renderSize - Unit.SIZE) / 2);
+        int renderY = drawY - (renderSize - Unit.SIZE);
+
+        Image caveSprite = resolveCaveExplorerSprite(unit);
+        if (caveSprite != null) {
+            g2d.setColor(new Color(0, 0, 0, 75));
+            g2d.fillOval(drawX + 4, drawY + Unit.SIZE - 7, Unit.SIZE - 8, 8);
+            g2d.drawImage(caveSprite, renderX, renderY, renderSize, renderSize, null);
+            return;
+        }
+
         g2d.setColor(new Color(0, 0, 0, 75));
         g2d.fillOval(drawX + 4, drawY + Unit.SIZE - 7, Unit.SIZE - 8, 8);
 
+        int bodyInset = Math.max(4, renderSize / 8);
+        int visorInset = Math.max(8, renderSize / 6);
+        int visorHeight = Math.max(8, renderSize / 6);
+
         g2d.setColor(new Color(29, 37, 53));
-        g2d.fillRoundRect(drawX + 4, drawY + 4, Unit.SIZE - 8, Unit.SIZE - 8, 10, 10);
+        g2d.fillRoundRect(renderX + bodyInset, renderY + bodyInset, renderSize - (bodyInset * 2), renderSize - (bodyInset * 2), 10, 10);
         g2d.setColor(new Color(84, 215, 221));
-        g2d.fillRoundRect(drawX + 8, drawY + 8, Unit.SIZE - 16, 8, 6, 6);
+        g2d.fillRoundRect(renderX + visorInset, renderY + visorInset, renderSize - (visorInset * 2), visorHeight, 6, 6);
 
         FacingDirection facingDirection = unit.getFacingDirection();
-        int weaponWidth = 8;
-        int weaponHeight = 4;
-        int weaponX = drawX + ((Unit.SIZE - weaponWidth) / 2);
-        int weaponY = drawY + ((Unit.SIZE - weaponHeight) / 2);
+        int weaponWidth = Math.max(8, renderSize / 6);
+        int weaponHeight = Math.max(4, renderSize / 11);
+        int weaponX = renderX + ((renderSize - weaponWidth) / 2);
+        int weaponY = renderY + ((renderSize - weaponHeight) / 2);
         if (facingDirection == FacingDirection.UP) {
-            weaponY = drawY + 2;
-            weaponHeight = 8;
-            weaponWidth = 4;
-            weaponX = drawX + ((Unit.SIZE - weaponWidth) / 2);
+            weaponY = renderY + Math.max(2, renderSize / 16);
+            weaponHeight = Math.max(8, renderSize / 6);
+            weaponWidth = Math.max(4, renderSize / 11);
+            weaponX = renderX + ((renderSize - weaponWidth) / 2);
         } else if (facingDirection == FacingDirection.DOWN) {
-            weaponY = drawY + Unit.SIZE - 10;
-            weaponHeight = 8;
-            weaponWidth = 4;
-            weaponX = drawX + ((Unit.SIZE - weaponWidth) / 2);
+            weaponY = renderY + renderSize - Math.max(10, renderSize / 8);
+            weaponHeight = Math.max(8, renderSize / 6);
+            weaponWidth = Math.max(4, renderSize / 11);
+            weaponX = renderX + ((renderSize - weaponWidth) / 2);
         } else if (facingDirection == FacingDirection.LEFT) {
-            weaponX = drawX + 2;
+            weaponX = renderX + Math.max(2, renderSize / 16);
         } else if (facingDirection == FacingDirection.RIGHT) {
-            weaponX = drawX + Unit.SIZE - 10;
+            weaponX = renderX + renderSize - Math.max(10, renderSize / 8);
         }
 
         g2d.setColor(new Color(208, 174, 90));
         g2d.fillRoundRect(weaponX, weaponY, weaponWidth, weaponHeight, 4, 4);
         g2d.setColor(new Color(30, 24, 20));
-        g2d.drawRoundRect(drawX + 4, drawY + 4, Unit.SIZE - 9, Unit.SIZE - 9, 10, 10);
+        g2d.drawRoundRect(renderX + bodyInset, renderY + bodyInset, renderSize - (bodyInset * 2) - 1, renderSize - (bodyInset * 2) - 1, 10, 10);
     }
 }
