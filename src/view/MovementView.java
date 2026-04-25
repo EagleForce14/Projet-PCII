@@ -340,7 +340,7 @@ public class MovementView extends JPanel {
      * Si l'animation demandée n'existe pas, la méthode cherche un remplacement lisible.
      */
     private Image resolveCaveExplorerSprite(Unit unit) {
-        Unit.SpriteAnimation animation = unit.getSpriteAnimation();
+        Unit.SpriteAnimation animation = resolveDisplayedCaveAnimation(unit);
         Image[] frames = caveExplorerSprites.get(animation);
 
         if (frames == null || frames.length == 0) {
@@ -369,6 +369,19 @@ public class MovementView extends JPanel {
     }
 
     /**
+     * En grotte, il n'existe qu'un seul sprite immobile "de face".
+     * Pour éviter que le personnage se retourne brutalement à l'arrêt,
+     * on affiche donc la première frame de la dernière direction jouée.
+     */
+    private Unit.SpriteAnimation resolveDisplayedCaveAnimation(Unit unit) {
+        Unit.SpriteAnimation animation = unit.getSpriteAnimation();
+        if (animation == Unit.SpriteAnimation.IDLE) {
+            return resolveWalkingAnimationForFacing(unit.getFacingDirection());
+        }
+        return animation;
+    }
+
+    /**
      * Convertit une direction simple en animation de marche correspondante.
      */
     private Unit.SpriteAnimation resolveWalkingAnimationForFacing(FacingDirection facingDirection) {
@@ -389,7 +402,7 @@ public class MovementView extends JPanel {
      * ou avec une version dessinée directement en code sinon.
      */
     private void drawCaveExplorer(Graphics2D g2d, Unit unit, int drawX, int drawY) {
-        int renderSize = resolveGardenerRenderSize(unit.getSpriteAnimation());
+        int renderSize = resolveGardenerRenderSize(resolveDisplayedCaveAnimation(unit));
         int renderX = drawX - ((renderSize - Unit.SIZE) / 2);
         int renderY = drawY - (renderSize - Unit.SIZE);
 

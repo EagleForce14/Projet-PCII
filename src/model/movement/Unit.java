@@ -293,7 +293,9 @@ public class Unit {
         SpriteAnimation desiredAnimation = resolveWalkingAnimation();
         if (spriteAnimation != desiredAnimation) {
             spriteAnimation = desiredAnimation;
-            animationFrameIndex = 0;
+            if (!isInCave() || animationFrameIndex >= desiredAnimation.getFrameCount()) {
+                animationFrameIndex = 0;
+            }
             animationTick = 0;
         }
 
@@ -325,7 +327,6 @@ public class Unit {
     private void setIdleAnimation() {
         if (spriteAnimation != SpriteAnimation.IDLE) {
             spriteAnimation = SpriteAnimation.IDLE;
-            animationFrameIndex = 0;
             animationTick = 0;
         }
     }
