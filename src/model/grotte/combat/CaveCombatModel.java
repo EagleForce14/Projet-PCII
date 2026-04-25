@@ -103,8 +103,8 @@ public final class CaveCombatModel {
     }
 
     /**
-     * Une nouvelle tentative dans la grotte redonne toute la vie au joueur
-     * car le reste du jeu ne possède pas encore de système de soins.
+     * Méthode permettant d'entrer dans la cave
+     * Une nouvelle entrée dans la grotte redonne toute la vie au joueur
      */
     public void enterCave() {
         projectiles.clear();
@@ -121,6 +121,7 @@ public final class CaveCombatModel {
         }
     }
 
+    // Méthode permettant de nettoyer les attributs liés à la grotte et de sortir de la grotte
     public void exitCave() {
         active = false;
         playerFiring = false;
@@ -149,7 +150,7 @@ public final class CaveCombatModel {
     }
 
     /**
-     * Horodatage du dernier ramassage en grotte.
+     * Horodatage du dernier ramassage d'item dans la grotte.
      * L'overlay d'inventaire l'utilise pour déclencher son animation temporaire.
      */
     public long getLastInventoryPickupTimeMs() {
