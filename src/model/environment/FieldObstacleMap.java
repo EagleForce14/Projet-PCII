@@ -151,6 +151,10 @@ public class FieldObstacleMap implements MovementCollisionMap {
     public boolean canOccupyCenteredBox(double centerX, double centerY, int width, int height, boolean blockFences) {
         Rectangle entityBounds = BuildingGeometry.buildCenteredBounds(centerX, centerY, width, height);
 
+        if (blockFences && intersectsTopRiverRabbitBlock(entityBounds)) {
+            return false;
+        }
+
         if (blockFences && intersectsRightRiverUpperDecoration(entityBounds)) {
             return false;
         }
@@ -332,6 +336,33 @@ public class FieldObstacleMap implements MovementCollisionMap {
     private boolean intersectsRightRiverUpperDecoration(Rectangle entityBounds) {
         Rectangle blockedBounds = fieldPanel.getRightRiverUpperDecorationLogicalBounds();
         return blockedBounds != null && blockedBounds.intersects(entityBounds);
+    }
+
+    /**
+     * Empêche les lapins de contourner la rivière décorative en passant juste
+     * au-dessus de sa toute première case, hors du champ visible du joueur.
+     */
+    private boolean intersectsTopRiverRabbitBlock(Rectangle entityBounds) {
+        for (int column = 0; column < fieldPanel.getColumnCount(); column++) {
+            if (!fieldPanel.getGrilleCulture().hasRiver(column, 0)) {
+                continue;
+            }
+
+            Rectangle topRiverCellBounds = fieldPanel.getLogicalCellBounds(column, 0);
+            if (topRiverCellBounds == null) {
+                return false;
+            }
+
+            Rectangle topRiverBlockBounds = new Rectangle(
+                    topRiverCellBounds.x,
+                    topRiverCellBounds.y - topRiverCellBounds.height,
+                    topRiverCellBounds.width,
+                    topRiverCellBounds.height
+            );
+            return topRiverBlockBounds.intersects(entityBounds);
+        }
+
+        return false;
     }
 
     /**

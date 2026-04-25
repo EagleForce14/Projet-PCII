@@ -9,6 +9,7 @@ import model.environment.TreeInstance;
 import model.movement.MovementModel;
 import model.movement.Unit;
 import model.management.Inventaire;
+import model.objective.ObjectifCompteur;
 import model.objective.ObjectifJournalier;
 import model.objective.TypeObjectif;
 import model.runtime.Jour;
@@ -104,6 +105,7 @@ public class SidebarPanel extends JPanel {
     private boolean currentWaterEnabledState;
     private boolean currentPathEnabledState;
     private boolean currentPathVisibleState;
+    private String currentPathButtonLabel;
     private boolean currentCompostEnabledState;
     private boolean currentCompostVisibleState;
     private boolean currentCutTreeEnabledState;
@@ -435,6 +437,7 @@ public class SidebarPanel extends JPanel {
                 false,
                 false,
                 false,
+                "Poser chemin",
                 false,
                 false,
                 false,
@@ -552,6 +555,7 @@ public class SidebarPanel extends JPanel {
                         false,
                         false,
                         false,
+                        "Poser chemin",
                         false,
                         false,
                         false,
@@ -571,8 +575,8 @@ public class SidebarPanel extends JPanel {
         boolean shouldEnableHarvest = canHarvestActiveCell();
         boolean shouldEnableClean = canCleanActiveCell();
         boolean shouldEnableWater = canWaterActiveCell();
-        boolean shouldShowPathAction = movementModel.getSelectedFacilityType() == FacilityType.CHEMIN;
-        boolean shouldEnablePath = shouldShowPathAction && canPlacePathActiveCell();
+        boolean shouldShowPathAction = shouldShowPathAction();
+        boolean shouldEnablePath = canUsePathButtonOnActiveCell();
         boolean shouldDisplayCompostAction = shouldShowCompostAction();
         boolean shouldEnableCompost = canUseCompostButtonOnActiveCell();
         boolean shouldShowBridgeAction = movementModel.getSelectedFacilityType() == FacilityType.PONT;
@@ -581,6 +585,9 @@ public class SidebarPanel extends JPanel {
         boolean shouldEnableCutTree = shouldShowCutTreeAction;
         boolean shouldShowBridgeHint = shouldShowBridgeAction;
         String labourButtonLabel = shouldShowRemettreEnHerbeAction() ? "Remettre en herbe" : "Labourer";
+        String pathButtonLabel = shouldShowStorePathAction()
+                ? "<html><center>Remise ce chemin<br>dans l'inventaire</center></html>"
+                : "Poser chemin";
         boolean shouldEnableLabourAction = canUseLabourButtonOnActiveCell();
         String compostButtonLabel = shouldShowRemiserCompostAction() ? "Remiser compost" : "Poser compost";
         boolean shouldShowLabourWarning = shouldShowAdjacentFenceLabourWarning();
@@ -591,6 +598,7 @@ public class SidebarPanel extends JPanel {
                 || shouldEnableWater != currentWaterEnabledState
                 || shouldEnablePath != currentPathEnabledState
                 || shouldShowPathAction != currentPathVisibleState
+                || !pathButtonLabel.equals(currentPathButtonLabel)
                 || shouldEnableCompost != currentCompostEnabledState
                 || shouldDisplayCompostAction != currentCompostVisibleState
                 || shouldEnableCutTree != currentCutTreeEnabledState
@@ -609,6 +617,7 @@ public class SidebarPanel extends JPanel {
                     shouldEnableWater,
                     shouldEnablePath,
                     shouldShowPathAction,
+                    pathButtonLabel,
                     shouldEnableCompost,
                     shouldDisplayCompostAction,
                     shouldEnableCutTree,
@@ -630,7 +639,7 @@ public class SidebarPanel extends JPanel {
      */
     private void applyButtonsEnabledState(boolean labourEnabled, boolean plantEnabled,
                                           boolean harvestEnabled, boolean cleanEnabled, boolean waterEnabled,
-                                          boolean pathEnabled, boolean pathVisible,
+                                          boolean pathEnabled, boolean pathVisible, String pathButtonLabel,
                                           boolean compostEnabled, boolean compostVisible,
                                           boolean cutTreeEnabled, boolean cutTreeVisible,
                                           boolean bridgeEnabled, boolean bridgeVisible, boolean bridgeHintVisible,
@@ -644,6 +653,7 @@ public class SidebarPanel extends JPanel {
         currentWaterEnabledState = waterEnabled;
         currentPathEnabledState = pathEnabled;
         currentPathVisibleState = pathVisible;
+        currentPathButtonLabel = pathButtonLabel;
         currentCompostEnabledState = compostEnabled;
         currentCompostVisibleState = compostVisible;
         currentCutTreeEnabledState = cutTreeEnabled;
@@ -669,6 +679,7 @@ public class SidebarPanel extends JPanel {
         waterButton.setEnabled(waterEnabled);
         cleanButton.setEnabled(cleanEnabled);
         pathButton.setEnabled(pathEnabled);
+        pathButton.setText(pathButtonLabel);
         pathActionRow.setVisible(pathVisible);
         compostButton.setEnabled(compostEnabled);
         compostActionRow.setVisible(compostVisible);
@@ -759,6 +770,28 @@ public class SidebarPanel extends JPanel {
         return activeFieldCell != null
                 && fieldPanel.isFarmableCell(activeFieldCell)
                 && grilleCulture.canPlacePath(activeFieldCell.x, activeFieldCell.y);
+    }
+
+    private boolean shouldShowPathAction() {
+        return movementModel.getSelectedFacilityType() == FacilityType.CHEMIN || isPlayerStandingOnPath();
+    }
+
+    private boolean shouldShowStorePathAction() {
+        return isPlayerStandingOnPath();
+    }
+
+    private boolean canUsePathButtonOnActiveCell() {
+        if (shouldShowStorePathAction()) {
+            return true;
+        }
+        return movementModel.getSelectedFacilityType() == FacilityType.CHEMIN && canPlacePathActiveCell();
+    }
+
+    private boolean isPlayerStandingOnPath() {
+        Point activeFieldCell = movementModel.getActiveFieldCell();
+        return activeFieldCell != null
+                && fieldPanel.isFarmableCell(activeFieldCell)
+                && grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y);
     }
 
     /**
@@ -963,7 +996,7 @@ public class SidebarPanel extends JPanel {
                 continue;
             }
 
-            objectiveLabel.setText(TypeObjectif.getIntitule(type));
+            objectiveLabel.setText(resolveObjectiveTitle(type, objectif));
 
             String progressionWithState = progression + "   " + (isReached ? "Atteint" : "En cours");
             progressionLabel.setText(progressionWithState);
@@ -1096,6 +1129,13 @@ public class SidebarPanel extends JPanel {
         area.setWrapStyleWord(true);
         area.setAlignmentX(LEFT_ALIGNMENT);
         return area;
+    }
+
+    private String resolveObjectiveTitle(TypeObjectif type, ObjectifJournalier objectif) {
+        if (type == TypeObjectif.CULTURES_MANGEES && objectif instanceof ObjectifCompteur compteur) {
+            return "Ne pas dépasser " + compteur.getValeurCible() + " cultures mangées";
+        }
+        return TypeObjectif.getIntitule(type);
     }
 
     /**

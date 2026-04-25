@@ -33,7 +33,7 @@ public enum TypeObjectif {
             case ACHETER_ITEMS_BOUTIQUE:
                 return "Acheter des items dans la boutique";
             case CULTURES_MANGEES:
-                return "Cultures mangées";
+                return "Ne pas dépasser la limite de cultures mangées";
             case REPOUSSER_LAPINS:
                 return "Repousser les lapins";
             default:
@@ -41,5 +41,3 @@ public enum TypeObjectif {
         }
     }
 }
-
-

@@ -6,6 +6,7 @@ import model.movement.Unit;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.List;
@@ -273,12 +274,12 @@ public class MovementView extends JPanel {
     private static Map<Unit.SpriteAnimation, Image[]> loadCaveExplorerSprites() {
         Map<Unit.SpriteAnimation, Image[]> sprites = new EnumMap<>(Unit.SpriteAnimation.class);
         sprites.put(Unit.SpriteAnimation.IDLE, new Image[] {
-                loadSprite("/assets/Immobile/JardinierImmobileGun.png")
+                trimTransparentBorders(loadSprite("/assets/Immobile/JardinierImmobileGun.png"))
         });
-        sprites.put(Unit.SpriteAnimation.WALK_DOWN, loadSequence("MarcheBas", "JardinierBasGun", "JardinierBasGun", 4));
-        sprites.put(Unit.SpriteAnimation.WALK_RIGHT, loadSequence("MarcheDroite", "JardinierDroiteGun", "JardinierDroiteGun", 4));
-        sprites.put(Unit.SpriteAnimation.WALK_LEFT, loadSequence("MarcheGauche", "JardinierGaucheGun", "JardinierGaucheGun", 4));
-        sprites.put(Unit.SpriteAnimation.WALK_UP, loadSequence("MarcheHaut", "JardinierHautGun", "JardinierHautGun", 4));
+        sprites.put(Unit.SpriteAnimation.WALK_DOWN, trimSequence(loadSequence("MarcheBas", "JardinierBasGun", "JardinierBasGun", 4)));
+        sprites.put(Unit.SpriteAnimation.WALK_RIGHT, trimSequence(loadSequence("MarcheDroite", "JardinierDroiteGun", "JardinierDroiteGun", 4)));
+        sprites.put(Unit.SpriteAnimation.WALK_LEFT, trimSequence(loadSequence("MarcheGauche", "JardinierGaucheGun", "JardinierGaucheGun", 4)));
+        sprites.put(Unit.SpriteAnimation.WALK_UP, trimSequence(loadSequence("MarcheHaut", "JardinierHautGun", "JardinierHautGun", 4)));
         return sprites;
     }
 
@@ -308,6 +309,43 @@ public class MovementView extends JPanel {
         }
 
         return null;
+    }
+
+    private static Image[] trimSequence(Image[] frames) {
+        Image[] trimmedFrames = new Image[frames.length];
+        for (int index = 0; index < frames.length; index++) {
+            trimmedFrames[index] = trimTransparentBorders(frames[index]);
+        }
+        return trimmedFrames;
+    }
+
+    private static Image trimTransparentBorders(Image sprite) {
+        if (!(sprite instanceof BufferedImage bufferedSprite)) {
+            return sprite;
+        }
+
+        int minX = bufferedSprite.getWidth();
+        int minY = bufferedSprite.getHeight();
+        int maxX = -1;
+        int maxY = -1;
+
+        for (int y = 0; y < bufferedSprite.getHeight(); y++) {
+            for (int x = 0; x < bufferedSprite.getWidth(); x++) {
+                if (((bufferedSprite.getRGB(x, y) >>> 24) & 0xFF) == 0) {
+                    continue;
+                }
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x);
+                maxY = Math.max(maxY, y);
+            }
+        }
+
+        if (maxX < minX || maxY < minY) {
+            return sprite;
+        }
+
+        return bufferedSprite.getSubimage(minX, minY, (maxX - minX) + 1, (maxY - minY) + 1);
     }
 
     /**

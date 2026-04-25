@@ -96,7 +96,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         cleanButton.addActionListener(this::nettoyerCaseActive);
 
         JButton pathButton = sidebarPanel.getPathButton();
-        pathButton.addActionListener(this::poserCheminCaseActive);
+        pathButton.addActionListener(this::gererBoutonCheminCaseActive);
 
         JButton compostButton = sidebarPanel.getCompostButton();
         compostButton.addActionListener(this::gererBoutonCompostCaseActive);
@@ -275,6 +275,30 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             model.clearSelectedInventoryItem();
         }
         inventoryStatusOverlay.repaint();
+    }
+
+    /**
+     * Le bouton chemin peut soit poser un chemin sur l'herbe,
+     * soit reprendre celui de la case active pour le remettre dans l'inventaire.
+     */
+    private void gererBoutonCheminCaseActive(ActionEvent event) {
+        if (pauseController.isPaused()) {
+            return;
+        }
+
+        Point activeFieldCell = model.getActiveFieldCell();
+        if (activeFieldCell == null || !fieldPanel.isFarmableCell(activeFieldCell)) {
+            return;
+        }
+
+        if (grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y)) {
+            grilleCulture.storePath(activeFieldCell.x, activeFieldCell.y, inventaire);
+            fieldPanel.refreshStaticTerrain();
+            inventoryStatusOverlay.repaint();
+            return;
+        }
+
+        poserCheminCaseActive(event);
     }
 
     /**

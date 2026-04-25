@@ -526,6 +526,21 @@ public class GrilleCulture {
     }
 
     /**
+     * Retire un chemin posé et le replace dans l'inventaire.
+     */
+    public void storePath(int x, int y, Inventaire inventaire) {
+        if (inventaire == null) {
+            throw new IllegalStateException("Impossible de remiser le chemin sans inventaire.");
+        }
+        if (!hasPath(x, y)) {
+            throw new IllegalStateException("Aucun chemin n'est posé sur cette case.");
+        }
+
+        pathCells[x][y] = false;
+        inventaire.ajoutInstallation(FacilityType.CHEMIN, 1);
+    }
+
+    /**
      * Une rivière se pose sur une case d'herbe totalement libre.
      *
      * Important :
