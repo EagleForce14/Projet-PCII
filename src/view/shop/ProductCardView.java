@@ -69,7 +69,10 @@ public class ProductCardView extends JPanel {
     private final Font priceFont;
     // Police du corps de texte.
     private final Font bodyFont;
-    // Action appelée quand on clique sur la carte.
+    // Sert juste à dire quoi faire quand on clique sur la carte.
+    // Le callback reste volontairement un Runnable très simple :
+    // la carte ne connaît ni la boutique, ni le contrôleur, ni la logique métier.
+    // Elle sait seulement déclencher "l'action de sélection" qu'on lui confie au clic.
     private final Runnable onSelect;
 
     // Indique si le pointeur survole actuellement la carte.
@@ -77,6 +80,8 @@ public class ProductCardView extends JPanel {
 
     /**
      * On prépare une carte purement visuelle pour un produit du catalogue.
+     * Le Runnable injecté garde cette vue légère :
+     * elle délègue simplement l'action de clic au parent qui l'instancie.
      */
     public ProductCardView(
             Product product,

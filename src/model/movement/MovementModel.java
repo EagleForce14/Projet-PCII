@@ -38,13 +38,6 @@ public class MovementModel {
     }
 
     /**
-     * On ajoute une unité supplémentaire à la liste suivie par le modèle.
-     */
-    public void addUnit(Unit unit) {
-        units.add(unit);
-    }
-
-    /**
      * On désigne l'unité pilotée par le joueur et on s'assure qu'elle est bien suivie par le modèle.
      */
     public void setPlayerUnit(Unit unit) {
@@ -69,13 +62,6 @@ public class MovementModel {
      */
     public Unit getPlayerUnit() {
         return playerUnit;
-    }
-
-    /**
-     * Getter pour activer/désactiver visuellement les boutons.
-     */
-    public boolean isActionOverlayEnabled() {
-        return actionOverlayEnabled;
     }
 
     /**

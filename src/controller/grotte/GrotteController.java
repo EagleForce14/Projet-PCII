@@ -386,7 +386,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
             return;
         }
 
-        if (!grotteFieldPanel.getGrotteMap().isActualFarmExitCell(playerCenterCell.x, playerCenterCell.y)) {
+        if (grotteFieldPanel.getGrotteMap().isActualFarmExitCell(playerCenterCell.x, playerCenterCell.y)) {
             exitTriggered = false;
             return;
         }

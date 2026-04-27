@@ -10,7 +10,7 @@ public class Seed extends Product {
      * **/
     // atttributs propres à une graine 
     //private int prixDeVente; // prix de vente de la culture une fois récoltée
-    private Type type; // type concret de la graine
+    private final Type type; // type concret de la graine
     
     // constructeur
     public Seed(String name, int price, int quantity, Type type) {
@@ -23,7 +23,7 @@ public class Seed extends Product {
     /** getPrixDeVente : méthode pour récupérer le prix de vente de la culture une fois récoltée
      * @return int : le prix de vente de la culture une fois récoltée 
      **/
-    /* 
+    /*
     public int getPrixDeVente() {
         return prixDeVente;
     }*/

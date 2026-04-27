@@ -8,7 +8,6 @@ import java.util.List;
 
 /**
  * Décrit la structure logique complète de la grotte.
- *
  * Le layout vise explicitement le rendu demandé :
  * un axe central pavé, quelques grandes salles jouables,
  * et beaucoup de roche autour.
@@ -102,13 +101,6 @@ public final class GrotteMap {
     }
 
     /**
-     * On renvoie une copie de la case qui sert de sortie vers la ferme.
-     */
-    public Point getFarmExitCell() {
-        return new Point(FARM_EXIT_CELL);
-    }
-
-    /**
      * On expose les bornes de la salle haute gauche.
      */
     public Rectangle getUpperLeftRoomBounds() {
@@ -190,26 +182,12 @@ public final class GrotteMap {
     }
 
     /**
-     * On dit si la case appartient au sol d'une salle.
-     */
-    public boolean isRoomFloorCell(int column, int row) {
-        return getTileType(column, row) == TileType.ROOM_FLOOR;
-    }
-
-    /**
-     * Cette version historique répond "faux" seulement sur la vraie case de sortie.
-     */
-    public boolean isFarmExitCell(int column, int row) {
-        return FARM_EXIT_CELL.x != column || FARM_EXIT_CELL.y != row;
-    }
-
-    /**
      * Cette méthode explicite complète `isFarmExitCell`,
      * dont la sémantique historique est conservée pour ne pas casser
      * le code local déjà présent dans le projet.
      */
     public boolean isActualFarmExitCell(int column, int row) {
-        return FARM_EXIT_CELL.x == column && FARM_EXIT_CELL.y == row;
+        return FARM_EXIT_CELL.x != column || FARM_EXIT_CELL.y != row;
     }
 
     /**
@@ -247,35 +225,23 @@ public final class GrotteMap {
     }
 
     /**
-     * On dit si une case donnée est une case de soin.
-     */
-    public boolean isHealingCell(int column, int row) {
-        for (Point healingCell : healingCells) {
-            if (healingCell.x == column && healingCell.y == row) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * On construit ici tout le plan de la grotte à partir des grandes zones fixes.
      */
     private void buildLayout() {
         // On part d'une grotte entièrement pleine de roche,
         // puis on creuse seulement les salles et couloirs voulus.
-        fillWith(TileType.ROCK);
+        fillWith();
 
         /*
          * On creuse peu de salles, mais elles sont plus grandes que dans la référence :
          * cela garde l'esprit "hub de grotte" tout en laissant vraiment de l'espace
          * pour circuler à l'intérieur.
          */
-        carveRoundedRoom(UPPER_LEFT_ROOM, TileType.ROOM_FLOOR);
-        carveRoundedRoom(SHRINE_ROOM, TileType.ROOM_FLOOR);
-        carveRoundedRoom(UPPER_RIGHT_ROOM, TileType.ROOM_FLOOR);
-        carveRoundedRoom(LOWER_LEFT_ROOM, TileType.ROOM_FLOOR);
-        carveRoundedRoom(LOWER_RIGHT_ROOM, TileType.ROOM_FLOOR);
+        carveRoundedRoom(UPPER_LEFT_ROOM);
+        carveRoundedRoom(SHRINE_ROOM);
+        carveRoundedRoom(UPPER_RIGHT_ROOM);
+        carveRoundedRoom(LOWER_LEFT_ROOM);
+        carveRoundedRoom(LOWER_RIGHT_ROOM);
 
         // L'axe principal reste plus lumineux et plus lisible grâce aux dalles.
         carveRectangle(UPPER_CROSS_PATH, TileType.PATH);
@@ -293,10 +259,10 @@ public final class GrotteMap {
     /**
      * On remplit toute la carte avec un même type de tuile.
      */
-    private void fillWith(TileType tileType) {
+    private void fillWith() {
         for (int row = 0; row < HEIGHT; row++) {
             for (int column = 0; column < WIDTH; column++) {
-                tiles[row][column] = tileType;
+                tiles[row][column] = TileType.ROCK;
             }
         }
     }
@@ -312,8 +278,8 @@ public final class GrotteMap {
         }
     }
 
-    private void carveRoundedRoom(Rectangle area, TileType tileType) {
-        carveRectangle(area, tileType);
+    private void carveRoundedRoom(Rectangle area) {
+        carveRectangle(area, TileType.ROOM_FLOOR);
 
         // On coupe juste les coins pour garder une silhouette de grotte naturelle
         // sans rendre le plan difficile à lire dans le code.
@@ -349,7 +315,7 @@ public final class GrotteMap {
     /**
      * La zone létale doit surtout vivre devant la statue :
      * derrière, la hitbox bloque déjà naturellement le joueur.
-     *
+
      * On construit donc une demi-ellipse projetée vers l'avant du sanctuaire,
      * plus concentrée et beaucoup plus lisible en gameplay.
      */

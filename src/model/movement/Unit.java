@@ -331,13 +331,6 @@ public class Unit {
     }
 
     /**
-     * On renvoie la scène courante dans laquelle évolue l'unité.
-     */
-    public PlayerScene getScene() {
-        return scene;
-    }
-
-    /**
      * On met à jour le flag de déplacement haut, avec option de mise à jour de l'orientation.
      */
     public void setMoveUp(boolean moveUp, boolean updateFacing) {

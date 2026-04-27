@@ -37,13 +37,6 @@ public class PhysicsThread extends Thread {
     }
 
     /**
-     * On active ou on suspend la boucle physique sans détruire le thread.
-     */
-    public void setThreadActive(boolean active) {
-        activationGate.setActive(active);
-    }
-
-    /**
      * Le joueur n'a qu'une seule boucle physique.
      * On lui rattache donc directement la vérification des transitions ferme/grotte,
      * au lieu d'ajouter un second polling parallèle.

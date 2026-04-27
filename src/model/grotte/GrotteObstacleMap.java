@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Collision dédiée à la grotte.
- *
+
  * Toute la roche non creusée bloque le joueur.
  * Comme la carte est statique, on s'appuie sur la liste pré-calculée
  * des cases rocheuses pour éviter des tests inutiles.
@@ -68,11 +68,7 @@ public final class GrotteObstacleMap implements MovementCollisionMap {
 
         // Dernier filtre : la statue du sanctuaire garde sa propre masse bloquante.
         Rectangle shrineStatueBounds = grotteFieldPanel.getShrineStatueCollisionBounds();
-        if (shrineStatueBounds != null && shrineStatueBounds.intersects(entityBounds)) {
-            return false;
-        }
-
-        return true;
+        return shrineStatueBounds == null || !shrineStatueBounds.intersects(entityBounds);
     }
 
     /**
@@ -92,15 +88,15 @@ public final class GrotteObstacleMap implements MovementCollisionMap {
                     topWallFrontCells.add(new Point(column, row));
                 }
                 // Même logique pour le bas, sauf sur la vraie sortie ferme que l'on doit laisser libre.
-                if (grotteMap.isWallCell(column, row + 1) && !grotteMap.isActualFarmExitCell(column, row)) {
+                if (grotteMap.isWallCell(column, row + 1) && grotteMap.isActualFarmExitCell(column, row)) {
                     bottomWallFrontCells.add(new Point(column, row));
                 }
                 // Même règle pour la façade gauche, avec la sortie ferme toujours préservée.
-                if (grotteMap.isWallCell(column - 1, row) && !grotteMap.isActualFarmExitCell(column, row)) {
+                if (grotteMap.isWallCell(column - 1, row) && grotteMap.isActualFarmExitCell(column, row)) {
                     leftWallFrontCells.add(new Point(column, row));
                 }
                 // Et enfin pour la façade droite.
-                if (grotteMap.isWallCell(column + 1, row) && !grotteMap.isActualFarmExitCell(column, row)) {
+                if (grotteMap.isWallCell(column + 1, row) && grotteMap.isActualFarmExitCell(column, row)) {
                     rightWallFrontCells.add(new Point(column, row));
                 }
             }

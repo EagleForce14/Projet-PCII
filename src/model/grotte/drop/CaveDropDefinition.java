@@ -44,10 +44,6 @@ public final class CaveDropDefinition {
         this.selectionWeight = Math.max(0.0, selectionWeight);
     }
 
-    public CaveDropKind getKind() {
-        return kind;
-    }
-
     public Type getSeedType() {
         return seedType;
     }

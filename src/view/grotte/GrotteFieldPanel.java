@@ -23,7 +23,7 @@ import java.awt.image.BufferedImage;
 
 /**
  * Panneau d'affichage dédié à la grotte.
- *
+
  * Optimisation importante :
  * tout le décor statique est pré-rendu dans un buffer.
  * Pendant le jeu, on ne redessine donc plus que cette image en cache
@@ -97,22 +97,14 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
 
     // Cache complet du décor statique déjà pré-rendu.
     private BufferedImage staticSceneCache;
-    // Version déjà mise à l'échelle du mur horizontal.
-    private BufferedImage scaledHorizontalWallTile;
-    // Version déjà mise à l'échelle du mur vertical.
-    private BufferedImage scaledVerticalWallTile;
     // Largeur de panneau associée au cache statique courant.
     private int cachedSceneWidth = -1;
     // Hauteur de panneau associée au cache statique courant.
     private int cachedSceneHeight = -1;
-    // Taille de tuile associée au cache du mur horizontal.
-    private int cachedHorizontalWallTileSize = -1;
-    // Hauteur associée au cache du mur horizontal.
-    private int cachedHorizontalWallTileHeight = -1;
-    // Taille de tuile associée au cache du mur vertical.
-    private int cachedVerticalWallTileSize = -1;
-    // Largeur associée au cache du mur vertical.
-    private int cachedVerticalWallTileWidth = -1;
+    // Cache dédié à la version mise à l'échelle du mur horizontal.
+    private final WallTextureCache horizontalWallTextureCache = new WallTextureCache();
+    // Cache dédié à la version mise à l'échelle du mur vertical.
+    private final WallTextureCache verticalWallTextureCache = new WallTextureCache();
 
     /**
      * On prépare toute la vue de grotte avec ses tuiles, ses polices et ses caches de base.
@@ -158,21 +150,7 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
      */
     @Override
     public Rectangle getFieldBounds() {
-        int columns = getColumnCount();
-        int rows = getRowCount();
-        if (getWidth() <= 0 || getHeight() <= 0 || columns <= 0 || rows <= 0) {
-            return new Rectangle();
-        }
-
-        int tileSize = (int) Math.ceil(Math.max(
-                (double) getWidth() / columns,
-                (double) getHeight() / rows
-        ));
-        int gridWidth = tileSize * columns;
-        int gridHeight = tileSize * rows;
-        int startX = (getWidth() - gridWidth) / 2;
-        int startY = (getHeight() - gridHeight) / 2;
-        return new Rectangle(startX, startY, gridWidth, gridHeight);
+        return buildGridBounds(getWidth(), getHeight());
     }
 
     /**
@@ -495,13 +473,13 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
                 if (grotteMap.isWallCell(column, row - 1)) {
                     drawHorizontalWallFront(g2, cellBounds, horizontalWallTexture, shadowThickness, lightThickness);
                 }
-                if (grotteMap.isWallCell(column - 1, row) && !grotteMap.isActualFarmExitCell(column, row)) {
+                if (grotteMap.isWallCell(column - 1, row) && grotteMap.isActualFarmExitCell(column, row)) {
                     drawVerticalWallBorder(g2, cellBounds, verticalWallTexture, true, shadowThickness);
                 }
-                if (grotteMap.isWallCell(column + 1, row) && !grotteMap.isActualFarmExitCell(column, row)) {
+                if (grotteMap.isWallCell(column + 1, row) && grotteMap.isActualFarmExitCell(column, row)) {
                     drawVerticalWallBorder(g2, cellBounds, verticalWallTexture, false, shadowThickness);
                 }
-                if (grotteMap.isWallCell(column, row + 1) && !grotteMap.isActualFarmExitCell(column, row)) {
+                if (grotteMap.isWallCell(column, row + 1) && grotteMap.isActualFarmExitCell(column, row)) {
                     drawBottomWallBorder(g2, cellBounds, horizontalWallTexture, shadowThickness);
                 }
             }
@@ -514,34 +492,10 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
      * puis on le réutilise partout dans le cache statique.
      */
     private BufferedImage getHorizontalWallTexture(int tileSize) {
-        if (horizontalWallTile == null) {
-            return null;
-        }
-
-        int sourceWidth = horizontalWallTile.getWidth(null);
-        int sourceHeight = horizontalWallTile.getHeight(null);
-        if (sourceWidth <= 0 || sourceHeight <= 0) {
-            return null;
-        }
-
         // On force une façade plus haute que le simple ratio de l'image
         // pour donner un vrai effet de paroi qui domine le sol.
         int wallHeight = resolveHorizontalWallHeight(tileSize);
-        if (scaledHorizontalWallTile != null
-                && cachedHorizontalWallTileSize == tileSize
-                && cachedHorizontalWallTileHeight == wallHeight) {
-            return scaledHorizontalWallTile;
-        }
-
-        cachedHorizontalWallTileSize = tileSize;
-        cachedHorizontalWallTileHeight = wallHeight;
-        scaledHorizontalWallTile = new BufferedImage(tileSize, wallHeight, BufferedImage.TYPE_INT_ARGB);
-
-        Graphics2D g2 = scaledHorizontalWallTile.createGraphics();
-        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-        g2.drawImage(horizontalWallTile, 0, 0, tileSize, wallHeight, this);
-        g2.dispose();
-        return scaledHorizontalWallTile;
+        return getScaledWallTexture(horizontalWallTile, tileSize, wallHeight, horizontalWallTextureCache);
     }
 
     /**
@@ -549,32 +503,8 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
      * L'image est mise à l'échelle une seule fois par taille de tuile.
      */
     private BufferedImage getVerticalWallTexture(int tileSize) {
-        if (verticalWallTile == null) {
-            return null;
-        }
-
-        int sourceWidth = verticalWallTile.getWidth(null);
-        int sourceHeight = verticalWallTile.getHeight(null);
-        if (sourceWidth <= 0 || sourceHeight <= 0) {
-            return null;
-        }
-
         int wallWidth = resolveVerticalWallWidth(tileSize);
-        if (scaledVerticalWallTile != null
-                && cachedVerticalWallTileSize == tileSize
-                && cachedVerticalWallTileWidth == wallWidth) {
-            return scaledVerticalWallTile;
-        }
-
-        cachedVerticalWallTileSize = tileSize;
-        cachedVerticalWallTileWidth = wallWidth;
-        scaledVerticalWallTile = new BufferedImage(wallWidth, tileSize, BufferedImage.TYPE_INT_ARGB);
-
-        Graphics2D g2 = scaledVerticalWallTile.createGraphics();
-        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-        g2.drawImage(verticalWallTile, 0, 0, wallWidth, tileSize, this);
-        g2.dispose();
-        return scaledVerticalWallTile;
+        return getScaledWallTexture(verticalWallTile, wallWidth, tileSize, verticalWallTextureCache);
     }
 
     /**
@@ -698,7 +628,7 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         }
 
         Rectangle daisBounds = buildAreaBounds(fieldBounds, tileSize, grotteMap.getShrineDaisBounds());
-        if (daisBounds == null || daisBounds.width <= 0 || daisBounds.height <= 0) {
+        if (daisBounds.width <= 0 || daisBounds.height <= 0) {
             return;
         }
         Rectangle statueBounds = buildShrineStatueBounds(daisBounds, tileSize);
@@ -729,11 +659,7 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
      */
     private void drawVignette(Graphics2D g2) {
         int band = Math.max(36, Math.min(getWidth(), getHeight()) / 8);
-        g2.setColor(VIGNETTE);
-        g2.fillRect(0, 0, getWidth(), band);
-        g2.fillRect(0, getHeight() - band, getWidth(), band);
-        g2.fillRect(0, 0, band, getHeight());
-        g2.fillRect(getWidth() - band, 0, band, getHeight());
+        GrotteOverlayPainter.drawScreenVignette(g2, getWidth(), getHeight(), band, VIGNETTE);
     }
 
     /**
@@ -836,38 +762,60 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
      * On calcule la hauteur cible des façades murales horizontales.
      */
     private int resolveHorizontalWallHeight(int tileSize) {
-        if (horizontalWallTile == null) {
-            return Math.max(10, (int) Math.round(tileSize * 0.72));
-        }
-
-        int sourceWidth = horizontalWallTile.getWidth(null);
-        int sourceHeight = horizontalWallTile.getHeight(null);
-        if (sourceWidth <= 0 || sourceHeight <= 0) {
-            return Math.max(10, (int) Math.round(tileSize * 0.72));
-        }
-
-        int naturalWallHeight = (int) Math.round(tileSize * (sourceHeight / (double) sourceWidth));
-        int targetWallHeight = (int) Math.round(tileSize * 0.72);
-        return Math.max(10, Math.min(tileSize, Math.max(naturalWallHeight, targetWallHeight)));
+        return resolveWallSpan(tileSize, horizontalWallTile, 10, 0.72, true);
     }
 
     /**
      * On calcule la largeur cible des façades murales verticales.
      */
     private int resolveVerticalWallWidth(int tileSize) {
-        if (verticalWallTile == null) {
-            return Math.max(8, (int) Math.round(tileSize * 0.42));
+        return resolveWallSpan(tileSize, verticalWallTile, 8, 0.42, false);
+    }
+
+    /**
+     * On met à l'échelle une texture de mur et on la garde en cache tant que ses dimensions utiles ne changent pas.
+     */
+    private BufferedImage getScaledWallTexture(Image sourceTile, int width, int height, WallTextureCache cache) {
+        if (hasUsableImageDimensions(sourceTile)) {
+            return null;
+        }
+        if (cache.matches(width, height)) {
+            return cache.texture;
         }
 
-        int sourceWidth = verticalWallTile.getWidth(null);
-        int sourceHeight = verticalWallTile.getHeight(null);
-        if (sourceWidth <= 0 || sourceHeight <= 0) {
-            return Math.max(8, (int) Math.round(tileSize * 0.42));
+        BufferedImage scaledTexture = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = scaledTexture.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g2.drawImage(sourceTile, 0, 0, width, height, this);
+        g2.dispose();
+
+        cache.update(scaledTexture, width, height);
+        return scaledTexture;
+    }
+
+    /**
+     * On mutualise le calcul de dimension cible pour les façades murales.
+     */
+    private int resolveWallSpan(int tileSize, Image wallTile, int minimumSpan, double targetRatio, boolean useHeightOverWidth) {
+        int targetSpan = Math.max(minimumSpan, (int) Math.round(tileSize * targetRatio));
+        if (hasUsableImageDimensions(wallTile)) {
+            return targetSpan;
         }
 
-        int naturalWallWidth = (int) Math.round(tileSize * (sourceWidth / (double) sourceHeight));
-        int targetWallWidth = (int) Math.round(tileSize * 0.42);
-        return Math.max(8, Math.min(tileSize, Math.max(naturalWallWidth, targetWallWidth)));
+        int sourceWidth = wallTile.getWidth(null);
+        int sourceHeight = wallTile.getHeight(null);
+        double naturalRatio = useHeightOverWidth
+                ? sourceHeight / (double) sourceWidth
+                : sourceWidth / (double) sourceHeight;
+        int naturalSpan = (int) Math.round(tileSize * naturalRatio);
+        return Math.max(minimumSpan, Math.min(tileSize, Math.max(naturalSpan, targetSpan)));
+    }
+
+    /**
+     * On vérifie ici qu'une image a bien des dimensions exploitables avant tout calcul de mise à l'échelle.
+     */
+    private boolean hasUsableImageDimensions(Image image) {
+        return image == null || image.getWidth(null) <= 0 || image.getHeight(null) <= 0;
     }
 
     /**
@@ -886,14 +834,27 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
             return new Rectangle();
         }
 
+        return buildGridBounds(preferredSize.width, preferredSize.height);
+    }
+
+    /**
+     * On calcule le rectangle centré occupé par la grille pour n'importe quelle taille de panneau.
+     */
+    private Rectangle buildGridBounds(int width, int height) {
+        int columns = getColumnCount();
+        int rows = getRowCount();
+        if (width <= 0 || height <= 0 || columns <= 0 || rows <= 0) {
+            return new Rectangle();
+        }
+
         int tileSize = (int) Math.ceil(Math.max(
-                (double) preferredSize.width / getColumnCount(),
-                (double) preferredSize.height / getRowCount()
+                (double) width / columns,
+                (double) height / rows
         ));
-        int gridWidth = tileSize * getColumnCount();
-        int gridHeight = tileSize * getRowCount();
-        int startX = (preferredSize.width - gridWidth) / 2;
-        int startY = (preferredSize.height - gridHeight) / 2;
+        int gridWidth = tileSize * columns;
+        int gridHeight = tileSize * rows;
+        int startX = (width - gridWidth) / 2;
+        int startY = (height - gridHeight) / 2;
         return new Rectangle(startX, startY, gridWidth, gridHeight);
     }
 
@@ -914,7 +875,7 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
      * pendant la fenêtre d'alerte, avec un clignotement franc sur les 10 dernières secondes.
      */
     private void drawShrineWarningCells(Graphics2D g2, Rectangle fieldBounds, int tileSize) {
-        if (shrineHazardState == null || !shrineHazardState.isWarningPhase()) {
+        if (shrineHazardState == null || shrineHazardState.isWarningPhase()) {
             return;
         }
 
@@ -924,11 +885,7 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
 
         for (Point dangerCell : grotteMap.getShrineDangerCells()) {
             Rectangle cellBounds = buildCellBounds(fieldBounds, tileSize, dangerCell.x, dangerCell.y);
-            g2.setColor(fillColor);
-            g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height);
-
-            g2.setColor(borderColor);
-            g2.drawRect(cellBounds.x, cellBounds.y, cellBounds.width - 1, cellBounds.height - 1);
+            fillAndStrokeCellOverlay(g2, cellBounds, fillColor, borderColor);
         }
     }
 
@@ -943,9 +900,6 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
 
         Rectangle shrineRoomBounds = buildAreaBounds(fieldBounds, tileSize, grotteMap.getShrineRoomBounds());
         Rectangle daisBounds = buildAreaBounds(fieldBounds, tileSize, grotteMap.getShrineDaisBounds());
-        if (shrineRoomBounds == null || daisBounds == null) {
-            return;
-        }
 
         Rectangle statueBounds = buildShrineStatueBounds(daisBounds, tileSize);
         if (statueBounds == null) {
@@ -1017,20 +971,58 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
 
         for (Point healingCell : grotteMap.getHealingCells()) {
             Rectangle cellBounds = buildCellBounds(fieldBounds, tileSize, healingCell.x, healingCell.y);
-            g2.setColor(HEAL_ZONE_FILL);
-            g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height);
-            g2.setColor(HEAL_ZONE_BORDER);
-            g2.drawRect(cellBounds.x, cellBounds.y, cellBounds.width - 1, cellBounds.height - 1);
+            fillAndStrokeCellOverlay(g2, cellBounds, HEAL_ZONE_FILL, HEAL_ZONE_BORDER);
 
             int centerX = cellBounds.x + (cellBounds.width / 2);
             int centerY = (int) Math.round(cellBounds.y + (cellBounds.height / 2.0) - (tileSize * 0.06));
+            drawCenteredPlus(g2, centerX + 1, centerY + 1, plusThickness, plusLength, HEAL_PLUS_SHADOW);
+            drawCenteredPlus(g2, centerX, centerY, plusThickness, plusLength, HEAL_PLUS_COLOR);
+        }
+    }
 
-            g2.setColor(HEAL_PLUS_SHADOW);
-            g2.fillRect(centerX - (plusThickness / 2) + 1, centerY - (plusLength / 2) + 1, plusThickness, plusLength);
-            g2.fillRect(centerX - (plusLength / 2) + 1, centerY - (plusThickness / 2) + 1, plusLength, plusThickness);
-            g2.setColor(HEAL_PLUS_COLOR);
-            g2.fillRect(centerX - (plusThickness / 2), centerY - (plusLength / 2), plusThickness, plusLength);
-            g2.fillRect(centerX - (plusLength / 2), centerY - (plusThickness / 2), plusLength, plusThickness);
+    /**
+     * On applique le même traitement visuel de fond et de bordure à une case surlignée.
+     */
+    private void fillAndStrokeCellOverlay(Graphics2D g2, Rectangle cellBounds, Color fillColor, Color borderColor) {
+        if (g2 == null || cellBounds == null) {
+            return;
+        }
+
+        g2.setColor(fillColor);
+        g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height);
+        g2.setColor(borderColor);
+        g2.drawRect(cellBounds.x, cellBounds.y, cellBounds.width - 1, cellBounds.height - 1);
+    }
+
+    /**
+     * On dessine un petit signe plus centré dans une case de soin.
+     */
+    private void drawCenteredPlus(Graphics2D g2, int centerX, int centerY, int thickness, int length, Color color) {
+        if (g2 == null || color == null) {
+            return;
+        }
+
+        g2.setColor(color);
+        g2.fillRect(centerX - (thickness / 2), centerY - (length / 2), thickness, length);
+        g2.fillRect(centerX - (length / 2), centerY - (thickness / 2), length, thickness);
+    }
+
+    /**
+     * Petit conteneur interne pour mémoriser une texture de mur déjà mise à l'échelle.
+     */
+    private static final class WallTextureCache {
+        private BufferedImage texture;
+        private int width = -1;
+        private int height = -1;
+
+        private boolean matches(int width, int height) {
+            return texture != null && this.width == width && this.height == height;
+        }
+
+        private void update(BufferedImage texture, int width, int height) {
+            this.texture = texture;
+            this.width = width;
+            this.height = height;
         }
     }
 

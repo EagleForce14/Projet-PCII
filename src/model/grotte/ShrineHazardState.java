@@ -2,7 +2,7 @@ package model.grotte;
 
 /**
  * État du cycle de la statue du sanctuaire.
- *
+
  * La vue lit uniquement cet état pour dessiner le compte à rebours
  * et le clignotement des cases dangereuses.
  * Le thread dédié reste le seul endroit qui le fait avancer.
@@ -65,7 +65,7 @@ public final class ShrineHazardState {
      * On dit si le cycle est entré dans sa phase d'alerte visuelle.
      */
     public boolean isWarningPhase() {
-        return getRemainingMs() <= WARNING_DURATION_MS;
+        return getRemainingMs() > WARNING_DURATION_MS;
     }
 
     /**
@@ -73,7 +73,7 @@ public final class ShrineHazardState {
      * La vue n'a ainsi aucune logique temporelle parallèle à maintenir.
      */
     public boolean isWarningBlinkVisible() {
-        if (!isWarningPhase()) {
+        if (isWarningPhase()) {
             return false;
         }
 

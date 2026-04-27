@@ -22,7 +22,7 @@ import java.awt.RenderingHints;
 
 /**
  * Couche d'interface dédiée au combat de la grotte.
- *
+
  * Elle affiche uniquement des informations de gameplay :
  * projectiles, flash de dégâts et petite barre de vie du joueur.
  */
@@ -299,11 +299,7 @@ public final class GrotteCombatView extends JPanel {
         int alpha = (int) Math.round(HIT_VIGNETTE.getAlpha() * flashRatio);
         Color vignetteColor = new Color(HIT_VIGNETTE.getRed(), HIT_VIGNETTE.getGreen(), HIT_VIGNETTE.getBlue(), alpha);
         int band = Math.max(34, Math.min(getWidth(), getHeight()) / 8);
-        g2d.setColor(vignetteColor);
-        g2d.fillRect(0, 0, getWidth(), band);
-        g2d.fillRect(0, getHeight() - band, getWidth(), band);
-        g2d.fillRect(0, 0, band, getHeight());
-        g2d.fillRect(getWidth() - band, 0, band, getHeight());
+        GrotteOverlayPainter.drawScreenVignette(g2d, getWidth(), getHeight(), band, vignetteColor);
     }
 
     /**

@@ -11,7 +11,7 @@ import java.awt.Point;
 
 /**
  * Thread dédié au cycle de la statue.
- *
+
  * Le rôle de ce thread est :
  * - faire avancer le compte à rebours
  * - déclencher l'onde létale toutes les 30 secondes
