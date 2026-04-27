@@ -7,34 +7,51 @@ import java.awt.Rectangle;
  * Le rendu, le placement et les collisions s'appuient ainsi sur les mêmes ratios.
  */
 public final class TreeGeometry {
+    // Échelle appliquée au sprite du tronc par rapport à une case.
     public static final double TRUNK_TILE_SCALE = 0.80;
+    // Échelle du grand arbre classique par rapport à une case racine.
     public static final double CLASSIC_MATURE_TREE_TILE_SCALE = 3.35;
+    // Point d'ancrage horizontal du grand arbre classique.
     public static final double CLASSIC_MATURE_TREE_ANCHOR_X_RATIO = 0.50;
+    // Point d'ancrage vertical du grand arbre classique.
     public static final double CLASSIC_MATURE_TREE_ANCHOR_Y_RATIO = 0.76;
 
     /*
      * Variables de réglage du saule pleureur :
      * ce sont celles à ajuster si son rendu ou sa collision doivent être affinés.
      */
+    // Échelle appliquée au sprite du saule pleureur par rapport à une case.
     public static final double WEEPING_WILLOW_TILE_SCALE = 3.35;
+    // Point d'ancrage horizontal du saule pleureur.
     public static final double WEEPING_WILLOW_ANCHOR_X_RATIO = 0.50;
+    // Point d'ancrage vertical du saule pleureur.
     public static final double WEEPING_WILLOW_ANCHOR_Y_RATIO = 0.76;
 
     // Le tronc garde une collision compacte.
     private static final double TRUNK_HITBOX_WIDTH_RATIO = 0.82;
+    // Hauteur de hitbox appliquée au tronc simple.
     private static final double TRUNK_HITBOX_HEIGHT_RATIO = 0.92;
+    // Décalage vertical de hitbox du tronc simple.
     private static final int TRUNK_HITBOX_Y_OFFSET = 0;
 
     // Les cases bloquées sont gérées séparément :
     // la collision du grand arbre peut donc rester plus proche du tronc visible.
     private static final double CLASSIC_MATURE_HITBOX_WIDTH_RATIO = 2.0;
+    // Hauteur de hitbox appliquée à l'arbre classique mature.
     private static final double CLASSIC_MATURE_HITBOX_HEIGHT_RATIO = 2.5;
+    // Décalage vertical de hitbox de l'arbre classique mature.
     private static final int CLASSIC_MATURE_HITBOX_Y_OFFSET = -45;
 
+    // Largeur de hitbox appliquée au saule pleureur mature.
     private static final double WEEPING_WILLOW_HITBOX_WIDTH_RATIO = 1.70;
+    // Hauteur de hitbox appliquée au saule pleureur mature.
     private static final double WEEPING_WILLOW_HITBOX_HEIGHT_RATIO = 2.65;
+    // Décalage vertical de hitbox du saule pleureur mature.
     private static final int WEEPING_WILLOW_HITBOX_Y_OFFSET = -50;
 
+    /**
+     * On bloque l'instanciation car cette classe ne sert que de boîte à outils géométrique.
+     */
     private TreeGeometry() {
     }
 
@@ -46,6 +63,9 @@ public final class TreeGeometry {
         return buildAnchoredScaledBounds(cellBounds, tileScale, 0.50, 0.50);
     }
 
+    /**
+     * On construit ici l'enveloppe visuelle du grand arbre selon son type de sprite.
+     */
     public static Rectangle buildMatureTreeBounds(Rectangle cellBounds, boolean weepingWillow) {
         return buildAnchoredScaledBounds(
                 cellBounds,
@@ -100,26 +120,44 @@ public final class TreeGeometry {
         return new Rectangle(x, y, width, height);
     }
 
+    /**
+     * On renvoie l'échelle de sprite adaptée au type d'arbre mature demandé.
+     */
     public static double getMatureTreeTileScale(boolean weepingWillow) {
         return weepingWillow ? WEEPING_WILLOW_TILE_SCALE : CLASSIC_MATURE_TREE_TILE_SCALE;
     }
 
+    /**
+     * On renvoie l'ancrage horizontal du sprite mature demandé.
+     */
     public static double getMatureTreeAnchorXRatio(boolean weepingWillow) {
         return weepingWillow ? WEEPING_WILLOW_ANCHOR_X_RATIO : CLASSIC_MATURE_TREE_ANCHOR_X_RATIO;
     }
 
+    /**
+     * On renvoie l'ancrage vertical du sprite mature demandé.
+     */
     public static double getMatureTreeAnchorYRatio(boolean weepingWillow) {
         return weepingWillow ? WEEPING_WILLOW_ANCHOR_Y_RATIO : CLASSIC_MATURE_TREE_ANCHOR_Y_RATIO;
     }
 
+    /**
+     * On choisit la largeur de hitbox adaptée au type d'arbre mature.
+     */
     private static double getMatureHitboxWidthRatio(boolean weepingWillow) {
         return weepingWillow ? WEEPING_WILLOW_HITBOX_WIDTH_RATIO : CLASSIC_MATURE_HITBOX_WIDTH_RATIO;
     }
 
+    /**
+     * On choisit la hauteur de hitbox adaptée au type d'arbre mature.
+     */
     private static double getMatureHitboxHeightRatio(boolean weepingWillow) {
         return weepingWillow ? WEEPING_WILLOW_HITBOX_HEIGHT_RATIO : CLASSIC_MATURE_HITBOX_HEIGHT_RATIO;
     }
 
+    /**
+     * On renvoie le décalage vertical de hitbox adapté à l'état et au type d'arbre.
+     */
     private static int getHitboxYOffset(boolean mature, boolean weepingWillow) {
         if (!mature) {
             return TRUNK_HITBOX_Y_OFFSET;

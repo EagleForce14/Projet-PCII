@@ -10,16 +10,25 @@ import java.util.Random;
  * Centralise uniquement l'état des arbres du champ.
  */
 public class TreeManager {
+    // Nombre d'impacts nécessaires avant qu'un arbre cède définitivement.
     private static final int TREE_CUT_REQUIRED_IMPACTS = 4;
+    // Quantité de bois gagnée quand un arbre tombe.
     private static final int TREE_WOOD_REWARD = 2;
 
+    // Grille de culture utilisée pour savoir si une case reste réellement libre.
     private final GrilleCulture grilleCulture;
+    // Stockage principal des arbres par coordonnées de case.
     private final TreeInstance[][] trees;
+    // Effets visuels d'abattage encore actifs.
     private final List<TreeFellingEffect> fellingEffects;
+    // Effets visuels de récompense bois encore actifs.
     private final List<WoodRewardEffect> woodRewardEffects;
+    // Aléatoire utilisé pour varier certains choix de sprite.
     private final Random random;
 
-    // le constructeur
+    /**
+     * On prépare ici tout l'état nécessaire pour gérer les arbres du champ.
+     */
     public TreeManager(GrilleCulture grilleCulture) {
         this.grilleCulture = grilleCulture;
         this.trees = new TreeInstance[grilleCulture.getLargeur()][grilleCulture.getHauteur()];
@@ -28,18 +37,30 @@ public class TreeManager {
         this.random = new Random();
     }
 
+    /**
+     * On expose le nombre de colonnes gérées par le tableau d'arbres.
+     */
     public int getColumnCount() {
         return trees.length;
     }
 
+    /**
+     * On expose le nombre de lignes gérées par le tableau d'arbres.
+     */
     public int getRowCount() {
         return trees.length == 0 ? 0 : trees[0].length;
     }
 
+    /**
+     * On dit simplement si un arbre existe actuellement sur cette case.
+     */
     public synchronized boolean hasTreeAt(int gridX, int gridY) {
         return isInsideGrid(gridX, gridY) && trees[gridX][gridY] != null;
     }
 
+    /**
+     * On renvoie une copie de l'arbre demandé pour protéger l'état interne.
+     */
     public synchronized TreeInstance getTreeAt(int gridX, int gridY) {
         if (!isInsideGrid(gridX, gridY) || trees[gridX][gridY] == null) {
             return null;
@@ -64,7 +85,9 @@ public class TreeManager {
                 || grilleCulture.getCulture(gridX, gridY) != null;
     }
 
-    // Pour placer l'arbre
+    /**
+     * On place un arbre sur la case si elle reste encore autorisée.
+     */
     public synchronized boolean placeTree(int gridX, int gridY, boolean mature, boolean weepingWillow) {
         if (canPlaceTreeAt(gridX, gridY)) {
             return false;
@@ -80,7 +103,9 @@ public class TreeManager {
         return true;
     }
 
-    // Pour faire grandir l'arbre
+    /**
+     * On fait passer le tronc existant à l'état d'arbre mature.
+     */
     public synchronized void growTree(int gridX, int gridY) {
         if (!hasTreeAt(gridX, gridY)) {
             return;
@@ -133,30 +158,48 @@ public class TreeManager {
         return true;
     }
 
+    /**
+     * On renvoie les effets d'abattage encore visibles après nettoyage des expirés.
+     */
     public synchronized List<TreeFellingEffect> getActiveFellingEffects() {
         long now = System.currentTimeMillis();
         cleanupExpiredEffects(now);
         return new ArrayList<>(fellingEffects);
     }
 
+    /**
+     * On renvoie les effets de récompense bois encore visibles après nettoyage des expirés.
+     */
     public synchronized List<WoodRewardEffect> getActiveWoodRewardEffects() {
         long now = System.currentTimeMillis();
         cleanupExpiredEffects(now);
         return new ArrayList<>(woodRewardEffects);
     }
 
+    /**
+     * On expose la règle globale du nombre de coups nécessaires.
+     */
     public int getRequiredCutImpactCount() {
         return TREE_CUT_REQUIRED_IMPACTS;
     }
 
+    /**
+     * On expose la quantité de bois donnée par arbre abattu.
+     */
     public int getWoodRewardQuantity() {
         return TREE_WOOD_REWARD;
     }
 
+    /**
+     * On vérifie ici si des coordonnées tombent bien dans la grille des arbres.
+     */
     private boolean isInsideGrid(int gridX, int gridY) {
         return gridX >= 0 && gridX < trees.length && gridY >= 0 && gridY < trees[gridX].length;
     }
 
+    /**
+     * On retire les effets visuels qui ont dépassé leur durée de vie.
+     */
     private void cleanupExpiredEffects(long now) {
         fellingEffects.removeIf(effect -> effect == null || effect.isExpired(now));
         woodRewardEffects.removeIf(effect -> effect == null || effect.isExpired(now));

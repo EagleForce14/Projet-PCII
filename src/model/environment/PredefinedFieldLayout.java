@@ -10,18 +10,31 @@ import java.awt.Rectangle;
  * Centralise la préconfiguration visuelle et jouable du champ.
  */
 public final class PredefinedFieldLayout {
+    // Nombre de colonnes gardées entre la rivière décorative et la boutique principale.
     private static final int DECORATIVE_RIVER_COLUMNS_LEFT_OF_BARN = 2;
+    // Colonne de repli si la boutique ne permet pas de recalculer la rivière.
     private static final int DECORATIVE_RIVER_FALLBACK_COLUMN = 4;
+    // Largeur de chaque bande pré-labourée.
     private static final int TILLED_STRIP_WIDTH = 4;
+    // Première ligne labourée prédéfinie.
     private static final int FIRST_TILLED_ROW = 5;
+    // Nombre total de bandes labourées à poser.
     private static final int TILLED_STRIP_COUNT = 4;
+    // Écart vertical entre deux bandes labourées.
     private static final int TILLED_ROW_STEP = 2;
+    // Rayon de dégagement gardé autour des terres déjà labourées à gauche de la rivière.
     private static final int LEFT_TILLED_CLEARANCE_RADIUS = 2;
 
+    /**
+     * On bloque l'instanciation car cette classe ne sert qu'à fournir des règles fixes de layout.
+     */
     private PredefinedFieldLayout() {
         // Classe utilitaire.
     }
 
+    /**
+     * On applique ici toute la préconfiguration fixe du terrain avant la partie.
+     */
     public static void apply(FieldPanel fieldPanel) {
         if (fieldPanel == null) {
             return;
@@ -124,6 +137,9 @@ public final class PredefinedFieldLayout {
         return fieldPanel != null && gridX == 0;
     }
 
+    /**
+     * On dit si la ligne se trouve dans la bande verticale réservée autour des terres à gauche.
+     */
     private static boolean isInsideReservedLeftRiverRows(int gridY) {
         int firstReservedRow = FIRST_TILLED_ROW;
         int lastReservedRow = FIRST_TILLED_ROW + ((TILLED_STRIP_COUNT - 1) * TILLED_ROW_STEP);

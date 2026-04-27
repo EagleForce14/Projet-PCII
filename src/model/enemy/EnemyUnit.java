@@ -17,10 +17,9 @@ import java.awt.geom.Point2D;
 import java.util.Random;
 
 /**
- * Classe représentant un lapin autonome.
- * Son cycle de vie est toujours le même :
- * apparition hors écran, entrée dans le champ, promenade, éventuelle recherche d'une culture,
- * attente de 5 secondes sur la culture avant de manger, ou retour/fuite vers l'extérieur.
+ * Représente une unité ennemie pilotée par un contexte de monde unique.
+ * Le monde FARM active la logique de lapin autour des cultures et des clôtures.
+ * Le monde CAVE active la logique de monstre autour de la patrouille et du combat.
  */
 public class EnemyUnit {
     public enum DisplaySprite {
@@ -31,41 +30,62 @@ public class EnemyUnit {
         EATING
     }
 
-    private enum EnemyKind {
-        FARM_RABBIT,
-        CAVE_MONSTER
-    }
-
     private enum CaveBehavior {
         PAUSE,
         PATROL,
         ALERT
     }
 
+    // Identifiant du bord haut pour les apparitions hors écran.
     private static final int SPAWN_SIDE_TOP = 0;
+    // Identifiant du bord droit pour les apparitions hors écran.
     private static final int SPAWN_SIDE_RIGHT = 1;
+    // Identifiant du bord bas pour les apparitions hors écran.
     private static final int SPAWN_SIDE_BOTTOM = 2;
+    // Identifiant du bord gauche pour les apparitions hors écran.
     private static final int SPAWN_SIDE_LEFT = 3;
+    // Seuil minimal pour considérer qu'une direction d'affichage (orientation) n'est pas nulle (pour savoir quelle image du joueur afficher :
+    // de dos, de face, à gauche ou à droite)
     private static final double DISPLAY_DIRECTION_EPSILON = 0.01;
+    // Vitesse normale d'un monstre en patrouille dans la grotte.
     private static final double CAVE_PATROL_SPEED = 1.4;
+    // Vitesse plus élevée utilisée quand un monstre est en alerte.
     private static final double CAVE_ALERT_SPEED = 2.0;
+    // Nombre minimal de frames avant de recalculer une cible de patrouille.
     private static final int CAVE_PATROL_RETARGET_MIN_FRAMES = 28;
+    // Variation aléatoire ajoutée avant de recalculer une cible de patrouille.
     private static final int CAVE_PATROL_RETARGET_RANDOM_FRAMES = 42;
+    // Durée minimale d'une pause volontaire en patrouille.
     private static final int CAVE_PAUSE_MIN_FRAMES = 6;
+    // Variation aléatoire de la durée des pauses de patrouille.
     private static final int CAVE_PAUSE_RANDOM_FRAMES = 22;
+    // Probabilité de marquer une pause au lieu de repartir tout de suite.
     private static final double CAVE_PAUSE_PROBABILITY = 0.12;
+    // Probabilité de choisir une cible de patrouille dans toute la grotte.
     private static final double CAVE_GLOBAL_PATROL_PROBABILITY = 0.32;
+    // Nombre de ticks avant d'alterner la frame de marche du monstre.
     private static final int CAVE_WALK_FRAME_TOGGLE_TICKS = 8;
+    // Rayon dans lequel un monstre peut repérer le joueur.
     private static final int CAVE_INFLUENCE_RADIUS = 120;
+    // Portée maximale de tir d'un monstre de grotte.
     private static final int CAVE_SHOOT_RANGE = 185;
+    // Temps pendant lequel l'alerte reste mémorisée après perte de vue.
     private static final long CAVE_ALERT_MEMORY_MS = 1_250L;
+    // Délai minimal avant de changer de sens de strafe.
     private static final long CAVE_STRAFE_SWAP_DELAY_MS = 820L;
+    // Cooldown entre deux tirs de monstre.
     private static final long CAVE_SHOT_COOLDOWN_MS = 860L;
+    // Durée du flash visuel quand le monstre reçoit un coup.
     private static final long CAVE_HIT_FLASH_MS = 150L;
+    // Distance minimale que le monstre essaie de garder avec le joueur.
     private static final double CAVE_COMBAT_MIN_DISTANCE = 82.0;
+    // Distance maximale avant que le monstre ne se rapproche de nouveau.
     private static final double CAVE_COMBAT_MAX_DISTANCE = 138.0;
+    // Distance latérale visée pendant le strafe autour du joueur.
     private static final double CAVE_COMBAT_STRAFE_DISTANCE = 30.0;
+    // Vie maximale d'un monstre de grotte.
     private static final int CAVE_MAX_HEALTH = 60;
+    // Dégâts de base infligés par un monstre de grotte.
     private static final int CAVE_ATTACK_POWER = 12;
     // La taille de la zone de "sécurité" autour de la boutique principale (à droite)
     // (on ne peut pas traverser cette zone i.e. on ne peut pas traverser la boutique principale).
@@ -78,10 +98,15 @@ public class EnemyUnit {
     private static final long DELAI_COUP_CLOTURE_MS = 900L;
     // Mouvement "bélier" : le lapin recule un peu puis revient plus vite sur la clôture.
     private static final double FENCE_ATTACK_APPROACH_SPEED = 1.5;
+    // Vitesse du petit recul avant la charge suivante contre la clôture.
     private static final double FENCE_ATTACK_BACKSTEP_SPEED = 1.15;
+    // Vitesse de la charge rapide du lapin contre la clôture ciblée.
     private static final double FENCE_ATTACK_CHARGE_SPEED = 3.1;
+    // Distance de recul prise avant de relancer un impact de clôture.
     private static final double FENCE_ATTACK_BACKSTEP_DISTANCE = 18.0;
+    // Marge d'arrivée utilisée pour considérer le point de contact atteint.
     private static final double FENCE_ATTACK_CONTACT_TOLERANCE = 0.75;
+    // Marge d'arrivée un peu plus large pour la phase de recul.
     private static final double FENCE_ATTACK_BACKSTEP_TOLERANCE = 1.0;
     // Le délai de retour au terrier si le lapin n'a rien trouvé. Correspond à 30s
     private static final long DELAI_RETOUR_TERRIER_MS = 30000L;
@@ -130,17 +155,22 @@ public class EnemyUnit {
     private int stagnantFrames = 0;
     // Dernier déplacement réellement appliqué, utile pour éviter un demi-tour immédiat.
     private double lastMoveX = 0;
+    // Même idée que lastMoveX, mais pour l'axe vertical.
     private double lastMoveY = 0;
     // Côté de contournement actuellement privilégié pour longer proprement
     // la boutique principale (à droite).
     private int preferredTurnSign = 1;
     // Case de culture actuellement visée par le lapin.
     private int targetCultureGridX = -1;
+    // Ligne de culture actuellement visée par le lapin.
     private int targetCultureGridY = -1;
     // Si une clôture protège la culture ciblée, le lapin garde ce segment comme cible jusqu'à sa destruction.
     private CellSide targetFenceSide = null;
+    // Indique si le lapin recule avant sa prochaine charge contre la clôture.
     private boolean isFenceAttackBackingOff = false;
+    // Indique si le lapin est dans sa phase de charge rapide contre la clôture.
     private boolean isFenceAttackCharging = false;
+    // Instant du dernier impact réellement porté à la clôture ciblée.
     private long lastFenceHitTime = -1L;
     // Instant où le lapin a atteint la case et commence son attente de 5 secondes avant de manger.
     private long cultureWaitStartTime = -1L;
@@ -151,19 +181,33 @@ public class EnemyUnit {
     private int wanderTimer = 0;
     // Générateur aléatoire pour rendre les comportements moins mécaniques.
     private final Random random = new Random();
-    private final EnemyKind enemyKind;
+    // Le contexte de monde suffit ici à choisir toute la famille de comportements de l'unité.
+    private final WorldType worldType;
+    // Petite zone locale autour du point de garde initial du monstre.
     private Rectangle caveGuardBounds;
+    // Zone globale dans laquelle le monstre de grotte peut patrouiller.
     private Rectangle cavePatrolBounds;
+    // Position de référence en X du poste de garde du monstre.
     private double caveHomeX;
+    // Position de référence en Y du poste de garde du monstre.
     private double caveHomeY;
+    // Salle logique d'affectation du monstre pour l'overlay et le debug.
     private int caveRoomIndex = -1;
+    // État courant du monstre entre pause, patrouille et alerte.
     private CaveBehavior caveBehavior = CaveBehavior.PATROL;
+    // Compte à rebours avant de recalculer une cible de patrouille.
     private int cavePatrolRetargetTimer = 0;
+    // Temps restant pendant lequel le monstre reste volontairement immobile.
     private int cavePauseTimer = 0;
+    // Indique si le monstre de grotte est effectivement en train de marcher.
     private boolean caveMoving = false;
+    // Direction affichée en X pour choisir le bon sprite du monstre.
     private double caveDisplayVectorX = 0.0;
+    // Direction affichée en Y pour choisir le bon sprite du monstre.
     private double caveDisplayVectorY = 1.0;
+    // Index courant de la frame de marche affichée.
     private int caveWalkFrameIndex = 0;
+    // Compteur qui pilote l'alternance des frames de marche.
     private int caveWalkTickCounter = 0;
     
     // Largeur courante de la fenêtre de jeu.
@@ -177,24 +221,36 @@ public class EnemyUnit {
 
     // Gestionnaire d'objectifs pour mettre à jour les objectifs liés à la fuite.
     private final GestionnaireObjectifs gestionnaireObjectifs;
+    // Obstacles propres à la ferme, consultés surtout par les lapins.
     private final FieldObstacleMap farmObstacleMap;
+    // Carte de collision effectivement utilisée dans le monde courant.
     private final MovementCollisionMap movementCollisionMap;
+    // Colonne de rivière décorative utilisée pour éviter certains choix de spawn.
     private final int decorativeRiverColumn;
+    // Composant de combat partagé pour la vie et l'attaque de l'unité.
     private final CombatUnit combatUnit;
 
+    // Indique si le monstre de grotte est actuellement en mode alerte.
     private boolean caveAggroed = false;
+    // Dernière position X connue du joueur quand le monstre l'a vu.
     private double caveLastSeenPlayerX = Double.NaN;
+    // Dernière position Y connue du joueur quand le monstre l'a vu.
     private double caveLastSeenPlayerY = Double.NaN;
+    // Instant de la dernière vision fiable du joueur.
     private long caveLastSeenPlayerTime = -1L;
+    // Instant du dernier changement de sens de strafe.
     private long caveLastStrafeSwapTime = 0L;
+    // Instant du dernier tir effectué par le monstre.
     private long caveLastShotTime = Long.MIN_VALUE;
+    // Instant jusqu'auquel le flash de dégât doit rester visible.
     private long caveHitFlashUntilMs = 0L;
+    // Sens de strafe actuellement privilégié autour du joueur.
     private boolean caveStrafeClockwise = true;
 
     // On construit ici une unité ennemie avec les dimensions connues au moment de son apparition.
     public EnemyUnit(int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight, GrilleCulture grilleCulture,
                      GestionnaireObjectifs gestionnaireObjectifs, FieldObstacleMap fieldObstacleMap) {
-        this.enemyKind = EnemyKind.FARM_RABBIT;
+        this.worldType = WorldType.FARM;
         this.viewportWidth = viewportWidth;
         this.viewportHeight = viewportHeight;
         this.fieldWidth = fieldWidth;
@@ -218,7 +274,7 @@ public class EnemyUnit {
      * puis peut patrouiller dans toute la grotte.
      */
     public EnemyUnit(Rectangle caveSpawnBounds, Rectangle cavePatrolBounds, int roomIndex, MovementCollisionMap movementCollisionMap) {
-        this.enemyKind = EnemyKind.CAVE_MONSTER;
+        this.worldType = WorldType.CAVE;
         this.viewportWidth = 1280;
         this.viewportHeight = 720;
         this.fieldWidth = 900;
@@ -255,6 +311,9 @@ public class EnemyUnit {
         pickNewCavePatrolTarget();
     }
 
+    /**
+     * On tire une coordonnée flottante dans les bornes données.
+     */
     private double randomCoordinateInBounds(int origin, int size) {
         if (size <= 0) {
             return origin;
@@ -262,6 +321,9 @@ public class EnemyUnit {
         return origin + (random.nextDouble() * size);
     }
 
+    /**
+     * On élargit le poste de garde pour donner au monstre une petite zone locale autour de son origine.
+     */
     private Rectangle buildCaveGuardBounds(Rectangle caveSpawnBounds) {
         if (caveSpawnBounds == null) {
             return null;
@@ -277,6 +339,9 @@ public class EnemyUnit {
         );
     }
 
+    /**
+     * On cherche un point libre dans la zone donnée avant d'y faire apparaître ou patrouiller le monstre.
+     */
     private Point2D.Double findValidCavePoint(Rectangle bounds, int attempts) {
         if (bounds == null) {
             return null;
@@ -318,6 +383,9 @@ public class EnemyUnit {
         }
     }
 
+    /**
+     * On place l'ennemi juste hors écran sur le bord choisi.
+     */
     private void placeOutsideForSide(int side, int halfWidth, int halfHeight, int offset) {
         switch (side) {
             case SPAWN_SIDE_TOP:
@@ -340,6 +408,9 @@ public class EnemyUnit {
         }
     }
 
+    /**
+     * On vérifie si une coordonnée tombe du côté droit de la rivière décorative.
+     */
     private boolean isRightOfDecorativeRiver(double logicalX) {
         if (decorativeRiverColumn < 0) {
             return false;
@@ -350,6 +421,9 @@ public class EnemyUnit {
         return logicalX >= riverRightEdgeX;
     }
 
+    /**
+     * On repère la colonne de rivière pour éviter certains spawns incohérents.
+     */
     private int resolveDecorativeRiverColumn(GrilleCulture grilleCulture) {
         if (grilleCulture == null) {
             return -1;
@@ -373,7 +447,7 @@ public class EnemyUnit {
      */
     public synchronized void update(EnemyModel enemyModel, Unit player, GrilleCulture grilleCulture, int viewportWidth, int viewportHeight,
                                     int fieldWidth, int fieldHeight) {
-        if (enemyKind == EnemyKind.CAVE_MONSTER) {
+        if (worldType == WorldType.CAVE) {
             updateCaveMonster(enemyModel, player, viewportWidth, viewportHeight, fieldWidth, fieldHeight);
             return;
         }
@@ -558,6 +632,9 @@ public class EnemyUnit {
         cavePatrolRetargetTimer = CAVE_PATROL_RETARGET_MIN_FRAMES + random.nextInt(CAVE_PATROL_RETARGET_RANDOM_FRAMES);
     }
 
+    /**
+     * On choisit la vitesse du monstre selon son état courant.
+     */
     private double resolveCaveSpeed() {
         if (caveBehavior == CaveBehavior.PAUSE) {
             return 0.0;
@@ -598,6 +675,9 @@ public class EnemyUnit {
         clampInsidePatrolBounds();
     }
 
+    /**
+     * On garde ici la direction affichée et l'alternance des frames de marche.
+     */
     private void updateCaveAnimation(double stepX, double stepY) {
         caveMoving = Math.abs(stepX) >= 0.001 || Math.abs(stepY) >= 0.001;
         if (!caveMoving) {
@@ -613,6 +693,9 @@ public class EnemyUnit {
         }
     }
 
+    /**
+     * On recadre le monstre dans sa zone de patrouille pour éviter une dérive progressive.
+     */
     private void clampInsidePatrolBounds() {
         if (cavePatrolBounds == null) {
             return;
@@ -622,6 +705,9 @@ public class EnemyUnit {
         y = Math.max(cavePatrolBounds.y, Math.min(y, cavePatrolBounds.y + cavePatrolBounds.height));
     }
 
+    /**
+     * On choisit une nouvelle destination de patrouille cohérente avec la zone du monstre.
+     */
     private void pickNewCavePatrolTarget() {
         if (cavePatrolBounds == null && caveGuardBounds == null) {
             targetX = caveHomeX;
@@ -912,6 +998,9 @@ public class EnemyUnit {
         return false;
     }
 
+    /**
+     * On calcule le point de contact à viser pour frapper la clôture sur le bon côté.
+     */
     private double getFenceContactTargetX(Rectangle fenceBounds, CellSide side) {
         switch (side) {
             case LEFT:
@@ -929,6 +1018,9 @@ public class EnemyUnit {
         }
     }
 
+    /**
+     * On calcule le point de contact vertical à viser pour frapper la clôture sur le bon côté.
+     */
     private double getFenceContactTargetY(Rectangle fenceBounds, CellSide side) {
         switch (side) {
             case TOP:
@@ -946,6 +1038,9 @@ public class EnemyUnit {
         }
     }
 
+    /**
+     * On calcule le petit recul horizontal avant la charge suivante contre la clôture.
+     */
     private double getFenceBackstepTargetX(double contactTargetX, CellSide side) {
         switch (side) {
             case LEFT:
@@ -960,6 +1055,9 @@ public class EnemyUnit {
         }
     }
 
+    /**
+     * On calcule le petit recul vertical avant la charge suivante contre la clôture.
+     */
     private double getFenceBackstepTargetY(double contactTargetY, CellSide side) {
         switch (side) {
             case TOP:
@@ -1196,6 +1294,9 @@ public class EnemyUnit {
         return culture == null || culture.getStadeCroissance() != Stade.MATURE;
     }
 
+    /**
+     * On transforme la clôture qui bloque la culture ciblée en vraie cible d'attaque.
+     */
     private boolean acquireTargetFence(double stepX, double stepY, GrilleCulture grilleCulture) {
         if (!hasCultureTarget() || grilleCulture == null || farmObstacleMap == null) {
             return false;
@@ -1217,6 +1318,9 @@ public class EnemyUnit {
         return true;
     }
 
+    /**
+     * On dit simplement si une clôture valide reste verrouillée comme cible.
+     */
     private boolean hasFenceAttackTarget(GrilleCulture grilleCulture) {
         return targetFenceSide != null
                 && hasCultureTarget()
@@ -1224,6 +1328,9 @@ public class EnemyUnit {
                 && grilleCulture.hasFence(targetCultureGridX, targetCultureGridY, targetFenceSide);
     }
 
+    /**
+     * On vérifie si la collision rencontrée correspond bien à la clôture actuellement attaquée.
+     */
     private boolean isTargetFenceCollision(FenceCollision collision) {
         return collision != null
                 && targetFenceSide != null
@@ -1232,6 +1339,9 @@ public class EnemyUnit {
                 && collision.getSide() == targetFenceSide;
     }
 
+    /**
+     * On remet à zéro tout l'état temporaire lié à l'attaque de clôture.
+     */
     private void clearFenceAttackTarget() {
         targetFenceSide = null;
         isFenceAttackBackingOff = false;
@@ -1545,7 +1655,7 @@ public class EnemyUnit {
      * boutique principale (à droite), arbres, rivière, et clôtures côté lapins.
      */
     private boolean canOccupy(double centerX, double centerY) {
-        if (enemyKind == EnemyKind.CAVE_MONSTER) {
+        if (worldType == WorldType.CAVE) {
             return movementCollisionMap == null
                     || movementCollisionMap.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE);
         }
@@ -1601,6 +1711,9 @@ public class EnemyUnit {
             && candidateY <= barnBounds.y + barnBounds.height + margin;
     }
 
+    /**
+     * On n'accepte la cible proposée que si le lapin peut vraiment l'occuper.
+     */
     private boolean trySetNavigableGroundTarget(double candidateX, double candidateY) {
         if (!canOccupy(candidateX, candidateY)) {
             return false;
@@ -1624,6 +1737,9 @@ public class EnemyUnit {
         return x;
     }
 
+    /**
+     * On expose la taille de hitbox commune utilisée pour les collisions.
+     */
     public static int getCollisionSize() {
         return HITBOX_SIZE;
     }
@@ -1646,44 +1762,74 @@ public class EnemyUnit {
      */
     public synchronized boolean hasFled() { return hasFled; }
 
+    /**
+     * On indique si cette unité relève de la logique grotte plutôt que lapin de ferme.
+     */
     public synchronized boolean isCaveMonster() {
-        return enemyKind == EnemyKind.CAVE_MONSTER;
+        return worldType == WorldType.CAVE;
     }
 
+    /**
+     * On expose la salle d'origine du monstre pour les aides visuelles et le debug.
+     */
     public synchronized int getAssignedRoomIndex() {
         return caveRoomIndex;
     }
 
+    /**
+     * On indique si le monstre est actuellement en état d'alerte.
+     */
     public synchronized boolean isCaveAggroed() {
-        return enemyKind == EnemyKind.CAVE_MONSTER && caveAggroed;
+        return worldType == WorldType.CAVE && caveAggroed;
     }
 
+    /**
+     * On expose le rayon d'aggro de la grotte pour l'overlay et le debug.
+     */
     public synchronized int getCaveInfluenceRadius() {
-        return enemyKind == EnemyKind.CAVE_MONSTER ? CAVE_INFLUENCE_RADIUS : 0;
+        return worldType == WorldType.CAVE ? CAVE_INFLUENCE_RADIUS : 0;
     }
 
+    /**
+     * On fournit la vie normalisée pour les barres de santé.
+     */
     public synchronized double getHealthRatio() {
         return combatUnit.getHealthRatio();
     }
 
+    /**
+     * On expose la vie actuelle brute de l'unité.
+     */
     public synchronized int getHealth() {
         return combatUnit.getHealth();
     }
 
+    /**
+     * On expose la vie maximale de l'unité.
+     */
     public synchronized int getMaxHealth() {
         return combatUnit.getMaxHealth();
     }
 
+    /**
+     * On prépare un libellé de vie prêt à afficher dans l'interface.
+     */
     public synchronized String getHealthLabel() {
         return combatUnit.getHealth() + " / " + combatUnit.getMaxHealth();
     }
 
+    /**
+     * On indique si l'unité peut encore agir.
+     */
     public synchronized boolean isAlive() {
         return combatUnit.isAlive();
     }
 
+    /**
+     * On dit si le flash de coup doit encore être affiché.
+     */
     public synchronized boolean isHitFlashVisible() {
-        return enemyKind == EnemyKind.CAVE_MONSTER && System.currentTimeMillis() < caveHitFlashUntilMs;
+        return worldType == WorldType.CAVE && System.currentTimeMillis() < caveHitFlashUntilMs;
     }
 
     /**
@@ -1691,7 +1837,7 @@ public class EnemyUnit {
      * s'il a le droit de tirer à cet instant.
      */
     public synchronized boolean canFireAtPlayer(Unit player, long now) {
-        if (enemyKind != EnemyKind.CAVE_MONSTER
+        if (worldType != WorldType.CAVE
                 || player == null
                 || !player.isInCave()
                 || !caveAggroed
@@ -1707,10 +1853,16 @@ public class EnemyUnit {
                 && (now - caveLastShotTime) >= CAVE_SHOT_COOLDOWN_MS;
     }
 
+    /**
+     * On expose la puissance d'attaque brute du monstre.
+     */
     public synchronized int getAttackPower() {
         return combatUnit.getAttackPower();
     }
 
+    /**
+     * On mémorise le tir pour le cooldown et pour orienter le sprite vers la cible.
+     */
     public synchronized void markShotFiredAt(double targetX, double targetY, long now) {
         caveLastShotTime = now;
         caveDisplayVectorX = targetX - x;
@@ -1725,7 +1877,7 @@ public class EnemyUnit {
      * Le booléen renvoyé permet au modèle de combat de le retirer sans re-tester sa vie.
      */
     public synchronized boolean receiveProjectileDamage(int damage, double attackerX, double attackerY) {
-        if (enemyKind != EnemyKind.CAVE_MONSTER || !combatUnit.isAlive()) {
+        if (worldType != WorldType.CAVE || !combatUnit.isAlive()) {
             return false;
         }
 
@@ -1775,10 +1927,16 @@ public class EnemyUnit {
         return displayVectorY >= 0 ? DisplaySprite.FRONT : DisplaySprite.BACK;
     }
 
+    /**
+     * On expose le sprite lapin déjà résolu pour ne pas refaire la logique dans la vue.
+     */
     public synchronized DisplaySprite getDisplaySprite() {
         return resolveDisplaySprite();
     }
 
+    /**
+     * On traduit l'état visuel du monstre de grotte en clé de sprite concrète.
+     */
     private SpriteKey resolveCaveSpriteKey() {
         double displayVectorX = caveDisplayVectorX;
         double displayVectorY = caveDisplayVectorY;
@@ -1810,8 +1968,11 @@ public class EnemyUnit {
         return caveWalkFrameIndex == 0 ? SpriteKey.MONSTER_DOWN_WALK_1 : SpriteKey.MONSTER_DOWN_WALK_2;
     }
 
+    /**
+     * On fournit la clé de sprite finale quel que soit le type d'ennemi.
+     */
     public synchronized SpriteKey getSpriteKey() {
-        if (enemyKind == EnemyKind.CAVE_MONSTER) {
+        if (worldType == WorldType.CAVE) {
             return resolveCaveSpriteKey();
         }
 
@@ -1828,7 +1989,7 @@ public class EnemyUnit {
      * Indique à l'overlay si le chrono pertinent est actuellement celui de la consommation.
      */
     public synchronized boolean isEatingCultureCountdownActive() {
-        if (enemyKind == EnemyKind.CAVE_MONSTER) {
+        if (worldType == WorldType.CAVE) {
             return false;
         }
         return hasCultureTarget() && isOnTargetCultureCell();
@@ -1839,7 +2000,7 @@ public class EnemyUnit {
      * L'overlay peut ainsi calculer sa progression sans connaître les détails métier.
      */
     public synchronized long getOverlayCountdownMaxMs() {
-        if (enemyKind == EnemyKind.CAVE_MONSTER) {
+        if (worldType == WorldType.CAVE) {
             return -1L;
         }
 
@@ -1859,7 +2020,7 @@ public class EnemyUnit {
      * La valeur dépend donc du vrai comportement courant du lapin, et non d'un état UI artificiel.
      */
     public synchronized long getOverlayCountdownMs() {
-        if (enemyKind == EnemyKind.CAVE_MONSTER) {
+        if (worldType == WorldType.CAVE) {
             return -1L;
         }
 
@@ -1888,7 +2049,7 @@ public class EnemyUnit {
      * Fournit un libellé très simple pour résumer le comportement courant dans l'overlay.
      */
     public synchronized String getOverlayStatus() {
-        if (enemyKind == EnemyKind.CAVE_MONSTER) {
+        if (worldType == WorldType.CAVE) {
             if (!combatUnit.isAlive()) {
                 return "Neutralise";
             }

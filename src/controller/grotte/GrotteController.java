@@ -7,7 +7,6 @@ import model.grotte.combat.CaveCombatModel;
 import model.grotte.combat.CaveCombatThread;
 import model.movement.BuildingGeometry;
 import model.movement.MovementCollisionMap;
-import model.movement.MovementModel;
 import model.movement.Unit;
 import model.runtime.GamePauseController;
 import model.runtime.Jour;
@@ -34,7 +33,6 @@ import java.awt.event.MouseListener;
 
 /**
  * Contrôleur dédié à la grotte.
- *
  * Toute la gestion des listeners de cette zone est centralisée ici :
  * déplacement, tir, focus clavier, clic de sélection des monstres
  * et bascule ferme <-> grotte.
@@ -67,6 +65,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
     private boolean exitTriggered;
     private volatile boolean transitionCheckQueued;
 
+    /**
+     * On rassemble ici tout ce qu'il faut pour faire vivre la scène de grotte.
+     */
     public GrotteController(
             MovementView farmMovementView,
             MovementView grotteMovementView,
@@ -115,6 +116,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         markActiveCard(farmCardName);
     }
 
+    /**
+     * On branche ici les couches Swing qui peuvent recevoir le clavier ou la souris dans la grotte.
+     */
     private void registerInputLayers() {
         if (grotteMovementView != null) {
             grotteMovementView.addKeyListener(this);
@@ -128,6 +132,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         }
     }
 
+    /**
+     * On relie le bouton de grotte de la sidebar à ce contrôleur.
+     */
     private void bindCaveButton() {
         if (sidebarPanel == null) {
             return;
@@ -139,6 +146,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         }
     }
 
+    /**
+     * On ne réagit ici qu'au bouton dédié à l'entrée ou à la sortie de la grotte.
+     */
     @Override
     public void actionPerformed(ActionEvent event) {
         if (event.getSource() == caveButton) {
@@ -146,6 +156,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         }
     }
 
+    /**
+     * On demande un contrôle différé pour tester la transition avec une position joueur bien à jour.
+     */
     public void checkSceneTransitionFromCurrentPosition() {
         if (pauseController.isPaused() || transitionCheckQueued) {
             return;
@@ -155,6 +168,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         SwingUtilities.invokeLater(this::runQueuedTransitionCheck);
     }
 
+    /**
+     * On transforme chaque touche en une direction unique ou en tir continu dans la grotte.
+     */
     @Override
     public void keyPressed(KeyEvent event) {
         if (pauseController.isPaused() || !isCaveSceneActive()) {
@@ -185,6 +201,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         }
     }
 
+    /**
+     * On arrête ici le tir ou la direction relâchée pour garder un état de contrôle propre.
+     */
     @Override
     public void keyReleased(KeyEvent event) {
         Unit player = playerUnit;
@@ -218,14 +237,23 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         }
     }
 
+    /**
+     * On n'utilise pas la saisie de caractères dans la grotte.
+     */
     @Override
     public void keyTyped(KeyEvent event) {
     }
 
+    /**
+     * On ne traite pas de logique au clic complet : seul l'appui nous intéresse.
+     */
     @Override
     public void mouseClicked(MouseEvent event) {
     }
 
+    /**
+     * On redonne le focus clavier à la vue grotte et on synchronise la sélection de monstre.
+     */
     @Override
     public void mousePressed(MouseEvent event) {
         if (grotteMovementView != null) {
@@ -234,18 +262,30 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         syncEnemySelection(event);
     }
 
+    /**
+     * On ne déclenche rien au relâchement de souris dans cette scène.
+     */
     @Override
     public void mouseReleased(MouseEvent event) {
     }
 
+    /**
+     * On ne gère pas d'effet d'entrée de souris ici.
+     */
     @Override
     public void mouseEntered(MouseEvent event) {
     }
 
+    /**
+     * On ne gère pas d'effet de sortie de souris ici.
+     */
     @Override
     public void mouseExited(MouseEvent event) {
     }
 
+    /**
+     * On convertit le clic reçu vers le repère de la vue ennemie avant de sélectionner quoi que ce soit.
+     */
     private void syncEnemySelection(MouseEvent event) {
         if (caveEnemyView == null || event == null) {
             return;
@@ -260,6 +300,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         caveEnemyView.handleWorldClick(translatedPoint);
     }
 
+    /**
+     * On force ici une seule direction active pour éviter les combinaisons ambiguës.
+     */
     private void activateSingleDirection(Unit player, boolean moveUp, boolean moveDown, boolean moveLeft, boolean moveRight) {
         if (player == null) {
             return;
@@ -271,18 +314,27 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         player.setMoveRight(moveRight, moveRight);
     }
 
+    /**
+     * On coupe complètement le déplacement du joueur avant chaque bascule de scène.
+     */
     private void stopPlayerMovement(Unit player) {
         if (player != null) {
             player.stopMovement();
         }
     }
 
+    /**
+     * On arrête le tir du joueur pour ne pas garder un feu actif après un changement d'état.
+     */
     private void stopPlayerFire() {
         if (caveCombatModel != null) {
             caveCombatModel.setPlayerFiring(false);
         }
     }
 
+    /**
+     * On bascule entre ferme et grotte en appliquant les arrêts nécessaires juste avant.
+     */
     private void toggleCaveScene() {
         if (pauseController.isPaused()) {
             return;
@@ -316,6 +368,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         }
     }
 
+    /**
+     * On surveille ici la zone de sortie de grotte pour renvoyer le joueur à la ferme au bon moment.
+     */
     private void checkFarmExit() {
         if (pauseController.isPaused() || !isCaveSceneActive()) {
             return;
@@ -346,6 +401,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         returnToFarm();
     }
 
+    /**
+     * On surveille ici l'entrée de la grotte côté ferme sans déclencher plusieurs fois la même transition.
+     */
     private void checkFarmEntry() {
         if (pauseController.isPaused() || isCaveSceneActive() || playerUnit == null || farmFieldPanel == null) {
             return;
@@ -385,6 +443,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         return caveEntryZoneBounds.intersects(playerBounds);
     }
 
+    /**
+     * On active la carte grotte, on y place le joueur et on relance les systèmes propres à cette scène.
+     */
     private void showCave() {
         if (centerLayout == null || centerPanel == null) {
             return;
@@ -403,9 +464,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
             Point caveSpawnOffset = grotteFieldPanel.getInitialPlayerOffset();
             stopPlayerMovement(playerUnit);
             playerUnit.setFieldObstacleMap(caveCollisionMap);
-            if (caveSpawnOffset != null) {
-                playerUnit.setPosition(caveSpawnOffset.x, caveSpawnOffset.y);
-            }
+            playerUnit.setPosition(caveSpawnOffset.x, caveSpawnOffset.y);
             playerUnit.enterCave();
         }
         if (caveEnemyModel != null) {
@@ -421,6 +480,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         exitTriggered = false;
     }
 
+    /**
+     * On revient à la ferme en restaurant la carte, la collision et l'état normal des systèmes.
+     */
     private void returnToFarm() {
         if (centerLayout == null || centerPanel == null) {
             return;
@@ -458,6 +520,9 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         entryTriggered = false;
     }
 
+    /**
+     * On active ou on coupe en bloc les threads qui ne doivent tourner que dans la grotte.
+     */
     private void setCaveThreadsActive(boolean active) {
         if (caveEnemyPhysicsThread != null) {
             caveEnemyPhysicsThread.setThreadActive(active);
@@ -470,32 +535,53 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         }
     }
 
+    /**
+     * On garde ce test séparé pour rendre la lecture des contrôles plus directe.
+     */
     private boolean isUpKey(int keyCode) {
         return keyCode == KeyEvent.VK_UP;
     }
 
+    /**
+     * On garde ce test séparé pour rendre la lecture des contrôles plus directe.
+     */
     private boolean isDownKey(int keyCode) {
         return keyCode == KeyEvent.VK_DOWN;
     }
 
+    /**
+     * On garde ce test séparé pour rendre la lecture des contrôles plus directe.
+     */
     private boolean isLeftKey(int keyCode) {
         return keyCode == KeyEvent.VK_LEFT;
     }
 
+    /**
+     * On garde ce test séparé pour rendre la lecture des contrôles plus directe.
+     */
     private boolean isRightKey(int keyCode) {
         return keyCode == KeyEvent.VK_RIGHT;
     }
 
+    /**
+     * On isole ici la touche de tir pour centraliser la règle en un seul endroit.
+     */
     private boolean isShootKey(int keyCode) {
         return keyCode == KeyEvent.VK_SPACE;
     }
 
+    /**
+     * On lit ici la carte active mémorisée sur le panneau central.
+     */
     private boolean isCaveSceneActive() {
         return centerPanel != null
                 && grotteCardName != null
                 && grotteCardName.equals(centerPanel.getClientProperty("activeCard"));
     }
 
+    /**
+     * On mémorise la carte affichée pour savoir ensuite dans quelle scène on se trouve vraiment.
+     */
     private void markActiveCard(String cardName) {
         if (centerPanel != null) {
             centerPanel.putClientProperty("activeCard", cardName);

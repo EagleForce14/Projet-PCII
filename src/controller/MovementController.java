@@ -50,7 +50,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     private final TreeManager treeManager;
     private final GamePauseController pauseController;
 
-    // Constructeur de la classe
+    /**
+     * On branche ici tous les boutons et tous les listeners qui pilotent le jeu principal.
+     */
     public MovementController(MovementModel model, MovementView view, EnemyModel enemyModel, EnemyView enemyView, SidebarPanel sidebarPanel,
                               GrilleCulture grilleCulture, Money playerMoney, Inventaire inventaire,
                               TreeManager treeManager,
@@ -250,10 +252,10 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
 
     /**
      * Le chemin se pose comme les autres actions de la sidebar :
-     * sur la case actuellement occupee par le joueur.
-     *
+     * sur la case actuellement occupée par le joueur.
+
      * Cela remplace volontairement l'ancien placement a la souris,
-     * pour garder une logique de controle plus uniforme.
+     * pour garder une logique de contrôle plus uniforme.
      */
     private void poserCheminCaseActive(ActionEvent event) {
         if (pauseController.isPaused()) {
@@ -441,6 +443,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         shopOverlay.openShop();
     }
 
+    /**
+     * On ouvre l'échoppe du stand et on met le jeu en pause tant qu'elle reste affichée.
+     */
     private void ouvrirEchoppe() {
         if (pauseController.isPaused()) {
             return;
@@ -629,7 +634,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         return true;
     }
 
-    // On implémente KeyListener (Gestion des Touches)
+    /**
+     * On active ici une seule direction à la fois
+     */
     @Override
     public void keyPressed(KeyEvent e) {
         if (pauseController.isPaused()) {
@@ -669,7 +676,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         }
     }
 
-    // Désactivation de tous les flags de déplacement de l'unité lors du relâchement d’une touche.
+    /**
+     * On coupe ici la direction relâchée pour éviter qu'un déplacement reste actif par erreur.
+     */
     @Override
     public void keyReleased(KeyEvent e) {
         if (pauseController.isPaused()) {
@@ -689,12 +698,21 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         if (key == KeyEvent.VK_RIGHT) player.setMoveRight(false);
     }
 
+    /**
+     * On n'utilise pas la saisie de caractère ici : seules les touches physiques comptent.
+     */
     @Override
     public void keyTyped(KeyEvent e) {}
 
+    /**
+     * On ne traite rien au clic relâché : toute la logique part du press.
+     */
     @Override
     public void mouseClicked(MouseEvent e) {}
 
+    /**
+     * On centralise ici tous les clics de jeu, d'inventaire et d'interaction avec le décor.
+     */
     @Override
     public void mousePressed(MouseEvent e) {
         if (pauseController.isPaused()) {
@@ -746,22 +764,37 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         movementView.requestFocusInWindow();
     }
 
+    /**
+     * On ne garde aucun traitement sur le relâchement de souris dans ce contrôleur.
+     */
     @Override
     public void mouseReleased(MouseEvent e) {}
 
+    /**
+     * On met à jour l'aperçu de clôture dès que la souris entre dans une zone suivie.
+     */
     @Override
     public void mouseEntered(MouseEvent e) {
         updateFencePlacementPreview(e);
     }
 
+    /**
+     * On efface l'aperçu de clôture quand la souris sort pour ne pas laisser un visuel trompeur.
+     */
     @Override
     public void mouseExited(MouseEvent e) {
         fieldPanel.clearFencePreview();
     }
 
+    /**
+     * On ne gère pas le drag ici : la pose se fait au clic simple.
+     */
     @Override
     public void mouseDragged(MouseEvent e) {}
 
+    /**
+     * On recalcule l'aperçu de clôture au fil du survol pour montrer exactement où l'on poserait.
+     */
     @Override
     public void mouseMoved(MouseEvent e) {
         updateFencePlacementPreview(e);
@@ -819,6 +852,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         return true;
     }
 
+    /**
+     * On ouvre la menuiserie uniquement si le clic tombe sur sa zone visible.
+     */
     private boolean handleWorkshopClick(MouseEvent event) {
         Point pointInFieldPanel = getPointInFieldPanel(event);
         if (pointInFieldPanel == null || !fieldPanel.getWorkshopScreenBounds().contains(pointInFieldPanel)) {
@@ -829,6 +865,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         return true;
     }
 
+    /**
+     * On ouvre l'échoppe uniquement si le clic vise bien le stand affiché sur la carte.
+     */
     private boolean handleStallClick(MouseEvent event) {
         Point pointInFieldPanel = getPointInFieldPanel(event);
         Rectangle stallBounds = fieldPanel.getStallScreenBounds();
@@ -869,6 +908,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         );
     }
 
+    /**
+     * On cherche ici l'arbre actuellement assez proche du joueur pour être coupé.
+     */
     private TreeInstance getInteractableTreeForPlayer() {
         Unit player = model.getPlayerUnit();
         FieldObstacleMap obstacleMap = fieldPanel.getFieldObstacleMap();
@@ -884,6 +926,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         );
     }
 
+    /**
+     * On affiche l'overlay demandé sur la glass pane pour bloquer le jeu derrière.
+     */
     private void showOverlay(JComponent overlay) {
         if (overlay == null || movementView.getRootPane() == null) {
             return;
@@ -893,6 +938,9 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         }
     }
 
+    /**
+     * On limite ici la sélection aux installations qui demandent un vrai mode de pose.
+     */
     private boolean isSelectableFacilityType(FacilityType facilityType) {
         return facilityType == FacilityType.CLOTURE
                 || facilityType == FacilityType.CHEMIN

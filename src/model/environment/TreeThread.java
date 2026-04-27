@@ -12,28 +12,42 @@ import java.util.Random;
 
 /**
  * Thread dédié au cycle de vie des arbres du décor.
- *
+
  * Au lancement :
  * quelques arbres sont déjà matures.
- *
+
  * Ensuite :
  * le thread fait apparaître un tronc sur une case d'herbe libre,
  * attend le délai de croissance, puis transforme ce tronc en arbre complet.
  */
 public class TreeThread extends Thread {
+    // Nombre d'arbres déjà matures placés au lancement.
     private static final int INITIAL_TREE_COUNT = 4;
+    // Temps d'attente entre deux tentatives de spawn d'arbre.
     private static final long TREE_SPAWN_DELAY_MS = 12000;
+    // Temps de croissance d'un tronc avant tentative de maturation.
     private static final long TREE_GROWTH_DELAY_MS = 8000;
+    // Petite attente entre deux vérifications d'une zone de croissance encore occupée.
     private static final long GROWTH_RETRY_DELAY_MS = 250;
 
+    // Gestionnaire qui détient l'état vivant de tous les arbres.
     private final TreeManager treeManager;
+    // Carte d'obstacles utilisée pour toutes les validations géométriques liées aux arbres.
     private final FieldObstacleMap fieldObstacleMap;
+    // Joueur à éviter lors des spawns et des maturations.
     private final Unit playerUnit;
+    // Modèle ennemi consulté pour ne pas faire pousser un arbre sur un lapin.
     private final EnemyModel enemyModel;
+    // Aléatoire utilisé pour choisir une case parmi les candidates.
     private final Random random;
+    // Contrôleur global de pause partagé avec le reste du jeu.
     private final GamePauseController pauseController;
+    // Indique si le thread doit continuer à tourner.
     private volatile boolean actif = true;
 
+    /**
+     * On prépare ici le thread qui gère les apparitions et la croissance des arbres.
+     */
     public TreeThread(TreeManager treeManager, FieldObstacleMap fieldObstacleMap, Unit playerUnit, EnemyModel enemyModel) {
         this.treeManager = treeManager;
         this.fieldObstacleMap = fieldObstacleMap;
@@ -59,11 +73,17 @@ public class TreeThread extends Thread {
         }
     }
 
+    /**
+     * On demande l'arrêt propre du thread et on réveille sa boucle si elle dort.
+     */
     public void arreter() {
         actif = false;
         interrupt();
     }
 
+    /**
+     * On fait tourner ici le cycle complet spawn de tronc puis croissance en arbre mature.
+     */
     @Override
     public void run() {
         while (actif) {
@@ -124,6 +144,9 @@ public class TreeThread extends Thread {
         return availableCells.get(random.nextInt(availableCells.size()));
     }
 
+    /**
+     * On vérifie si un nouveau tronc toucherait déjà le joueur ou un lapin.
+     */
     private boolean isTrunkSpawnAreaOccupied(int gridX, int gridY) {
         if (playerUnit != null
                 && fieldObstacleMap.trunkWouldOverlapCenteredBox(
@@ -167,6 +190,9 @@ public class TreeThread extends Thread {
         }
     }
 
+    /**
+     * On vérifie si la future hitbox mature couperait encore le joueur ou un lapin.
+     */
     private boolean isFutureMatureAreaOccupied(int gridX, int gridY) {
         if (playerUnit != null
                 && fieldObstacleMap.matureTreeWouldOverlapCenteredBox(

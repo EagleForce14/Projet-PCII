@@ -14,6 +14,9 @@ public final class GameOverController {
     private final JFrame frame;
     private final GameSession session; // Référence à la session de jeu en cours
 
+    /**
+     * On relie ici chaque overlay de défaite au redémarrage de la partie.
+     */
     public GameOverController(JFrame frame, GameSession session, GameOverOverlay... overlays) {
         this.frame = frame;
         this.session = session;

@@ -19,71 +19,103 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Modèle de gestion des ennemis (IA ennemie).
  */
 public class EnemyModel {
-    public enum WorldType {
-        FARM,
-        CAVE
-    }
-
     // La liste des unités ennemies présentes.
     private final List<EnemyUnit> enemies;
-    // Associe chaque case de culture à l'unique lapin autorisé à la viser.
+    // Dans la ferme, une culture ne peut être visée que par un seul lapin à la fois.
     private final Map<Point, EnemyUnit> reservedCultures;
+    // Le contexte global détermine si ce modèle orchestre la ferme ou la grotte.
     private final WorldType worldType;
+    // La grille de culture n'est utile que pour la logique de ferme.
     private GrilleCulture grilleCulture;
-    private GrotteMap grotteMap;
+    // La carte de grotte sert à placer et organiser les monstres souterrains.
+    private final GrotteMap grotteMap;
+    // Largeur visible courante utilisée par les spawns et les sorties d'écran.
     private volatile int viewportWidth = 1280;
+    // Hauteur visible courante utilisée par les spawns et les sorties d'écran.
     private volatile int viewportHeight = 720;
+    // Largeur logique du terrain utilisée pour les conversions de coordonnées.
     private volatile int fieldWidth = 900;
+    // Hauteur logique du terrain utilisée pour les conversions de coordonnées.
     private volatile int fieldHeight = 540;
     
-    // Constante pour limiter le nombre maximum d'ennemis sur la carte
+    // Nombre maximal de lapins de ferme présents en même temps.
     private static final int MAX_ENEMIES = 12;
+    // Taille logique d'un petit poste de garde placé dans un coin de salle.
     private static final int CAVE_CORNER_POST_SIZE = 4;
     
+    // Compte à rebours avant la prochaine tentative d'apparition d'un ennemi.
     private int spawnTimer = 0;
+    // Source d'aléatoire partagée pour les spawns et les petites variations d'IA.
     private final Random random = new Random();
     
     // Référence au joueur pour la fuite
     private Unit player;
+    // Obstacles propres à la ferme, utilisés notamment par les lapins.
     private FieldObstacleMap fieldObstacleMap;
+    // Carte de collision réellement consultée par l'ennemi dans son monde courant.
     private MovementCollisionMap movementCollisionMap;
+    // Indique si la population de grotte doit actuellement être simulée.
     private volatile boolean caveActive = false;
+    // Indique si les monstres de grotte ont déjà été recréés pour l'entrée en cours.
     private volatile boolean cavePopulationInitialized = false;
 
+    /**
+     * On construit ici le modèle ennemi standard utilisé pour la ferme.
+     */
     public EnemyModel() {
         this(WorldType.FARM, null);
     }
 
+    /**
+     * On fabrique ici la variante dédiée à la grotte avec sa carte propre.
+     */
     public static EnemyModel createCaveModel(GrotteMap grotteMap) {
         return new EnemyModel(WorldType.CAVE, grotteMap);
     }
 
+    /**
+     * On initialise la structure commune du modèle avant toute apparition d'ennemis.
+     */
     private EnemyModel(WorldType worldType, GrotteMap grotteMap) {
-        // Remarque : On utilise CopyOnWriteArrayList pour éviter les ConcurrentModificationException
-        // entre le thread de rendu (qui lit la liste) et le thread physique (qui ajoute des ennemis)
+        // La liste reste sûre à lire pendant que la logique de jeu ajoute ou retire des unités.
         this.enemies = new CopyOnWriteArrayList<>();
         this.reservedCultures = new HashMap<>();
         this.worldType = worldType;
         this.grotteMap = grotteMap;
     }
     
+    /**
+     * On mémorise le joueur pour que les ennemis puissent réagir à sa présence.
+     */
     public void setPlayer(Unit player) {
         this.player = player;
     }
 
+    /**
+     * On branche la grille de culture que les lapins vont surveiller et viser.
+     */
     public void setGrilleCulture(GrilleCulture grilleCulture) {
         this.grilleCulture = grilleCulture;
     }
 
+    /**
+     * On fournit ici les obstacles de ferme, qui servent aussi de collision de déplacement.
+     */
     public void setFieldObstacleMap(FieldObstacleMap fieldObstacleMap) {
         this.fieldObstacleMap = fieldObstacleMap;
         this.movementCollisionMap = fieldObstacleMap;
     }
 
+    /**
+     * On remplace explicitement la carte de collision utilisée par les ennemis.
+     */
     public void setMovementCollisionMap(MovementCollisionMap movementCollisionMap) {
         this.movementCollisionMap = movementCollisionMap;
     }
 
+    /**
+     * On met à jour la taille visible pour les apparitions et les sorties d'écran.
+     */
     public void setViewportSize(int viewportWidth, int viewportHeight) {
         if (viewportWidth > 0) {
             this.viewportWidth = viewportWidth;
@@ -93,6 +125,9 @@ public class EnemyModel {
         }
     }
 
+    /**
+     * On met à jour la taille logique du terrain utilisée par l'IA.
+     */
     public void setFieldSize(int fieldWidth, int fieldHeight) {
         if (fieldWidth > 0) {
             this.fieldWidth = fieldWidth;
@@ -112,6 +147,9 @@ public class EnemyModel {
         return fieldWidth;
     }
 
+    /**
+     * On expose aussi la hauteur logique déjà calculée pour les conversions de la vue.
+     */
     public int getFieldHeight() {
         return fieldHeight;
     }
@@ -144,7 +182,7 @@ public class EnemyModel {
                         fieldObstacleMap
                 ));
             }
-            // Un nouveau ennemi apparaît toutes les 2 à 5 secondes (à 60 FPS)
+            // Un nouvel ennemi apparaît toutes les 2 à 5 secondes (à 60 FPS)
             spawnTimer = 120 + random.nextInt(180); 
         }
         
@@ -152,7 +190,7 @@ public class EnemyModel {
         for (EnemyUnit enemy : enemies) {
             enemy.update(this, player, grilleCulture, currentViewportWidth, currentViewportHeight, currentFieldWidth, currentFieldHeight);
             
-            // Si le ennemi a fui en dehors de la carte ou a mangé une culture, on le supprime.
+            // Si l'ennemi a fui en dehors de la carte ou a mangé une culture, on le supprime.
             if (enemy.hasFled()) {
                 enemies.remove(enemy);
             }
@@ -172,7 +210,7 @@ public class EnemyModel {
             return false;
         }
 
-        // Sinon on mémorise que cette case appartient à ce lapin.
+        // Sinon, on mémorise que cette case appartient à ce lapin.
         reservedCultures.put(cell, enemy);
         return true;
     }
@@ -191,7 +229,7 @@ public class EnemyModel {
 
     /**
      * Active la population de monstres de la grotte.
-     * On regénère la répartition à chaque entrée pour rester simple et déterministe.
+     * On régénère la répartition à chaque entrée pour rester simple et déterministe.
      */
     public synchronized void enterCave() {
         if (worldType != WorldType.CAVE) {
@@ -203,6 +241,9 @@ public class EnemyModel {
         enemies.clear();
     }
 
+    /**
+     * On coupe ici l'activité de la grotte et on vide sa population courante.
+     */
     public synchronized void exitCave() {
         if (worldType != WorldType.CAVE) {
             return;
@@ -213,6 +254,9 @@ public class EnemyModel {
         enemies.clear();
     }
     
+    /**
+     * On expose la liste vivante pour le rendu et les autres lectures d'état.
+     */
     public List<EnemyUnit> getEnemyUnits() {
         return enemies;
     }
@@ -228,6 +272,9 @@ public class EnemyModel {
         }
     }
 
+    /**
+     * On met à jour uniquement les monstres actifs de la grotte et on enlève ceux qui sont morts.
+     */
     private void updateCaveEnemies() {
         if (!caveActive) {
             return;
@@ -259,6 +306,9 @@ public class EnemyModel {
         }
     }
 
+    /**
+     * On recrée ici toute la population de grotte à partir des postes de garde définis.
+     */
     private void populateCaveEnemies() {
         if (grotteMap == null || fieldWidth <= 0 || fieldHeight <= 0) {
             return;
@@ -294,7 +344,7 @@ public class EnemyModel {
     }
 
     /**
-     * On choisit explicitement quels coins garder pour éviter de surpeupler
+     * On choisit explicitement quels coins sont à surveiller pour éviter de surpeupler
      * les bords proches de l'axe central.
      */
     private void addSelectedCornerPosts(
@@ -359,7 +409,7 @@ public class EnemyModel {
 
     /**
      * Tous les monstres peuvent ensuite patrouiller dans l'ensemble de la grotte.
-     * Le rectangle retourné couvre toute la zone marchable globale ;
+     * Le rectangle retourné couvre toute la zone "marchable" globale ;
      * les murs et objets centraux restent gérés par la collision réelle.
      */
     private Rectangle buildGlobalLogicalRoamingBounds() {
@@ -396,13 +446,4 @@ public class EnemyModel {
         ));
     }
 
-    private static final class CaveGuardPost {
-        private final int roomIndex;
-        private final Rectangle gridBounds;
-
-        private CaveGuardPost(int roomIndex, Rectangle gridBounds) {
-            this.roomIndex = roomIndex;
-            this.gridBounds = gridBounds == null ? null : new Rectangle(gridBounds);
-        }
-    }
 }
