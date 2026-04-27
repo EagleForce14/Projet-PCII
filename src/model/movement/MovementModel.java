@@ -25,19 +25,28 @@ public class MovementModel {
 
     // Une seule entrée d'inventaire peut être active à la fois :
     // soit une graine, soit une installation.
+    // Type de graine actuellement sélectionné par le joueur.
     private volatile Type selectedSeedType;
+    // Type d'installation actuellement sélectionné par le joueur.
     private volatile FacilityType selectedFacilityType;
 
+    /**
+     * On démarre avec un modèle vide, prêt à recevoir ses unités.
+     */
     public MovementModel() {
         units = new ArrayList<>();
     }
 
-    // Permet l'ajout d'unités contrôlables au clavier (non utilisée pour le moment mais elle le sera par la suite)
+    /**
+     * On ajoute une unité supplémentaire à la liste suivie par le modèle.
+     */
     public void addUnit(Unit unit) {
         units.add(unit);
     }
 
-    // Définit l'unité spécifique qui sera contrôlée par le joueur
+    /**
+     * On désigne l'unité pilotée par le joueur et on s'assure qu'elle est bien suivie par le modèle.
+     */
     public void setPlayerUnit(Unit unit) {
         this.playerUnit = unit;
         // On s'assure qu'il est aussi dans la liste générale pour l'affichage/update
@@ -46,14 +55,18 @@ public class MovementModel {
         }
     }
 
-    // On met à jour la position pour chaque unité de la liste
+    /**
+     * On met à jour toutes les unités suivies pendant ce tick de physique.
+     */
     public void update() {
         for (Unit u : units) {
             u.updatePosition();
         }
     }
 
-    // Accesseur pour le contrôleur (qui a besoin de piloter le joueur)
+    /**
+     * On renvoie l'unité actuellement contrôlée par le joueur.
+     */
     public Unit getPlayerUnit() {
         return playerUnit;
     }
@@ -81,25 +94,40 @@ public class MovementModel {
         return activeFieldCell == null ? null : new Point(activeFieldCell);
     }
 
+    /**
+     * On sélectionne une graine et on efface toute sélection d'installation.
+     */
     public void selectSeed(Type type) {
         selectedSeedType = type;
         selectedFacilityType = null;
     }
 
+    /**
+     * On sélectionne une installation et on efface toute sélection de graine.
+     */
     public void selectFacility(FacilityType type) {
         selectedFacilityType = type;
         selectedSeedType = null;
     }
 
+    /**
+     * On vide toute sélection d'objet d'inventaire active.
+     */
     public void clearSelectedInventoryItem() {
         selectedSeedType = null;
         selectedFacilityType = null;
     }
 
+    /**
+     * On renvoie le type de graine actuellement sélectionné.
+     */
     public Type getSelectedSeedType() {
         return selectedSeedType;
     }
 
+    /**
+     * On renvoie le type d'installation actuellement sélectionné.
+     */
     public FacilityType getSelectedFacilityType() {
         return selectedFacilityType;
     }
@@ -112,23 +140,37 @@ public class MovementModel {
         return !isSelectedFacility(FacilityType.CLOTURE);
     }
 
+    /**
+     * On dit si le joueur a actuellement sélectionné un chemin.
+     */
     public boolean isPathPlacementSelected() {
         return isSelectedFacility(FacilityType.CHEMIN);
     }
 
+    /**
+     * On dit si le joueur a actuellement sélectionné un compost.
+     */
     public boolean isCompostPlacementSelected() {
         return isSelectedFacility(FacilityType.COMPOST);
     }
 
+    /**
+     * On dit si le joueur a actuellement sélectionné un pont.
+     */
     public boolean isBridgePlacementSelected() {
         return isSelectedFacility(FacilityType.PONT);
     }
 
-    // Accesseur pour la vue (qui a besoin d'afficher TOUTES les unités)
+    /**
+     * On expose la liste des unités suivies pour le rendu et les contrôles.
+     */
     public List<Unit> getUnits() {
         return units;
     }
 
+    /**
+     * On factorise ici le test de sélection d'une installation donnée.
+     */
     private boolean isSelectedFacility(FacilityType type) {
         return selectedFacilityType == type;
     }

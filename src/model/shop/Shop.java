@@ -9,8 +9,6 @@ import model.runtime.DayChangeListener;
 import java.util.ArrayList;
 import java.util.Random;
 
-
-
 public class Shop implements DayChangeListener {
     private static final int COMPOST_RESTOCK_DAY = 10;
     private static final int INITIAL_COMPOST_STOCK = 1;
@@ -32,9 +30,6 @@ public class Shop implements DayChangeListener {
 
     /** Référence optionnelle vers le gestionnaire d'objectifs pour mettre à jour les objectifs de boutique */
     private GestionnaireObjectifs gestionnaireObjectifs;
-
-    // référence vers l'inventaire du joueur
-
 
     //Constructeur
     public Shop(ShopKind kind) {

@@ -9,8 +9,9 @@ public class Money {
      * Stockage de l'argent en Integer pour évité les arondis liés au float et double.
      * **/
     
-    // attribut 
+    // Montant total actuellement possédé par le joueur.
     private int amount;
+    // Effets temporaires utilisés pour animer les gains récents à l'écran.
     private final List<MoneyRewardEffect> rewardEffects;
 
     // constructeur
@@ -61,6 +62,9 @@ public class Money {
         return new ArrayList<>(rewardEffects);
     }
 
+    /**
+     * On centralise ici le vrai crédit d'argent et la création de son effet visuel éventuel.
+     */
     private synchronized void creditInternal(int amount, int sourceWorldX, int sourceWorldY, boolean explicitSource) {
         if (amount < 0) {
             throw new IllegalArgumentException("Un gain d'argent ne peut pas être négatif.");
@@ -95,6 +99,9 @@ public class Money {
         this.amount -= other.amount;
     }
 
+    /**
+     * On renvoie le montant sous forme de texte simple.
+     */
     @Override
     public String toString() {
         return String.format("%d", amount);

@@ -6,8 +6,11 @@ import model.Combat.CombatUnit;
  * Représente une entité déplaçable.
  */
 public class Unit {
+    // Taille logique de la hitbox principale de l'unité.
     public static final int SIZE = 30;
+    // Vitesse normale utilisée hors chemins accélérés.
     public static final int NORMAL_SPEED = 3;
+    // Vitesse utilisée quand l'unité profite d'un chemin.
     public static final int PATH_SPEED = 5;
 
     /**
@@ -23,37 +26,54 @@ public class Unit {
         PLANTER(3, true),
         RECOLTER(3, true);
 
+        // Nombre total d'images dans cette animation.
         private final int frameCount;
+        // Indique si l'animation doit se jouer une seule fois.
         private final boolean oneShot;
 
+        /**
+         * On décrit ici le format de lecture de chaque animation.
+         */
         SpriteAnimation(int frameCount, boolean oneShot) {
             this.frameCount = frameCount;
             this.oneShot = oneShot;
         }
 
+        /**
+         * On renvoie le nombre d'images à parcourir pour cette animation.
+         */
         public int getFrameCount() {
             return frameCount;
         }
 
+        /**
+         * On dit si l'animation doit se terminer seule après une lecture complète.
+         */
         public boolean isOneShot() {
             return oneShot;
         }
     }
 
+    // Nombre de ticks à attendre avant de passer à l'image suivante en marche.
     private static final int WALK_FRAME_DELAY = 4;
+    // Nombre de ticks à attendre avant de passer à l'image suivante pour une action.
     private static final int ACTION_FRAME_DELAY = 4;
 
-    // On rappelle que volatile assure que les modifications sont immédiatement visibles par tous les threads
+    // Position horizontale actuelle de l'unité dans le repère logique.
     private volatile int x;
+    // Position verticale actuelle de l'unité dans le repère logique.
     private volatile int y;
     
-    // Flags de mouvement propre à cette unité
+    // Indique si l'unité essaie actuellement de monter.
     private volatile boolean moveUp = false;
+    // Indique si l'unité essaie actuellement de descendre.
     private volatile boolean moveDown = false;
+    // Indique si l'unité essaie actuellement d'aller à gauche.
     private volatile boolean moveLeft = false;
+    // Indique si l'unité essaie actuellement d'aller à droite.
     private volatile boolean moveRight = false;
 
-    // Rayon de la zone d'influence
+    // Rayon logique de la zone d'influence du joueur dans la ferme.
     public static final int INFLUENCE_RADIUS = 50;
 
     /*
@@ -62,28 +82,38 @@ public class Unit {
      * pour ne pas compliquer inutilement le déplacement.
      */
     private volatile int currentSpeed = NORMAL_SPEED;
+    // Carte de collision actuellement utilisée par l'unité.
     private MovementCollisionMap fieldObstacleMap;
 
-    // Attribut pour la gestion des combats
+    // État de combat associé à cette unité.
     private final CombatUnit combatUnit;
 
     // La scene courante dit sur quelle carte la meme unite evolue.
     // Cela evite de dupliquer l'etat du joueur entre ferme et grotte.
     private volatile PlayerScene scene = PlayerScene.FARM;
+    // Dernière direction visuelle portée par l'unité.
     private volatile FacingDirection facingDirection = FacingDirection.DOWN;
+    // Animation actuellement affichée pour l'unité.
     private volatile SpriteAnimation spriteAnimation = SpriteAnimation.IDLE;
+    // Index de l'image actuellement affichée dans l'animation.
     private volatile int animationFrameIndex = 0;
+    // Compteur interne utilisé pour ralentir l'avancement des animations.
     private volatile int animationTick = 0;
 
-    // Le constructeur de la classe.
+    /**
+     * On crée une unité mobile à la position donnée avec tout son état de base.
+     */
     public Unit(int x, int y) {
         this.x = x;
         this.y = y;
         combatUnit = new CombatUnit();
     }
 
-    // On met à jour la position selon le flag activé
+    /**
+     * On fait avancer l'unité selon les directions actives, les collisions et l'animation courante.
+     */
     public synchronized void updatePosition() {
+        // Une animation d'action bloque le déplacement tant qu'elle n'est pas terminée.
         if (spriteAnimation.isOneShot()) {
             updateOneShotAnimation();
             return;
@@ -91,6 +121,7 @@ public class Unit {
 
         int stepX = 0;
         int stepY = 0;
+        // On ne garde qu'une direction de déplacement à la fois selon l'ordre de priorité existant.
         if (moveUp) {
             stepY -= currentSpeed;
         } else if (moveDown) {
@@ -118,6 +149,8 @@ public class Unit {
         x = nextX;
         y = nextY;
 
+        // Si l'unité a bougé, on fait vivre l'animation de marche,
+        // sinon on la remet sur son état immobile.
         if (stepX != 0 || stepY != 0) {
             updateWalkingAnimation();
         } else {
@@ -125,8 +158,13 @@ public class Unit {
         }
     }
 
-    // Getters et Setters
+    /**
+     * On renvoie l'abscisse courante de l'unité.
+     */
     public synchronized int getX() { return x; }
+    /**
+     * On renvoie l'ordonnée courante de l'unité.
+     */
     public synchronized int getY() { return y; }
 
     /**
@@ -165,35 +203,70 @@ public class Unit {
         animationTick = 0;
     }
 
-    // Force l'unité à rester dans les bornes visibles de la fenêtre.
+    /**
+     * On force l'unité à rester dans les bornes autorisées.
+     */
     public synchronized void clampPosition(int minX, int maxX, int minY, int maxY) {
         x = Math.max(minX, Math.min(x, maxX));
         y = Math.max(minY, Math.min(y, maxY));
     }
     
+    /**
+     * On active ou non le déplacement vers le haut, en mettant aussi à jour l'orientation si besoin.
+     */
     public void setMoveUp(boolean moveUp) { setMoveUp(moveUp, true); }
+    /**
+     * On active ou non le déplacement vers le bas, en mettant aussi à jour l'orientation si besoin.
+     */
     public void setMoveDown(boolean moveDown) { setMoveDown(moveDown, true); }
+    /**
+     * On active ou non le déplacement vers la gauche, en mettant aussi à jour l'orientation si besoin.
+     */
     public void setMoveLeft(boolean moveLeft) { setMoveLeft(moveLeft, true); }
+    /**
+     * On active ou non le déplacement vers la droite, en mettant aussi à jour l'orientation si besoin.
+     */
     public void setMoveRight(boolean moveRight) { setMoveRight(moveRight, true); }
+    /**
+     * On remplace la vitesse courante utilisée pour les prochains déplacements.
+     */
     public void setCurrentSpeed(int currentSpeed) { this.currentSpeed = currentSpeed; }
+    /**
+     * On branche la carte de collision qui servira à valider les déplacements.
+     */
     public void setFieldObstacleMap(MovementCollisionMap fieldObstacleMap) { this.fieldObstacleMap = fieldObstacleMap; }
 
+    /**
+     * On renvoie l'état de combat associé à cette unité.
+     */
     public CombatUnit getCombatUnit() {
         return combatUnit;
     }
 
+    /**
+     * On renvoie l'orientation actuellement portée par l'unité.
+     */
     public FacingDirection getFacingDirection() {
         return facingDirection;
     }
 
+    /**
+     * On renvoie l'animation actuellement jouée.
+     */
     public synchronized SpriteAnimation getSpriteAnimation() {
         return spriteAnimation;
     }
 
+    /**
+     * On renvoie l'index de l'image courante dans l'animation active.
+     */
     public synchronized int getAnimationFrameIndex() {
         return animationFrameIndex;
     }
 
+    /**
+     * On remplace l'orientation actuelle si une direction valide est fournie.
+     */
     public void setFacingDirection(FacingDirection facingDirection) {
         if (facingDirection != null) {
             this.facingDirection = facingDirection;
@@ -257,10 +330,16 @@ public class Unit {
         scene = PlayerScene.FARM;
     }
 
+    /**
+     * On renvoie la scène courante dans laquelle évolue l'unité.
+     */
     public PlayerScene getScene() {
         return scene;
     }
 
+    /**
+     * On met à jour le flag de déplacement haut, avec option de mise à jour de l'orientation.
+     */
     public void setMoveUp(boolean moveUp, boolean updateFacing) {
         this.moveUp = moveUp;
         if (moveUp && updateFacing) {
@@ -268,6 +347,9 @@ public class Unit {
         }
     }
 
+    /**
+     * On met à jour le flag de déplacement bas, avec option de mise à jour de l'orientation.
+     */
     public void setMoveDown(boolean moveDown, boolean updateFacing) {
         this.moveDown = moveDown;
         if (moveDown && updateFacing) {
@@ -275,6 +357,9 @@ public class Unit {
         }
     }
 
+    /**
+     * On met à jour le flag de déplacement gauche, avec option de mise à jour de l'orientation.
+     */
     public void setMoveLeft(boolean moveLeft, boolean updateFacing) {
         this.moveLeft = moveLeft;
         if (moveLeft && updateFacing) {
@@ -282,6 +367,9 @@ public class Unit {
         }
     }
 
+    /**
+     * On met à jour le flag de déplacement droite, avec option de mise à jour de l'orientation.
+     */
     public void setMoveRight(boolean moveRight, boolean updateFacing) {
         this.moveRight = moveRight;
         if (moveRight && updateFacing) {
@@ -289,8 +377,12 @@ public class Unit {
         }
     }
 
+    /**
+     * On fait avancer l'animation de marche en gardant la bonne direction affichée.
+     */
     private void updateWalkingAnimation() {
         SpriteAnimation desiredAnimation = resolveWalkingAnimation();
+        // Si l'on change de direction visuelle, on réinitialise proprement l'animation correspondante.
         if (spriteAnimation != desiredAnimation) {
             spriteAnimation = desiredAnimation;
             if (!isInCave() || animationFrameIndex >= desiredAnimation.getFrameCount()) {
@@ -308,6 +400,9 @@ public class Unit {
         animationFrameIndex = (animationFrameIndex + 1) % spriteAnimation.getFrameCount();
     }
 
+    /**
+     * On fait progresser une animation d'action jusqu'à son retour automatique à l'immobile.
+     */
     private void updateOneShotAnimation() {
         animationTick++;
         if (animationTick < ACTION_FRAME_DELAY) {
@@ -324,6 +419,9 @@ public class Unit {
         animationFrameIndex = 0;
     }
 
+    /**
+     * On replace l'unité sur son animation immobile si besoin.
+     */
     private void setIdleAnimation() {
         if (spriteAnimation != SpriteAnimation.IDLE) {
             spriteAnimation = SpriteAnimation.IDLE;
@@ -331,6 +429,9 @@ public class Unit {
         }
     }
 
+    /**
+     * On choisit l'animation de marche qui correspond au flag de déplacement actif.
+     */
     private SpriteAnimation resolveWalkingAnimation() {
         if (moveUp) {
             return SpriteAnimation.WALK_UP;

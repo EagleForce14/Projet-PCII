@@ -14,12 +14,15 @@ import javax.imageio.ImageIO;
  * chargement des dimensions réelles de l'image et construction d'une hitbox.
  */
 public final class BuildingGeometry {
+    /**
+     * On empêche toute instanciation de cette classe utilitaire.
+     */
     private BuildingGeometry() {}
 
     /**
      * Place un bâtiment latéral par rapport à la boutique principale (à droite) en conservant
      * exactement le même niveau de sol et un léger écart horizontal.
-     *
+
      * Le calcul est volontairement partagé entre les bâtiments de gauche et de droite
      * pour éviter que chacun ne recopie sa propre logique de placement.
      */

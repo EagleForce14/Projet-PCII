@@ -8,5 +8,8 @@ package model.movement;
  * peut occuper une position donnée.
  */
 public interface MovementCollisionMap {
+    /**
+     * On dit si une hitbox centrée peut occuper librement la position demandée.
+     */
     boolean canOccupyCenteredBox(double centerX, double centerY, int width, int height);
 }

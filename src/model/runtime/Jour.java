@@ -25,7 +25,7 @@ public class Jour extends Thread {
     private final Object freezeLock;
 
     /** Attribut représentant le gestionnaire d'objectifs */
-    private GestionnaireObjectifs gestionnaireObjectifs;
+    private final GestionnaireObjectifs gestionnaireObjectifs;
 
     // Listeners pour le changement de jour
     private final List<DayChangeListener> dayChangeListeners = new CopyOnWriteArrayList<>();

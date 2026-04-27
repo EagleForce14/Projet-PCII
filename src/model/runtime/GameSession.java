@@ -49,6 +49,9 @@ public final class GameSession {
         this.workshopConstructionManager = workshopConstructionManager;
     }
 
+    /**
+     * On arrête proprement tout ce qui appartient à cette partie avant d'en relancer une autre.
+     */
     public void shutdown() {
         /*
          * On commence par les cultures, parce que ce sont elles qui ont le plus de chances

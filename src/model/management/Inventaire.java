@@ -17,6 +17,7 @@ public class Inventaire {
      * Ainsi, si l'on ajoute ou retire un type ici plus tard,
      * l'UI de l'inventaire et les drops évolueront ensemble.
      */
+    // Ordre officiel des graines affichées dans la zone principale de l'inventaire.
     private static final Type[] MAIN_ZONE_SEED_SLOT_ORDER = {
             Type.TULIPE,
             Type.ROSE,
@@ -26,10 +27,12 @@ public class Inventaire {
             Type.RADIS,
             Type.CHOUFLEUR
     };
+    // Ordre officiel des graines affichées dans la zone gauche de l'inventaire.
     private static final Type[] LEFT_ZONE_SEED_SLOT_ORDER = {
             Type.NENUPHAR,
             Type.IRIS_DES_MARAIS
     };
+    // Ordre officiel des installations affichées dans l'inventaire.
     private static final FacilityType[] FACILITY_SLOT_ORDER = {
             FacilityType.CLOTURE,
             FacilityType.CHEMIN,
@@ -41,12 +44,16 @@ public class Inventaire {
     // liste des nombres de graines que le joueur possède
     // pour l'instant on suppose qu'il ne possède que les graines de tulipe
     
-    // On garde deux rangements séparés, mais avec le type unique du projet.
+    // Stock des graines possédées, indexé par type.
     private final HashMap<Type, Integer> graines;
+    // Stock des installations possédées, indexé par type.
     private final HashMap<FacilityType, Integer> installations;
+    // Quantité de bois disponible pour les constructions.
     private int woodQuantity;
     
-    // constructeur
+    /**
+     * On prépare un inventaire vide pour une nouvelle partie.
+     */
     public Inventaire() {
         graines = new HashMap<>();
         installations = new HashMap<>();
@@ -232,6 +239,9 @@ public class Inventaire {
         return availableFacilityTypes;
     }
 
+    /**
+     * On dit si le stock de bois couvre bien la quantité demandée.
+     */
     public boolean possedeBois(int quantiteDemandee) {
         return quantiteDemandee > 0 && getQuantiteBois() >= quantiteDemandee;
     }
@@ -243,10 +253,16 @@ public class Inventaire {
         return MAIN_ZONE_SEED_SLOT_ORDER.clone();
     }
 
+    /**
+     * On renvoie l'ordre officiel des graines de la zone gauche de l'inventaire.
+     */
     public static Type[] getLeftZoneSeedSlotOrder() {
         return LEFT_ZONE_SEED_SLOT_ORDER.clone();
     }
 
+    /**
+     * On renvoie l'ordre officiel des installations affichées dans l'inventaire.
+     */
     public static FacilityType[] getFacilitySlotOrder() {
         return FACILITY_SLOT_ORDER.clone();
     }
@@ -294,6 +310,9 @@ public class Inventaire {
         return true;
     }
 
+    /**
+     * On ajoute du bois seulement si la quantité reçue est positive.
+     */
     public void ajoutBois(int quantite) {
         if (quantite <= 0) {
             return;
@@ -302,6 +321,9 @@ public class Inventaire {
         woodQuantity += quantite;
     }
 
+    /**
+     * On retire du bois sans jamais laisser le stock passer sous zéro.
+     */
     public void retirerBois(int quantite) {
         if (quantite <= 0) {
             return;

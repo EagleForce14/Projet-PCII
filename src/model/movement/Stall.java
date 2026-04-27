@@ -12,21 +12,34 @@ import java.awt.Rectangle;
  * pour mieux occuper la zone gauche du décor.
  */
 public final class Stall {
+    // Nombre de colonnes décoratives à laisser entre l'échoppe et la boutique.
     private static final int DECORATIVE_RIVER_COLUMNS_LEFT_OF_BARN = 2;
+    // Chemin du sprite de l'échoppe.
     private static final String ASSET_PATH = "/assets/echoppe.png";
+    // Hauteur affichée de l'échoppe par rapport à la boutique.
     private static final double HEIGHT_RATIO_TO_BARN = 1.02;
+    // Espace horizontal conservé entre l'échoppe et la boutique.
     private static final double GAP_RATIO_TO_BARN_WIDTH = 0.26;
+    // Marge minimale conservée avec le bord de l'écran.
     private static final int MIN_SCREEN_MARGIN = 18;
+    // Décalage vertical en nombre de lignes logiques.
     private static final int VERTICAL_SHIFT_ROWS = 1;
+    // Ratio de largeur de la hitbox.
     private static final double HITBOX_WIDTH_RATIO = 0.82;
+    // Ratio de hauteur de la hitbox.
     private static final double HITBOX_HEIGHT_RATIO = 0.71;
+    // Décalage vertical de la hitbox depuis le bas du sprite.
     private static final double HITBOX_BOTTOM_INSET_RATIO = 0.04;
+    // Dimensions natives du sprite de l'échoppe.
     private static final Dimension SPRITE_SIZE = BuildingGeometry.loadSpriteSize(
             Stall.class,
             ASSET_PATH,
             new Dimension(1412, 852)
     );
 
+    /**
+     * On empêche toute instanciation de cette classe utilitaire.
+     */
     private Stall() {}
 
     /**
@@ -66,6 +79,9 @@ public final class Stall {
         return shiftDown(new Rectangle(centeredX, preferredBounds.y, preferredBounds.width, preferredBounds.height), tileSize);
     }
 
+    /**
+     * On renvoie la hitbox compacte de l'échoppe à partir de sa zone de dessin.
+     */
     public static Rectangle getCollisionBounds(Rectangle fieldLogicalBounds) {
         return BuildingGeometry.buildCollisionBounds(
                 getDrawBounds(fieldLogicalBounds),
@@ -90,6 +106,9 @@ public final class Stall {
         return Math.max(0, Math.min(leftmostColumn, GrilleCulture.LARGEUR_GRILLE - 1));
     }
 
+    /**
+     * On abaisse un rectangle d'un certain nombre de lignes logiques.
+     */
     private static Rectangle shiftDown(Rectangle bounds, int tileSize) {
         if (bounds == null) {
             return null;
