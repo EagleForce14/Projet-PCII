@@ -170,6 +170,7 @@ public class GrilleCulture {
         return HAUTEUR_GRILLE;
     }
 
+    /** Dit si une case possède une clôture sur un de ses 4 côtés. */
     public boolean hasFence(int x, int y, CellSide side) {
         if (side == null || !estDansGrille(x, y)) {
             return false;
@@ -178,16 +179,18 @@ public class GrilleCulture {
         return (fenceMasks[x][y] & side.getMask()) != 0;
     }
 
+    /** Getter qui renvoie le nombre de points de vie restants pour une clôture. */
     public int getFenceRemainingHitPoints(int x, int y, CellSide side) {
         if (side == null || !estDansGrille(x, y) || !hasFence(x, y, side)) {
-            return 0;
+            return 0; // Pas de clôture, pas de points de vie. On évite aussi les accès hors limites ou avec un côté null.
         }
 
         return Math.max(0, FENCE_HIT_POINTS - fenceHitCounts[x][y][side.ordinal()]);
     }
 
+    /** Getter qui renvoie le ratio d'intégrité pour une clôture. */
     public double getFenceIntegrityRatio(int x, int y, CellSide side) {
-        int remainingHitPoints = getFenceRemainingHitPoints(x, y, side);
+        int remainingHitPoints = getFenceRemainingHitPoints(x, y, side); // Récupère les points de vie restants pour la clôture spécifiée
         if (remainingHitPoints <= 0) {
             return 0.0;
         }
@@ -202,16 +205,20 @@ public class GrilleCulture {
      */
     public boolean hasFenceTouchingCellSide(int x, int y, CellSide side) {
         if (side == null || !estDansGrille(x, y)) {
-            return false;
+            return false; // Un côté null ou des coordonnées hors de la grille ne peuvent pas toucher de clôture. On évite aussi les accès hors limites.
         }
 
         if (hasFence(x, y, side)) {
-            return true;
+            return true; // Il y a déjà une clôture sur ce côté de la case, pas besoin de vérifier la voisine.
         }
 
+        // Il n'y a pas de clôture sur ce côté de la case, 
+        // vérifions si la voisine d'en face a une clôture qui touche ce côté.
         int neighborX = x + side.getDeltaX();
         int neighborY = y + side.getDeltaY();
         CellSide oppositeSide = side.opposite();
+
+        // Il y a une clôture qui touche ce côté de la case si la voisine d'en face a une clôture sur son côté opposé.
         return oppositeSide != null
                 && estDansGrille(neighborX, neighborY)
                 && hasFence(neighborX, neighborY, oppositeSide);
@@ -223,6 +230,7 @@ public class GrilleCulture {
             return false;
         }
 
+        // On vérifie les 4 côtés de la case pour voir si une clôture y est présente ou touche ce côté.
         for (CellSide side : CellSide.values()) {
             if (hasFenceTouchingCellSide(x, y, side)) {
                 return true;
@@ -259,12 +267,14 @@ public class GrilleCulture {
             return false;
         }
 
+        // Si la clôture est en état critique, on veut toujours montrer la barre de vie pour que le joueur puisse anticiper sa destruction.
         int sideIndex = side.ordinal();
         int remainingHitPoints = getFenceRemainingHitPoints(x, y, side);
         if (remainingHitPoints <= 1) {
             return true;
         }
 
+        // Sinon, on montre la barre de vie seulement si elle est encore dans sa fenêtre de visibilité après un coup récent.
         return System.currentTimeMillis() <= fenceBarVisibleUntilMs[x][y][sideIndex];
     }
 
@@ -277,14 +287,16 @@ public class GrilleCulture {
             return false;
         }
 
+        // On incrémente le nombre de coups encaissés pour ce segment, et on met à jour la visibilité de la barre de vie.
         int sideIndex = side.ordinal();
         long now = System.currentTimeMillis();
         fenceHitCounts[x][y][sideIndex] = Math.min(FENCE_HIT_POINTS, fenceHitCounts[x][y][sideIndex] + 1);
         fenceBarVisibleUntilMs[x][y][sideIndex] = now + FENCE_BAR_VISIBLE_MS;
         if (fenceHitCounts[x][y][sideIndex] < FENCE_HIT_POINTS) {
-            return false;
+            return false; // Le segment n'est pas encore détruit, on ne fait que l'endommager et mettre à jour la barre de vie.
         }
 
+        // Le segment est détruit, on le retire de la grille et on ajoute un effet de destruction pour le rendu.
         destroyFence(x, y, side, now);
         return true;
     }
@@ -302,6 +314,7 @@ public class GrilleCulture {
      * pas au milieu d'un bloc de terre continu.
      */
     public boolean canPlaceFence(int x, int y, CellSide side) {
+        // Validation rapide des cas d'interdiction évidents pour éviter les calculs plus complexes ensuite.
         if (side == null
                 || !estDansGrille(x, y)
                 || !isLabouree(x, y)
@@ -310,12 +323,16 @@ public class GrilleCulture {
             return true;
         }
 
+        // Validation plus complète pour les cas limites où la clôture pourrait être posée sur un bord de parcelle.
         int neighborX = x + side.getDeltaX();
         int neighborY = y + side.getDeltaY();
         if (!estDansGrille(neighborX, neighborY)) {
-            return false;
+            return false; // Un bord de grille est un bord de parcelle : on autorise la clôture à cet endroit.
         }
 
+        // Si la voisine d'en face a déjà une clôture qui touche ce côté, 
+        // alors ce bord est déjà fermé par la clôture de la voisine : 
+        // on interdit donc d'en poser une nouvelle à cet endroit.
         CellSide oppositeSide = side.opposite();
         if (oppositeSide == null || hasFence(neighborX, neighborY, oppositeSide)) {
             return true;
@@ -351,22 +368,34 @@ public class GrilleCulture {
         }
 
         fenceMasks[x][y] = fenceMasks[x][y] | side.getMask(); // Attention OU binaire
-        resetFenceState(x, y, side);
+        resetFenceState(x, y, side); // Réinitialise les points de vie et la barre de vie pour ce nouveau segment de clôture
+        // La clôture est maintenant posée, on peut consommer l'installation de l'inventaire.
         inventaire.UseInstallation(FacilityType.CLOTURE);
     }
 
+    /**
+     * Getter qui renvoie la liste des effets de destruction de clôture actifs pour le rendu.
+     */
     public synchronized List<FenceDestructionEffect> getActiveFenceDestructionEffects() {
         long now = System.currentTimeMillis();
         fenceDestructionEffects.removeIf(effect -> effect.isExpired(now));
         return new ArrayList<>(fenceDestructionEffects);
     }
 
+    /**
+     * Méthode interne pour gérer la destruction d'un segment de clôture, 
+     * en mettant à jour la grille et en ajoutant un effet de destruction pour le rendu.
+     */
     private void destroyFence(int x, int y, CellSide side, long destroyedAtMs) {
         fenceMasks[x][y] = fenceMasks[x][y] & ~side.getMask();
         resetFenceState(x, y, side);
         fenceDestructionEffects.add(new FenceDestructionEffect(x, y, side, destroyedAtMs));
     }
 
+    /**
+     * Méthode interne pour réinitialiser l'état d'un segment de clôture après sa pose ou sa réparation,
+     * en remettant à zéro les coups encaissés et en cachant la barre de vie.
+     */
     private void resetFenceState(int x, int y, CellSide side) {
         int sideIndex = side.ordinal();
         fenceHitCounts[x][y][sideIndex] = 0;
@@ -398,6 +427,9 @@ public class GrilleCulture {
         grille[x][y].remettreEnHerbe();
     }
 
+    /**
+     * La logique de labourage est centralisée dans une méthode interne pour éviter les doublons entre labourage normal et sans objectif.
+     */
     private void labourerCaseInterne(int x, int y, boolean compterObjectif) {
         if (!estDansGrille(x, y)) {
             throw new IllegalStateException("Coordonnees hors de la grille.");
@@ -418,6 +450,7 @@ public class GrilleCulture {
             throw new IllegalStateException("Impossible de labourer une case adjacente à une clôture.");
         }
 
+        // On vérifie si la case était déjà labourée avant de la labourer, pour ne compter l'objectif que lors du premier labourage.
         boolean etaitLabouree = grille[x][y].isLabouree();
         grille[x][y].labourer();
         if (compterObjectif && !etaitLabouree && gestionnaireObjectifs != null) {
@@ -685,13 +718,13 @@ public class GrilleCulture {
     public List<Point> getCompostAffectedSoilCells() {
         List<Point> affectedCells = new ArrayList<>();
         if (compostCells.isEmpty()) {
-            return affectedCells;
+            return affectedCells; // Si aucun compost n'est posé, il n'y a aucune cellule affectée, on retourne une liste vide.
         }
 
         for (int x = 0; x < LARGEUR_GRILLE; x++) {
             for (int y = 0; y < HAUTEUR_GRILLE; y++) {
                 if (isCellBoostedByCompost(x, y)) {
-                    affectedCells.add(new Point(x, y));
+                    affectedCells.add(new Point(x, y)); // On ajoute une copie de la cellule affectée à la liste des cellules affectées.
                 }
             }
         }
@@ -713,6 +746,10 @@ public class GrilleCulture {
         return -1;
     }
 
+    /**
+     * Même logique pour les ponts que pour les composts : une petite boucle suffit vu leur nombre limité, 
+     * et c'est plus simple que de gérer une structure plus complexe juste pour ça.
+     */
     private int findBridgeAnchorIndexAt(int x, int y) {
         for (int index = 0; index < bridgeAnchorCells.size(); index++) {
             Point bridgeAnchorCell = bridgeAnchorCells.get(index);
@@ -741,6 +778,7 @@ public class GrilleCulture {
      * la même boucle sur les cases adjacentes.
      */
     static boolean isCellBoostedByRiver(boolean[][] decorativeRiverCells, int x, int y) {
+        // Validation rapide pour éviter la boucle si la grille de rivière n'est pas initialisée ou si les coordonnées sont hors limites.
         if (decorativeRiverCells == null
                 || decorativeRiverCells.length == 0
                 || x < 0
@@ -751,6 +789,7 @@ public class GrilleCulture {
             return false;
         }
 
+        // On vérifie toutes les cases dans un rayon de 1 autour de la case ciblée, en incluant les diagonales.
         for (int deltaX = -RIVER_BOOST_RADIUS; deltaX <= RIVER_BOOST_RADIUS; deltaX++) {
             for (int deltaY = -RIVER_BOOST_RADIUS; deltaY <= RIVER_BOOST_RADIUS; deltaY++) {
                 if (deltaX == 0 && deltaY == 0) {
@@ -768,6 +807,7 @@ public class GrilleCulture {
         return false;
     }
 
+    /** Vérifie si une case contient une rivière décorative. */
     private static boolean hasRiverAt(boolean[][] decorativeRiverCells, int x, int y) {
         return decorativeRiverCells != null
                 && x >= 0
@@ -878,6 +918,7 @@ public class GrilleCulture {
         return null;
     }
 
+    /** Trouve la colonne contenant une rivière décorative */
     private int findDecorativeRiverColumn() {
         for (int x = 0; x < LARGEUR_GRILLE; x++) {
             for (int y = 0; y < HAUTEUR_GRILLE; y++) {

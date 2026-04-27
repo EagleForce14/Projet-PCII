@@ -24,11 +24,13 @@ public enum Type {
         LEGUME
     }
 
+    // Attributs de chaque type de culture
     private final String displayName;
     private final Categorie categorie;
     private final FieldZone allowedFieldZone;
     private final ShopKind shopKind;
 
+    // Constructeur de l'énumération qui initialise les attributs de chaque type de culture
     Type(String displayName, Categorie categorie, FieldZone allowedFieldZone, ShopKind shopKind) {
         this.displayName = displayName;
         this.categorie = categorie;
@@ -36,38 +38,47 @@ public enum Type {
         this.shopKind = shopKind;
     }
 
+    /** Getter pour le nom d'affichage du type de culture. */
     public String getDisplayName() {
         return displayName;
     }
 
+    /** Getter pour la catégorie du type de culture. */
     public Categorie getCategorie() {
         return categorie;
     }
 
+    /** Getter pour la zone de terrain autorisée. */
     public FieldZone getAllowedFieldZone() {
         return allowedFieldZone;
     }
 
+    /** Getter pour le type de boutique dans laquelle la culture est vendue. */
     public ShopKind getShopKind() {
         return shopKind;
     }
 
+    /** Vérifie si la culture est vendue dans la boutique principale. */
     public boolean isSoldInMainShop() {
         return shopKind == ShopKind.MAIN;
     }
 
+    /** Vérifie si la culture est vendue dans la boutique de côté. */
     public boolean isSoldInStallShop() {
         return shopKind == ShopKind.STALL;
     }
 
+    /** Vérifie si la culture est une fleur. */
     public boolean isFleur() {
         return categorie == Categorie.FLEUR;
     }
 
+    /** Vérifie si la culture est un légume. */
     public boolean isLegume() {
         return categorie == Categorie.LEGUME;
     }
 
+    /** Vérifie si la culture peut être plantée dans une zone de terrain donnée. */
     public boolean canBePlantedIn(FieldZone fieldZone) {
         return fieldZone != null && fieldZone == allowedFieldZone;
     }

@@ -71,7 +71,7 @@ public class Croissance extends Thread {
                 long delaiRestant = delaiCible - delaiEcoule;
 
                 if (delaiRestant > 0) {
-                    pauseController.sleep(delaiRestant);
+                    pauseController.sleep(delaiRestant); // Utilise le GamePauseController pour dormir, ce qui gère les pauses du jeu
                 }
 
                 Stade nouveauStade = culture.grandir();
