@@ -82,10 +82,10 @@ public class SidebarPanel extends JPanel {
     private final JPanel bridgeActionRow;
 
     // Blocs UI dédiés à la zone objectifs et au bilan du jour.
-    private final JPanel objectivesContentPanel;
-    private final JPanel dayValidationContentPanel;
-    private final JPanel dayValidationCardPanel;
-    private final JLabel objectivesInfoLabel;
+    private final JPanel objectivesContentPanel; // Conteneur dynamique de la liste des objectifs.
+    private final JPanel dayValidationContentPanel; // Conteneur dynamique du bilan du jour (objectifs validés, non validés, etc).
+    private final JPanel dayValidationCardPanel; // Panneau de fond du bilan du jour, avec une peinture personnalisée pour les couleurs dynamiques selon validation ou non du jour.
+    private final JLabel objectivesInfoLabel; // Label d'information sur les objectifs, affiché uniquement dans la grotte pour expliquer le fonctionnement particulier des objectifs dans ce lieu.
 
     // Références directes vers les widgets objectifs pour mises à jour incrémentales.
     private final Map<TypeObjectif, JTextArea> objectiveTitleLabelsByType;
@@ -391,6 +391,7 @@ public class SidebarPanel extends JPanel {
         dayValidationStatusLabel = new JLabel("");
         dayValidationStatusLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 12.0f));
 
+        // Organisation verticale des éléments du bilan du jour, avec alignement à gauche.
         JPanel dayValidationRow = new JPanel();
         dayValidationRow.setOpaque(false);
         dayValidationRow.setLayout(new BoxLayout(dayValidationRow, BoxLayout.Y_AXIS));
@@ -405,9 +406,9 @@ public class SidebarPanel extends JPanel {
         dayValidationRow.add(Box.createVerticalStrut(2));
         dayValidationRow.add(dayValidationStatusLabel);
 
-        dayValidationContentPanel.add(dayValidationRow);
+        dayValidationContentPanel.add(dayValidationRow); // On ajoute d'abord le row de base, puis on met à jour son contenu en place au fil du temps.
 
-        dayValidationCardPanel.add(dayValidationContentPanel, BorderLayout.CENTER);
+        dayValidationCardPanel.add(dayValidationContentPanel, BorderLayout.CENTER); // Le card panel gère le fond et la bordure, le content panel gère le contenu dynamique du bilan du jour.
 
         // Ordonnancement final de la sidebar: actions -> objectifs -> bilan.
         JPanel actionsSectionPanel = new JPanel();
@@ -707,18 +708,27 @@ public class SidebarPanel extends JPanel {
         return grilleCulture.canLabourCell(activeFieldCell.x, activeFieldCell.y);
     }
 
+    /** Vérifie si la case active peut être remise en herbe */
     private boolean canRemettreEnHerbeActiveCell() {
         Point activeFieldCell = movementModel.getActiveFieldCell();
         if (activeFieldCell == null || !fieldPanel.isFarmableCell(activeFieldCell)) {
-            return false;
+            return false; // Pas de case active ou case non cultivable : on ne peut pas remettre en herbe.
         }
         return grilleCulture.canRemettreEnHerbeCell(activeFieldCell.x, activeFieldCell.y);
     }
 
+    /**
+     * Vérifie si l'action de remettre en herbe doit être affichée.
+     */
     private boolean shouldShowRemettreEnHerbeAction() {
         return canRemettreEnHerbeActiveCell();
     }
 
+    /**
+     * Le bouton de labourage doit être actif si l'une ou l'autre des actions est possible :
+     * - soit labourer la case active,
+     * - soit remettre en herbe la case active.
+     */
     private boolean canUseLabourButtonOnActiveCell() {
         return canLabourActiveCell() || canRemettreEnHerbeActiveCell();
     }
@@ -772,14 +782,17 @@ public class SidebarPanel extends JPanel {
                 && grilleCulture.canPlacePath(activeFieldCell.x, activeFieldCell.y);
     }
 
+    /** Vérifie si l'action de placement de chemin doit être affichée. */
     private boolean shouldShowPathAction() {
         return movementModel.getSelectedFacilityType() == FacilityType.CHEMIN || isPlayerStandingOnPath();
     }
 
+    /** Vérifie si l'action de placement de chemin dans la boutique doit être affichée. */
     private boolean shouldShowStorePathAction() {
         return isPlayerStandingOnPath();
     }
 
+    /** Vérifie si le bouton de placement de chemin peut être utilisé sur la case active. */
     private boolean canUsePathButtonOnActiveCell() {
         if (shouldShowStorePathAction()) {
             return true;
@@ -787,6 +800,7 @@ public class SidebarPanel extends JPanel {
         return movementModel.getSelectedFacilityType() == FacilityType.CHEMIN && canPlacePathActiveCell();
     }
 
+    /** Vérifie si le joueur est positionné sur un chemin. */
     private boolean isPlayerStandingOnPath() {
         Point activeFieldCell = movementModel.getActiveFieldCell();
         return activeFieldCell != null
@@ -867,13 +881,15 @@ public class SidebarPanel extends JPanel {
         return getInteractableTreeNearPlayer() != null;
     }
 
+    /** Retourne l'arbre interagissable le plus proche du joueur. */
     private TreeInstance getInteractableTreeNearPlayer() {
-        Unit playerUnit = movementModel.getPlayerUnit();
+        Unit playerUnit = movementModel.getPlayerUnit(); // On se base sur l'unité du joueur, pas sur la case active, pour trouver l'arbre le plus proche.
         FieldObstacleMap obstacleMap = fieldPanel.getFieldObstacleMap();
         if (playerUnit == null || obstacleMap == null) {
             return null;
         }
 
+        // On cherche un arbre interagissable à la position du joueur, avec une tolérance de la taille d'une case pour compenser les différences de géométrie.
         return obstacleMap.findInteractableTree(
                 playerUnit.getX(),
                 playerUnit.getY(),
@@ -1149,49 +1165,60 @@ public class SidebarPanel extends JPanel {
         return signature.toString();
     }
 
+    /** Retourne le bouton de plantation. */
     public JButton getPlantButton() {
         return plantButton;
     }
 
+    /** Retourne le bouton de labourage. */
     public JButton getLabourButton() {
         return labourButton;
     }
 
+    /** Retourne le bouton de récolte. */
     public JButton getHarvestButton() {
         return harvestButton;
     }
 
+    /** Retourne le bouton d'arrosage. */
     public JButton getWaterButton() {
         return waterButton;
     }
 
+    /** Retourne le bouton de nettoyage. */
     public JButton getCleanButton() {
         return cleanButton;
     }
 
+    /** Retourne le bouton de placement de chemin. */
     public JButton getPathButton() {
         return pathButton;
     }
 
+    /** Retourne le bouton de compostage. */
     public JButton getCompostButton() {
         return compostButton;
     }
 
+    /** Retourne le bouton de coupe d'arbre. */
     public JButton getCutTreeButton() {
         return cutTreeButton;
     }
 
+    /** Retourne le bouton de construction de pont. */
     public JButton getBridgeButton() {
         return bridgeButton;
     }
 
+    /** Retourne le bouton de la grotte. */
     public JButton getCaveButton() {
         return caveButton;
     }
 
+    /** Définit le mode grotte. */
     public void setCaveMode(boolean caveMode) {
         if (this.caveMode == caveMode) {
-            return;
+            return; // Pas de changement : on évite les opérations coûteuses de refresh/repaint.
         }
 
         this.caveMode = caveMode;
