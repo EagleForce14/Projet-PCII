@@ -18,31 +18,57 @@ import java.awt.RenderingHints;
  * partagent exactement les memes illustrations.
  */
 public final class ProductPixelArt {
+    // Largeur par défaut des petits dessins quand aucun sprite dédié n'existe.
     private static final int DEFAULT_ART_COLUMNS = 5;
+    // Hauteur par défaut des petits dessins quand aucun sprite dédié n'existe.
     private static final int DEFAULT_ART_ROWS = 5;
+    // Taille maximale utilisée quand on redimensionne un sprite de graine illustrée.
     private static final int ILLUSTRATED_SEED_IMAGE_MAX_SIDE = 6;
+    // Largeur du motif de clôture dessiné directement en pixel-art.
     private static final int FENCE_ART_COLUMNS = 9;
+    // Hauteur du motif de clôture dessiné directement en pixel-art.
     private static final int FENCE_ART_ROWS = 7;
+    // Taille maximale du petit visuel de chemin.
     private static final int PATH_ART_MAX_SIDE = 7;
+    // Taille maximale du petit visuel de compost.
     private static final int COMPOST_ART_MAX_SIDE = 6;
+    // Taille maximale du petit visuel de pont.
     private static final int BRIDGE_ART_MAX_SIDE = 8;
+    // Taille maximale du petit visuel de bois.
     private static final int WOOD_ART_MAX_SIDE = 8;
+    // Taille maximale du petit visuel de pièce.
     private static final int COIN_ART_MAX_SIDE = 7;
+    // Sprite utilisé pour représenter le chemin dans les aperçus produit.
     private static final Image PATH_IMAGE = ImageLoader.load("/assets/stone_with_grass.png");
+    // Sprite utilisé pour représenter le compost dans les aperçus produit.
     private static final Image COMPOST_IMAGE = ImageLoader.load("/assets/Compost.png");
+    // Sprite utilisé pour représenter le pont dans les aperçus produit.
     private static final Image BRIDGE_IMAGE = ImageLoader.load("/assets/bridge.png");
+    // Sprite utilisé pour représenter le bois dans les aperçus produit.
     private static final Image WOOD_IMAGE = ImageLoader.load("/assets/wood.png");
+    // Sprite utilisé pour représenter les pièces dans les aperçus produit.
     private static final Image COIN_IMAGE = ImageLoader.load("/assets/coin.png");
+    // Sprite mature générique réutilisé pour les fleurs classiques.
     private static final Image DEFAULT_MATURE_FLOWER_IMAGE = ImageLoader.load("/assets/maturite.png");
+    // Sprite mature de la carotte.
     private static final Image CARROT_IMAGE = ImageLoader.load("/assets/carotte_mature.png");
+    // Sprite mature du radis.
     private static final Image RADISH_IMAGE = ImageLoader.load("/assets/radis_mature.png");
+    // Sprite mature du chou-fleur.
     private static final Image CAULIFLOWER_IMAGE = ImageLoader.load("/assets/choufleur_mature.png");
+    // Sprite mature du nénuphar.
     private static final Image WATER_LILY_IMAGE = ImageLoader.load("/assets/nenuphar_mature.png");
+    // Sprite mature de l'iris des marais.
     private static final Image MARSH_IRIS_IMAGE = ImageLoader.load("/assets/iris_marais_mature.png");
 
-    // Le constructeur de la classe
+    /**
+     * On interdit l'instanciation car toute cette classe sert juste de boîte à outils statique.
+     */
     private ProductPixelArt() {}
 
+    /**
+     * On calcule la largeur du visuel à afficher pour n'importe quel produit de boutique.
+     */
     public static int getProductArtWidth(Product product, int pixelSize) {
         if (product instanceof Seed) {
             return getSeedArtWidth(((Seed) product).getType(), pixelSize);
@@ -53,6 +79,9 @@ public final class ProductPixelArt {
         return DEFAULT_ART_COLUMNS * pixelSize;
     }
 
+    /**
+     * On calcule la hauteur du visuel à afficher pour n'importe quel produit de boutique.
+     */
     public static int getProductArtHeight(Product product, int pixelSize) {
         if (product instanceof Seed) {
             return getSeedArtHeight(((Seed) product).getType(), pixelSize);
@@ -63,6 +92,9 @@ public final class ProductPixelArt {
         return DEFAULT_ART_ROWS * pixelSize;
     }
 
+    /**
+     * On renvoie la largeur du dessin d'une graine selon son type réel.
+     */
     public static int getSeedArtWidth(Type type, int pixelSize) {
         Image illustratedSeedImage = getIllustratedSeedImage(type);
         if (illustratedSeedImage != null) {
@@ -71,6 +103,9 @@ public final class ProductPixelArt {
         return DEFAULT_ART_COLUMNS * pixelSize;
     }
 
+    /**
+     * On renvoie la hauteur du dessin d'une graine selon son type réel.
+     */
     public static int getSeedArtHeight(Type type, int pixelSize) {
         Image illustratedSeedImage = getIllustratedSeedImage(type);
         if (illustratedSeedImage != null) {
@@ -92,6 +127,9 @@ public final class ProductPixelArt {
         return getScaledImageSize(matureCultureImage, ILLUSTRATED_SEED_IMAGE_MAX_SIDE * pixelSize).width;
     }
 
+    /**
+     * On renvoie la hauteur du visuel mature utilisé pour un drop de culture.
+     */
     public static int getMatureCultureArtHeight(Type type, int pixelSize) {
         Image matureCultureImage = getMatureCultureImage(type);
         if (matureCultureImage == null) {
@@ -100,6 +138,9 @@ public final class ProductPixelArt {
         return getScaledImageSize(matureCultureImage, ILLUSTRATED_SEED_IMAGE_MAX_SIDE * pixelSize).height;
     }
 
+    /**
+     * On renvoie la largeur du dessin d'un équipement de boutique.
+     */
     public static int getFacilityArtWidth(FacilityType type, int pixelSize) {
         if (type == FacilityType.CLOTURE) {
             return FENCE_ART_COLUMNS * pixelSize;
@@ -116,6 +157,9 @@ public final class ProductPixelArt {
         return DEFAULT_ART_COLUMNS * pixelSize;
     }
 
+    /**
+     * On renvoie la hauteur du dessin d'un équipement de boutique.
+     */
     public static int getFacilityArtHeight(FacilityType type, int pixelSize) {
         if (type == FacilityType.CLOTURE) {
             return FENCE_ART_ROWS * pixelSize;
@@ -132,22 +176,37 @@ public final class ProductPixelArt {
         return DEFAULT_ART_ROWS * pixelSize;
     }
 
+    /**
+     * On renvoie la largeur du petit visuel de bois.
+     */
     public static int getWoodArtWidth(int pixelSize) {
         return getScaledImageSize(WOOD_IMAGE, WOOD_ART_MAX_SIDE * pixelSize).width;
     }
 
+    /**
+     * On renvoie la hauteur du petit visuel de bois.
+     */
     public static int getWoodArtHeight(int pixelSize) {
         return getScaledImageSize(WOOD_IMAGE, WOOD_ART_MAX_SIDE * pixelSize).height;
     }
 
+    /**
+     * On renvoie la largeur du petit visuel de pièce.
+     */
     public static int getCoinArtWidth(int pixelSize) {
         return getScaledImageSize(COIN_IMAGE, COIN_ART_MAX_SIDE * pixelSize).width;
     }
 
+    /**
+     * On renvoie la hauteur du petit visuel de pièce.
+     */
     public static int getCoinArtHeight(int pixelSize) {
         return getScaledImageSize(COIN_IMAGE, COIN_ART_MAX_SIDE * pixelSize).height;
     }
 
+    /**
+     * On dessine automatiquement le bon visuel selon le vrai type de produit reçu.
+     */
     public static void drawProduct(Graphics2D g2d, Product product, int x, int y, int pixelSize) {
         if (product instanceof Seed) {
             drawSeed(g2d, ((Seed) product).getType(), x, y, pixelSize);
@@ -156,6 +215,9 @@ public final class ProductPixelArt {
         }
     }
 
+    /**
+     * On dessine une graine, soit via son sprite dédié, soit via un petit motif manuel.
+     */
     public static void drawSeed(Graphics2D g2d, Type type, int x, int y, int pixelSize) {
         Image illustratedSeedImage = getIllustratedSeedImage(type);
         if (illustratedSeedImage != null) {
@@ -181,6 +243,9 @@ public final class ProductPixelArt {
         }
     }
 
+    /**
+     * On dessine la version mature de la culture utilisée pour les drops au sol.
+     */
     public static void drawMatureCulture(Graphics2D g2d, Type type, int x, int y, int pixelSize) {
         Image matureCultureImage = getMatureCultureImage(type);
         if (matureCultureImage != null) {
@@ -242,6 +307,9 @@ public final class ProductPixelArt {
         return DEFAULT_MATURE_FLOWER_IMAGE;
     }
 
+    /**
+     * On dessine un équipement de boutique avec son visuel adapté au type demandé.
+     */
     public static void drawFacility(Graphics2D g2d, FacilityType type, int x, int y, int pixelSize) {
         switch (type) {
             case CLOTURE:
@@ -261,14 +329,23 @@ public final class ProductPixelArt {
         }
     }
 
+    /**
+     * On dessine l'icône de ressource utilisée pour le bois.
+     */
     public static void drawWoodResource(Graphics2D g2d, int x, int y, int pixelSize) {
         drawScaledImage(g2d, WOOD_IMAGE, x, y, WOOD_ART_MAX_SIDE * pixelSize);
     }
 
+    /**
+     * On dessine l'icône de ressource utilisée pour les pièces.
+     */
     public static void drawCoinResource(Graphics2D g2d, int x, int y, int pixelSize) {
         drawScaledImage(g2d, COIN_IMAGE, x, y, COIN_ART_MAX_SIDE * pixelSize);
     }
 
+    /**
+     * On dessine le petit motif manuel de la tulipe.
+     */
     private static void drawTulip(Graphics2D g2d, int x, int y, int pixelSize) {
         drawStem(g2d, x, y, pixelSize);
         fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(226, 73, 126));
@@ -277,6 +354,9 @@ public final class ProductPixelArt {
         fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, new Color(255, 154, 190));
     }
 
+    /**
+     * On dessine le petit motif manuel de la rose.
+     */
     private static void drawRose(Graphics2D g2d, int x, int y, int pixelSize) {
         drawStem(g2d, x, y, pixelSize);
         fillPixel(g2d, x + pixelSize, y, pixelSize, new Color(174, 41, 66));
@@ -286,6 +366,9 @@ public final class ProductPixelArt {
         fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(212, 61, 84));
     }
 
+    /**
+     * On dessine le petit motif manuel de la marguerite.
+     */
     private static void drawDaisy(Graphics2D g2d, int x, int y, int pixelSize) {
         drawStem(g2d, x, y, pixelSize);
         Color petal = new Color(245, 239, 227);
@@ -298,6 +381,9 @@ public final class ProductPixelArt {
         fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(236, 201, 72));
     }
 
+    /**
+     * On dessine le petit motif manuel de l'orchidée.
+     */
     private static void drawOrchid(Graphics2D g2d, int x, int y, int pixelSize) {
         drawStem(g2d, x, y, pixelSize);
         Color purple = new Color(170, 110, 214);
@@ -309,6 +395,9 @@ public final class ProductPixelArt {
         fillPixel(g2d, x + (4 * pixelSize), y + (2 * pixelSize), pixelSize, purple);
     }
 
+    /**
+     * On dessine le petit motif manuel utilisé pour représenter une clôture.
+     */
     private static void drawFence(Graphics2D g2d, int x, int y, int pixelSize) {
         Color cap = new Color(72, 56, 46);
         Color woodLight = new Color(255, 173, 49);
@@ -338,17 +427,26 @@ public final class ProductPixelArt {
         fillGridRect(g2d, x, y, pixelSize, 3, 4, 1, 1, new Color(255, 145, 61));
     }
 
+    /**
+     * On dessine la tige commune aux petits motifs de fleurs.
+     */
     private static void drawStem(Graphics2D g2d, int x, int y, int pixelSize) {
         fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(79, 163, 78));
         fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, new Color(63, 137, 63));
         fillPixel(g2d, x + pixelSize, y + (3 * pixelSize), pixelSize, new Color(103, 188, 93));
     }
 
+    /**
+     * On remplit un seul pixel logique du motif avec la couleur demandée.
+     */
     private static void fillPixel(Graphics2D g2d, int x, int y, int pixelSize, Color color) {
         g2d.setColor(color);
         g2d.fillRect(x, y, pixelSize, pixelSize);
     }
 
+    /**
+     * On redimensionne et dessine une image dans la boîte prévue pour ce mini-visuel.
+     */
     private static void drawScaledImage(Graphics2D g2d, Image image, int x, int y, int maxSide) {
         if (image == null) {
             return;
@@ -384,6 +482,9 @@ public final class ProductPixelArt {
         return new Dimension(Math.max(1, (maxSide * imageWidth) / imageHeight), maxSide);
     }
 
+    /**
+     * On remplit un rectangle entier du motif exprimé en coordonnées de grille.
+     */
     private static void fillGridRect(Graphics2D g2d, int originX, int originY, int pixelSize,
                                      int gridX, int gridY, int gridWidth, int gridHeight, Color color) {
         g2d.setColor(color);

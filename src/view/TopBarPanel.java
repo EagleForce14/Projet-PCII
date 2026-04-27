@@ -23,24 +23,41 @@ import java.awt.event.MouseEvent;
  * Petite barre d'information en haut à gauche de l'écran
  */
 public class TopBarPanel extends JPanel {
+    // Chemin de la police pixel utilisée dans la barre du haut.
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
+    // Largeur fixe de la jauge de progression du jour.
     private static final int DAY_PROGRESS_BAR_WIDTH = 156;
+    // Hauteur fixe de la jauge de progression du jour.
     private static final int DAY_PROGRESS_BAR_HEIGHT = 18;
+    // Cadre de la jauge de progression du jour.
     private static final Color DAY_PROGRESS_FRAME = new Color(244, 215, 125, 245);
+    // Fond de la jauge de progression du jour.
     private static final Color DAY_PROGRESS_BACKGROUND = new Color(46, 30, 14, 235);
+    // Remplissage de la jauge de progression du jour.
     private static final Color DAY_PROGRESS_FILL = new Color(238, 191, 62, 250);
+    // Reflet de la jauge de progression du jour.
     private static final Color DAY_PROGRESS_HIGHLIGHT = new Color(255, 244, 194, 240);
+    // Couleur du texte affiché dans la jauge.
     private static final Color DAY_PROGRESS_TEXT = new Color(255, 248, 220);
+    // Ombre du texte affiché dans la jauge.
     private static final Color DAY_PROGRESS_TEXT_SHADOW = new Color(73, 48, 22, 220);
 
+    // Réserve d'argent du joueur affichée dans le HUD.
     private final Money playerMoney;
+    // Libellé qui affiche le numéro du jour courant.
     private final JLabel dayLabel;
+    // Libellé qui affiche le solde actuel.
     private final JLabel moneyLabel;
+    // Police utilisée dans la jauge de progression du jour.
     private final Font dayProgressTextFont;
+    // Composant graphique de la jauge de progression du jour.
     private final JComponent dayProgressBar;
+    // Référence au cycle de journée en cours.
     private final Jour jour;
 
-    // Le constructeur de la classe
+    /**
+     * On prépare la barre haute avec le jour courant, l'argent et la jauge temporelle.
+     */
     public TopBarPanel(Money playerMoney, Jour jour) {
         this.playerMoney = playerMoney;
         this.jour = jour;
@@ -148,6 +165,9 @@ public class TopBarPanel extends JPanel {
                 g2.dispose();
             }
 
+            /**
+             * On renvoie le temps restant complet dans l'infobulle de la jauge.
+             */
             @Override
             public String getToolTipText(MouseEvent event) {
                 long remainingMs = jour.getTempsRestantAvantProchainJourMs();
@@ -200,6 +220,9 @@ public class TopBarPanel extends JPanel {
         );
     }
 
+    /**
+     * On resynchronise le texte du HUD avant de laisser Swing dessiner la barre.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         syncMoneyText();

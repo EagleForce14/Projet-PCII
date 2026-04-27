@@ -28,57 +28,107 @@ import java.awt.image.BufferedImage;
  * comme la boutique principale (à droite) et les arbres.
  */
 public class EnvironmentView extends JPanel {
+    // Police pixel utilisée pour les barres de progression dans le décor.
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
+    // Couleur de l'ombre plaquée au sol sous les arbres.
     private static final Color TREE_GROUND_SHADOW_COLOR = new Color(7, 10, 4, 62);
+    // Couleur de l'ombre générale projetée par les arbres.
     private static final Color TREE_GLOBAL_SHADOW_COLOR = new Color(6, 8, 4, 52);
+    // Couleur du cadre de la barre de progression de menuiserie.
     private static final Color WORKSHOP_PROGRESS_FRAME = new Color(31, 21, 18, 235);
+    // Couleur du fond de la barre de progression de menuiserie.
     private static final Color WORKSHOP_PROGRESS_BACKGROUND = new Color(54, 67, 84, 228);
+    // Couleur du remplissage de la barre de progression de menuiserie.
     private static final Color WORKSHOP_PROGRESS_FILL = new Color(105, 184, 219, 240);
+    // Couleur du reflet léger ajouté sur la barre de progression de menuiserie.
     private static final Color WORKSHOP_PROGRESS_HIGHLIGHT = new Color(220, 246, 255, 210);
+    // Couleur du texte de durée affiché près de la menuiserie.
     private static final Color WORKSHOP_PROGRESS_TEXT = new Color(255, 247, 227);
+    // Ombre du texte de durée affiché près de la menuiserie.
     private static final Color WORKSHOP_PROGRESS_TEXT_SHADOW = new Color(24, 17, 13, 220);
+    // Couleur du cadre de la barre de progression d'abattage.
     private static final Color TREE_PROGRESS_FRAME = new Color(33, 21, 12, 235);
+    // Couleur du fond de la barre de progression d'abattage.
     private static final Color TREE_PROGRESS_BACKGROUND = new Color(76, 54, 31, 228);
+    // Couleur du remplissage de la barre de progression d'abattage.
     private static final Color TREE_PROGRESS_FILL = new Color(197, 145, 76, 240);
+    // Couleur du reflet léger ajouté sur la barre de progression d'abattage.
     private static final Color TREE_PROGRESS_HIGHLIGHT = new Color(255, 229, 169, 210);
+    // Couleur du texte affiché au-dessus d'un arbre en cours de coupe.
     private static final Color TREE_PROGRESS_TEXT = new Color(255, 246, 223);
+    // Ombre du texte affiché au-dessus d'un arbre en cours de coupe.
     private static final Color TREE_PROGRESS_TEXT_SHADOW = new Color(30, 18, 9, 220);
+    // Couleur extérieure du flash quand un arbre tombe.
     private static final Color TREE_FELLING_FLASH_OUTER = new Color(224, 178, 93);
+    // Couleur interne du flash quand un arbre tombe.
     private static final Color TREE_FELLING_FLASH_INNER = new Color(255, 231, 173);
+    // Couleur des petits débris projetés quand un arbre tombe.
     private static final Color TREE_FELLING_DEBRIS = new Color(112, 74, 36);
+    // Halo lumineux utilisé pendant la récompense en bois.
     private static final Color WOOD_REWARD_GLOW = new Color(255, 229, 149, 120);
+    // Couleur du parachute stylisé utilisé pendant la récompense en bois.
     private static final Color WOOD_REWARD_PARACHUTE = new Color(255, 247, 225, 220);
+    // Halo lumineux utilisé pendant la récompense en argent.
     private static final Color MONEY_REWARD_GLOW = new Color(255, 206, 108, 125);
+    // Ressources partagées entre toutes les instances de cette vue.
     private static SharedAssets sharedAssets;
 
+    // Panneau du champ utilisé pour projeter correctement le décor à l'écran.
     private final FieldPanel fieldPanel;
+    // Gestionnaire des arbres affichés dans l'environnement.
     private final TreeManager treeManager;
+    // Gestionnaire de construction de la menuiserie.
     private final WorkshopConstructionManager workshopConstructionManager;
+    // Compteur d'argent lu pour les animations de récompense.
     private final Money playerMoney;
+    // Barre supérieure utilisée comme destination visuelle des pièces.
     private final TopBarPanel topBarPanel;
+    // Image du bâtiment principal de la ferme.
     private final Image barnImage;
+    // Image de l'échoppe.
     private final Image stallImage;
+    // Image de la menuiserie.
     private final Image workshopImage;
+    // Image du pont construit sur la rivière.
     private final Image bridgeImage;
+    // Image du morceau de bois utilisé dans les récompenses.
     private final Image woodImage;
+    // Image de l'arbre principal.
     private final Image treeImage;
+    // Variante visuelle du deuxième arbre.
     private final Image alternateTreeImage;
+    // Image du saule pleureur.
     private final Image weepingWillowImage;
+    // Image du tronc clair.
     private final Image trunkImage;
+    // Image du tronc sombre.
     private final Image darkTrunkImage;
+    // Ombre au sol du premier arbre.
     private final BufferedImage treeGroundShadowImage;
+    // Ombre au sol du deuxième arbre.
     private final BufferedImage alternateTreeGroundShadowImage;
+    // Ombre au sol du saule pleureur.
     private final BufferedImage weepingWillowGroundShadowImage;
+    // Ombre au sol du tronc clair.
     private final BufferedImage trunkGroundShadowImage;
+    // Ombre au sol du tronc sombre.
     private final BufferedImage darkTrunkGroundShadowImage;
+    // Ombre générale du premier arbre.
     private final BufferedImage treeShadowImage;
+    // Ombre générale du deuxième arbre.
     private final BufferedImage alternateTreeShadowImage;
+    // Ombre générale du saule pleureur.
     private final BufferedImage weepingWillowShadowImage;
+    // Ombre générale du tronc clair.
     private final BufferedImage trunkShadowImage;
+    // Ombre générale du tronc sombre.
     private final BufferedImage darkTrunkShadowImage;
+    // Police utilisée pour les compteurs et durées flottants.
     private final Font progressFont;
 
-    // Le constructeur de la classe
+    /**
+     * On prépare la vue du décor avec toutes les images partagées déjà chargées.
+     */
     public EnvironmentView(
             FieldPanel fieldPanel,
             TreeManager treeManager,
@@ -683,26 +733,47 @@ public class EnvironmentView extends JPanel {
      * Regroupe toutes les images de décor partagées entre les différentes parties.
      */
     private static final class SharedAssets {
+        // Image du bâtiment principal de la ferme.
         private final Image barnImage = ImageLoader.load("/assets/barn.png");
+        // Image de l'échoppe.
         private final Image stallImage = ImageLoader.load("/assets/echoppe.png");
+        // Image de la menuiserie.
         private final Image workshopImage = ImageLoader.load("/assets/menuiserie.png");
+        // Image du pont.
         private final Image bridgeImage = ImageLoader.load("/assets/bridge.png");
+        // Image du morceau de bois.
         private final Image woodImage = ImageLoader.load("/assets/wood.png");
+        // Image du premier arbre.
         private final Image treeImage = ImageLoader.load("/assets/arbre.png");
+        // Image de la variante d'arbre secondaire.
         private final Image alternateTreeImage = ImageLoader.load("/assets/arbre2.png");
+        // Image du saule pleureur.
         private final Image weepingWillowImage = ImageLoader.load("/assets/Saule pleureur.png");
+        // Image du tronc clair.
         private final Image trunkImage = ImageLoader.load("/assets/tronc_arbre.png");
+        // Image du tronc sombre.
         private final Image darkTrunkImage = ImageLoader.load("/assets/tronc_sombre.png");
+        // Ombre au sol du premier arbre.
         private final BufferedImage treeGroundShadowImage = createShadowImage(treeImage, TREE_GROUND_SHADOW_COLOR);
+        // Ombre au sol du deuxième arbre.
         private final BufferedImage alternateTreeGroundShadowImage = createShadowImage(alternateTreeImage, TREE_GROUND_SHADOW_COLOR);
+        // Ombre au sol du saule pleureur.
         private final BufferedImage weepingWillowGroundShadowImage = createShadowImage(weepingWillowImage, TREE_GROUND_SHADOW_COLOR);
+        // Ombre au sol du tronc clair.
         private final BufferedImage trunkGroundShadowImage = createShadowImage(trunkImage, TREE_GROUND_SHADOW_COLOR);
+        // Ombre au sol du tronc sombre.
         private final BufferedImage darkTrunkGroundShadowImage = createShadowImage(darkTrunkImage, TREE_GROUND_SHADOW_COLOR);
+        // Ombre générale du premier arbre.
         private final BufferedImage treeShadowImage = createShadowImage(treeImage, TREE_GLOBAL_SHADOW_COLOR);
+        // Ombre générale du deuxième arbre.
         private final BufferedImage alternateTreeShadowImage = createShadowImage(alternateTreeImage, TREE_GLOBAL_SHADOW_COLOR);
+        // Ombre générale du saule pleureur.
         private final BufferedImage weepingWillowShadowImage = createShadowImage(weepingWillowImage, TREE_GLOBAL_SHADOW_COLOR);
+        // Ombre générale du tronc clair.
         private final BufferedImage trunkShadowImage = createShadowImage(trunkImage, TREE_GLOBAL_SHADOW_COLOR);
+        // Ombre générale du tronc sombre.
         private final BufferedImage darkTrunkShadowImage = createShadowImage(darkTrunkImage, TREE_GLOBAL_SHADOW_COLOR);
+        // Police partagée par les petites infos flottantes du décor.
         private final Font progressFont = CustomFontLoader.loadFont(FONT_PATH, 8.0f);
     }
 

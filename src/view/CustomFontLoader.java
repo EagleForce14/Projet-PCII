@@ -10,7 +10,9 @@ import java.io.InputStream;
  *  Classe permettant d'importer une police d'écriture personnalisée
  */
 public class CustomFontLoader {
+    // Police pixel partagée déjà chargée une première fois.
     private static Font pixelFont;
+
     /**
      * Méthode statique (l'instanciation n'est donc pas nécessaire) qui charge une police à partir d'un fichier .ttf depuis le package resources.
      * @param resourcePath Chemin relatif dans les ressources (ex: "src/resources/fonts/PixelFont.ttf")
@@ -24,7 +26,7 @@ public class CustomFontLoader {
                 if (!fontFile.exists()) {
                     throw new IOException("Police non trouvée au chemin spécifié: " + resourcePath);
                 }
-                
+
                 try (InputStream is = new FileInputStream(fontFile)) {
                     pixelFont = Font.createFont(Font.TRUETYPE_FONT, is);
                     GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();

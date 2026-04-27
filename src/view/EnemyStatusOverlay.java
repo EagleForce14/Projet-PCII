@@ -10,12 +10,17 @@ import java.awt.Graphics2D;
  * Petit renderer dédié à la carte d'information affichée après un clic sur un lapin.
  */
 public class EnemyStatusOverlay {
+    // Chemin de la police pixel utilisée dans la carte d'information.
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
 
+    // Police du titre de la carte.
     private final Font titleFont;
+    // Police des lignes d'information secondaires.
     private final Font bodyFont;
 
-    // Le constructeur de la classe
+    /**
+     * On prépare les polices utilisées pour la carte d'information d'un ennemi sélectionné.
+     */
     public EnemyStatusOverlay() {
         this.titleFont = CustomFontLoader.loadFont(FONT_PATH, 10.0f);
         this.bodyFont = CustomFontLoader.loadFont(FONT_PATH, 8.0f);

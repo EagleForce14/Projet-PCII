@@ -14,11 +14,17 @@ import java.util.concurrent.ConcurrentHashMap;
  * - la terre, qui reste une tuile pixel art fixe.
  */
 public final class TerrainTileFactory {
+    // Taille de référence utilisée pour précharger les tuiles les plus courantes.
     private static final int GRASS_PIXEL_TILE_SIZE = 16;
+    // Motif source utilisé quand on doit reconstruire une herbe de secours en pixel-art.
     private static final String GRASS_SYMBOLS = "0123456789ABCDEFGHIJKLMNOPQR";
+    // Cache des variantes d'herbe par taille de tuile demandée.
     private static final Map<Integer, Image[]> GRASS_TILE_CACHE = new ConcurrentHashMap<>();
+    // Cache des variantes de terre par taille de tuile demandée.
     private static final Map<Integer, Image[]> SOIL_TILE_CACHE = new ConcurrentHashMap<>();
+    // Cache des tuiles chemin/pierre par taille de tuile demandée.
     private static final Map<Integer, Image[]> STONE_WITH_GRASS_TILE_CACHE = new ConcurrentHashMap<>();
+    // Cache des tuiles de rivière par taille de tuile demandée.
     private static final Map<Integer, Image[]> RIVER_TILE_CACHE = new ConcurrentHashMap<>();
 
     /**

@@ -31,28 +31,51 @@ import java.awt.RenderingHints;
  * ce panneau ne fait que présenter différemment les mêmes slots logiques.
  */
 public class InventoryStatusOverlay extends JPanel {
+    // Chemin de la police pixel utilisée pour les quantités.
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
+    // Taille d'un slot d'inventaire.
     private static final int SLOT_SIZE = 48;
+    // Espace horizontal entre deux slots voisins.
     private static final int SLOT_GAP = 6;
+    // Espace entre deux groupes de slots.
     private static final int GROUP_GAP = 12;
+    // Marge intérieure des coques d'inventaire.
     private static final int OUTER_PADDING = 10;
+    // Temps de maintien visible de l'inventaire en grotte après un pickup.
     private static final long CAVE_INVENTORY_VISIBLE_MS = 1250L;
+    // Durée des animations d'entrée et de sortie de l'inventaire en grotte.
     private static final long CAVE_INVENTORY_SLIDE_MS = 220L;
+    // Décalage vertical de l'inventaire quand il est hors écran.
     private static final int CAVE_INVENTORY_HIDDEN_OFFSET_Y = 84;
+    // Voile sombre appliqué aux graines encore verrouillées.
     private static final Color LOCKED_SEED_OVERLAY = new Color(22, 18, 14, 148);
+    // Bordure des graines encore verrouillées.
     private static final Color LOCKED_SEED_BORDER = new Color(150, 132, 112, 185);
 
+    // Map actuellement affichée sous l'inventaire.
     private final PlayableMapPanel mapPanel;
+    // Référence typée vers la ferme quand la map courante en est une.
     private final FieldPanel farmFieldPanel;
+    // Inventaire réel du joueur.
     private final Inventaire inventaire;
+    // Modèle de déplacement utilisé pour connaître la scène courante.
     private final MovementModel movementModel;
+    // Police utilisée pour afficher les quantités dans les slots.
     private final Font quantityFont;
+    // Modèle de combat de grotte éventuellement observé pour les pickups.
     private CaveCombatModel caveCombatModel;
+    // Indique si l'inventaire de grotte doit s'afficher de façon temporaire.
     private boolean transientCaveDisplayEnabled;
+    // Instant de début de l'affichage temporaire courant.
     private long transientDisplayStartMs;
+    // Instant de fin de maintien visible courant.
     private long transientDisplayEndMs;
+    // Dernier pickup déjà observé pour éviter de relancer deux fois la même animation.
     private long lastObservedPickupMs;
 
+    /**
+     * On prépare l'overlay d'inventaire commun à la ferme et à la grotte.
+     */
     public InventoryStatusOverlay(PlayableMapPanel mapPanel, Inventaire inventaire, MovementModel movementModel) {
         this.mapPanel = mapPanel;
         this.farmFieldPanel = mapPanel instanceof FieldPanel ? (FieldPanel) mapPanel : null;
@@ -113,6 +136,9 @@ public class InventoryStatusOverlay extends JPanel {
         return false;
     }
 
+    /**
+     * On dessine l'inventaire complet, avec son éventuelle animation temporaire de grotte.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -207,6 +233,9 @@ public class InventoryStatusOverlay extends JPanel {
         return CAVE_INVENTORY_HIDDEN_OFFSET_Y;
     }
 
+    /**
+     * On calcule l'opacité courante de l'inventaire temporaire pendant son entrée, sa tenue et sa sortie.
+     */
     private float resolveTransientAlpha(long now) {
         if (!transientCaveDisplayEnabled || transientDisplayStartMs == Long.MIN_VALUE) {
             return 1.0f;

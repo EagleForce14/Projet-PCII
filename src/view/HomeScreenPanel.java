@@ -36,19 +36,32 @@ import java.util.Random;
  * Ecran d'accueil affiche avant de lancer la partie.
  */
 public class HomeScreenPanel extends JPanel {
+    // Police pixel utilisée sur l'écran d'accueil.
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
+    // Image de fond dédiée à l'écran d'accueil.
     private static final String HOME_BACKGROUND_PATH = "/assets/fond_accueil.png";
 
+    // Couleur du titre principal.
     private static final Color TITLE_COLOR = new Color(255, 239, 205);
+    // Couleur du sous-titre descriptif.
     private static final Color SUBTITLE_COLOR = new Color(232, 214, 181);
+    // Couleur du texte du bouton de lancement.
     private static final Color START_LABEL_COLOR = new Color(255, 239, 205);
+    // Couleur du texte du bouton de sortie.
     private static final Color QUIT_LABEL_COLOR = new Color(232, 214, 181);
+    // Couleur normale du bouton de lancement.
     private static final Color START_BUTTON_BASE = new Color(140, 96, 56, 255);
+    // Couleur de survol du bouton de lancement.
     private static final Color START_BUTTON_HOVER = new Color(170, 118, 69, 255);
+    // Couleur de contour du bouton de lancement.
     private static final Color START_BUTTON_BORDER = new Color(70, 42, 23);
+    // Couleur normale du bouton de sortie.
     private static final Color QUIT_BUTTON_BASE = new Color(94, 66, 46, 240);
+    // Couleur de survol du bouton de sortie.
     private static final Color QUIT_BUTTON_HOVER = new Color(114, 82, 57, 240);
+    // Couleur de contour du bouton de sortie.
     private static final Color QUIT_BUTTON_BORDER = new Color(58, 36, 22);
+    // Couleur de la séparation visuelle de la sidebar.
     private static final Color SIDEBAR_SEPARATOR = new Color(52, 31, 18, 215);
     // Feuilles decoratives animees pour donner de la vie a l'ecran d'accueil.
     private static final int LEAF_COUNT = 24;
@@ -63,10 +76,13 @@ public class HomeScreenPanel extends JPanel {
             new Color(244, 179, 206, 220)
     };
 
+    // Fond fixe affiché derrière la sidebar et les feuilles.
     private final Image homeBackground;
+    // Liste complète des feuilles actuellement animées.
     private final List<FallingLeaf> fallingLeaves = new ArrayList<>();
     // Generateur pseudo-aleatoire utilise pour les tailles, vitesses et positions.
     private final Random random = new Random();
+    // Timer Swing qui fait avancer l'animation des feuilles.
     private final Timer leavesTimer;
     // Permet d'attendre la premiere taille reelle du panneau avant de repartir les feuilles.
     private boolean leavesNeedInitialDistribution = true;

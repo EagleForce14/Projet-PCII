@@ -18,16 +18,27 @@ import java.awt.RenderingHints;
  * Overlay qui recouvre la zone de jeu en cas de défaite.
  */
 public class GameOverOverlay extends JPanel {
+    // Police pixel commune utilisée sur la carte de défaite.
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
+    // Largeur maximale de la carte affichée au centre.
     private static final int CARD_MAX_WIDTH = 620;
+    // Hauteur fixe de la carte affichée au centre.
     private static final int CARD_HEIGHT = 300;
+    // Marge horizontale minimale laissée autour de la carte.
     private static final int CARD_HORIZONTAL_MARGIN = 80;
+    // Largeur du bouton qui relance une partie.
     private static final int REPLAY_BUTTON_WIDTH = 190;
+    // Hauteur du bouton qui relance une partie.
     private static final int REPLAY_BUTTON_HEIGHT = 42;
 
+    // On lit l'état de fin de partie et la cause exacte de la défaite.
     private final Jour jour;
+    // Bouton affiché uniquement quand la partie est réellement terminée.
     private final ShopPixelButton replayButton;
 
+    /**
+     * On prépare l'overlay de défaite et son bouton de relance.
+     */
     public GameOverOverlay(Jour jour) {
         this.jour = jour;
 
@@ -147,6 +158,9 @@ public class GameOverOverlay extends JPanel {
         g2d.drawString(text, x, baselineY);
     }
 
+    /**
+     * On choisit le texte central selon la vraie cause de la défaite.
+     */
     private String buildBodyText(DefeatCause defeatCause) {
         if (defeatCause == DefeatCause.CAVE_SHRINE) {
             return "La statue du sanctuaire vous a foudroyé.";
@@ -166,6 +180,9 @@ public class GameOverOverlay extends JPanel {
         return Math.max(320, Math.min(CARD_MAX_WIDTH, getWidth() - CARD_HORIZONTAL_MARGIN));
     }
 
+    /**
+     * On expose le bouton pour que le contrôleur puisse y brancher l'action de replay.
+     */
     public ShopPixelButton getReplayButton() {
         return replayButton;
     }

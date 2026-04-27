@@ -8,6 +8,7 @@ import view.grotte.GrotteTileFactory;
  * pour éviter que le clic "Lancer la partie" déclenche tout le travail d'un coup.
  */
 public final class GameStartupWarmup {
+    // On évite de lancer deux fois le même préchargement en parallèle.
     private static boolean started;
 
     /**

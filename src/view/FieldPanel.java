@@ -34,19 +34,24 @@ import java.util.Objects;
  * Panneau d'affichage du champ, compose d'une grille d'images.
  */
 public class FieldPanel extends JPanel implements PlayableMapPanel {
+    // Échelles de rendu des stades visuels des carottes sur la carte.
     private static final double CARROT_YOUNG_MAP_SCALE = 0.62;
     private static final double CARROT_INTERMEDIATE_MAP_SCALE = 0.68;
     private static final double CARROT_MATURE_MAP_SCALE = 0.78;
     private static final double CARROT_WILTED_MAP_SCALE = 0.72;
+    // Échelles de rendu des stades visuels des radis sur la carte.
     private static final double RADISH_YOUNG_MAP_SCALE = 0.92;
     private static final double RADISH_INTERMEDIATE_MAP_SCALE = 0.80;
     private static final double RADISH_MATURE_MAP_SCALE = 0.82;
     private static final double RADISH_WILTED_MAP_SCALE = 0.80;
+    // Échelles de rendu des stades visuels des choux-fleurs sur la carte.
     private static final double CAULIFLOWER_YOUNG_MAP_SCALE = 0.88;
     private static final double CAULIFLOWER_INTERMEDIATE_MAP_SCALE = 0.90;
     private static final double CAULIFLOWER_MATURE_MAP_SCALE = 0.82;
     private static final double CAULIFLOWER_WILTED_MAP_SCALE = 0.82;
+    // Échelle de rendu du stade jeune des nénuphars sur la carte.
     private static final double WATER_LILY_YOUNG_MAP_SCALE = 0.78;
+    // Échelle de rendu du stade jeune des iris des marais sur la carte.
     private static final double MARSH_IRIS_YOUNG_MAP_SCALE = 0.78;
 
     // Taille préférée alignée sur la zone de jeu principale.
@@ -123,7 +128,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
 
     // On lit directement l'état réel des cultures.
     private final GrilleCulture grilleCulture;
+    // Gestionnaire relu pour dessiner et bloquer les arbres du décor.
     private final TreeManager treeManager;
+    // Carte d'obstacles enrichie utilisée quand elle est disponible.
     private FieldObstacleMap fieldObstacleMap;
 
     // Plusieurs variantes évitent un motif trop répétitif.
@@ -180,15 +187,25 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     // Cet indicateur dit seulement si la zone du compost doit être montrée ou non.
     // Les cases exactes sont relues directement depuis la grille au moment du dessin.
     private boolean compostInfluenceVisible;
+    // Indique si toutes les cases candidates au pont doivent être mises en avant.
     private boolean bridgePlacementHighlightVisible;
+    // Bornes du champ utilisées pour savoir si le cache décor de la boutique reste valable.
     private Rectangle cachedBarnDecorFieldBounds;
+    // Zone de cases bloquées par la partie haute droite du décor.
     private Rectangle cachedBarnBlockedGridBounds;
+    // Colonne de rivière utilisée pour les décorations de la zone droite.
     private int cachedDecorativeRiverColumn = Integer.MIN_VALUE;
+    // Zone logique globale traitée comme décoration haute à droite de la rivière.
     private Rectangle cachedRightRiverUpperDecorationLogicalBounds;
+    // Image déjà rendue du terrain fixe pour éviter de tout repeindre à chaque frame.
     private BufferedImage staticTerrainCache;
+    // Largeur utilisée pour savoir si le cache terrain doit être reconstruit.
     private int cachedTerrainWidth = -1;
+    // Hauteur utilisée pour savoir si le cache terrain doit être reconstruit.
     private int cachedTerrainHeight = -1;
+    // Bornes du champ correspondant au cache terrain courant.
     private Rectangle cachedTerrainFieldBounds;
+    // Cache des rectangles utiles pour dessiner les cultures déjà visibles.
     private final Map<Image, Rectangle> visibleCultureBoundsCache = new IdentityHashMap<>();
 
     /**
@@ -244,6 +261,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         setOpaque(false);
     }
 
+    /**
+     * On branche la carte d'obstacles détaillée utilisée par les règles de placement et de collision.
+     */
     public void setFieldObstacleMap(FieldObstacleMap fieldObstacleMap) {
         this.fieldObstacleMap = fieldObstacleMap;
     }
@@ -257,15 +277,23 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return fieldObstacleMap;
     }
 
-    // Les getters pour l'attribut grilleCulture, et pour la largeur et la hauteur de la grille
+    /**
+     * On expose la grille de culture réellement affichée par ce panneau.
+     */
     public GrilleCulture getGrilleCulture() {
         return grilleCulture;
     }
 
+    /**
+     * On renvoie le nombre total de colonnes de la grille.
+     */
     public int getColumnCount() {
         return grilleCulture.getLargeur();
     }
 
+    /**
+     * On renvoie le nombre total de lignes de la grille.
+     */
     public int getRowCount() {
         return grilleCulture.getHauteur();
     }
@@ -280,11 +308,17 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return getLogicalCellCenter(getColumnCount() / 2, getRowCount() / 2, fieldBounds);
     }
 
+    /**
+     * On renvoie la vitesse à appliquer selon que la case est un chemin ou non.
+     */
     @Override
     public int resolveMovementSpeed(Point cell) {
         return cell != null && grilleCulture.hasPath(cell.x, cell.y) ? Unit.PATH_SPEED : Unit.NORMAL_SPEED;
     }
 
+    /**
+     * On expose ce panneau lui-même comme composant de map jouable.
+     */
     @Override
     public Component getMapComponent() {
         return this;
@@ -330,6 +364,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         repaint();
     }
 
+    /**
+     * On efface toute prévisualisation de clôture en cours.
+     */
     public void clearFencePreview() {
         setFencePreview(null);
     }
@@ -344,6 +381,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         repaint();
     }
 
+    /**
+     * On cache explicitement la zone d'influence des composts.
+     */
     public void clearCompostInfluenceHighlight() {
         if (!compostInfluenceVisible) {
             return;
@@ -366,6 +406,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         repaint();
     }
 
+    /**
+     * On masque explicitement le highlight de placement de pont.
+     */
     public void clearBridgePlacementHighlight() {
         setBridgePlacementHighlightVisible(false);
     }
@@ -379,6 +422,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return cell != null && isBridgePlacementCandidateCell(cell.x, cell.y);
     }
 
+    /**
+     * On dit si une case précise remplit toutes les conditions de pose d'un pont.
+     */
     public boolean isBridgePlacementCandidateCell(int gridX, int gridY) {
         return grilleCulture.canPlaceBridge(gridX, gridY)
                 && !isBlockedByBarn(gridX, gridY)
@@ -533,6 +579,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * On reconstruit les bornes idéales du champ à partir de la taille préférée du panneau.
+     */
     private Rectangle getPreferredFieldBounds() {
         Dimension preferredSize = getPreferredSize();
         Rectangle fieldBounds = computeFieldBounds(preferredSize.width, preferredSize.height);
@@ -540,6 +589,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return fieldBounds;
     }
 
+    /**
+     * On calcule le rectangle occupé par la grille à partir de la taille réelle du panneau.
+     */
     private Rectangle computeFieldBounds(int panelWidth, int panelHeight) {
         int columns = getColumnCount();
         int rows = getRowCount();
@@ -638,6 +690,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return cell != null && isBlockedByBarn(cell.x, cell.y);
     }
 
+    /**
+     * On vérifie si une case touche la zone occupée par la boutique principale ou sa cour.
+     */
     public boolean isBlockedByBarn(int gridX, int gridY) {
         Rectangle logicalCellBounds = getLogicalCellBounds(gridX, gridY);
         if (logicalCellBounds == null) {
@@ -663,10 +718,16 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return true;
     }
 
+    /**
+     * Variante pratique quand on a déjà la case sous forme de point.
+     */
     public boolean isBlockedByWorkshop(Point cell) {
         return cell != null && isBlockedByWorkshop(cell.x, cell.y);
     }
 
+    /**
+     * Variante pratique quand on a déjà la case sous forme de point.
+     */
     public boolean isBlockedByStall(Point cell) {
         return cell != null && isBlockedByStall(cell.x, cell.y);
     }
@@ -699,6 +760,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return stallCollisionBounds != null && stallCollisionBounds.intersects(logicalCellBounds);
     }
 
+    /**
+     * On dit si une case peut vraiment servir au champ sans tomber sur un décor bloquant.
+     */
     public boolean isFarmableCell(Point cell) {
         return cell != null
                 && !isFarmCaveDecorationCell(cell.x, cell.y)
@@ -726,6 +790,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
                 || hasDecorativeBushAt(gridX, gridY);
     }
 
+    /**
+     * On regroupe ici tous les petits buissons décoratifs qui bloquent aussi le gameplay.
+     */
     public boolean hasDecorativeBushAt(int gridX, int gridY) {
         // Toute la végétation purement décorative liée à la boutique
         // passe par ce point d'entrée unique pour le rendu et le gameplay.
@@ -761,6 +828,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
                 : new Rectangle(cachedRightRiverUpperDecorationLogicalBounds);
     }
 
+    /**
+     * On dit si une case fait partie de la grande zone décorative haute à droite de la rivière.
+     */
     public boolean isRightRiverUpperDecorationCell(int gridX, int gridY) {
         Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
         int riverColumn = findDecorativeRiverColumn();
@@ -849,6 +919,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return new Rectangle(drawX, drawY, scaledSize.width, scaledSize.height);
     }
 
+    /**
+     * On conserve les proportions du sprite du pont quand on l'étire sur plusieurs cases.
+     */
     private Dimension getBridgeScaledSize(int targetWidth) {
         int imageWidth = bridgeImage == null ? -1 : bridgeImage.getWidth(this);
         int imageHeight = bridgeImage == null ? -1 : bridgeImage.getHeight(this);
@@ -877,18 +950,30 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return new Rectangle(Barn.getDrawX(), Barn.Y, Barn.WIDTH, Barn.HEIGHT);
     }
 
+    /**
+     * On expose les bornes logiques complètes du sprite de la menuiserie.
+     */
     public Rectangle getWorkshopLogicalDrawBounds() {
         return Workshop.getDrawBounds(getFieldLogicalBounds());
     }
 
+    /**
+     * On expose la hitbox logique basse utilisée pour bloquer le passage devant la menuiserie.
+     */
     public Rectangle getWorkshopLogicalCollisionBounds() {
         return Workshop.getCollisionBounds(getFieldLogicalBounds());
     }
 
+    /**
+     * On expose les bornes logiques complètes du sprite de l'échoppe.
+     */
     public Rectangle getStallLogicalDrawBounds() {
         return Stall.getDrawBounds(getFieldLogicalBounds());
     }
 
+    /**
+     * On expose la hitbox logique basse utilisée pour bloquer le passage devant l'échoppe.
+     */
     public Rectangle getStallLogicalCollisionBounds() {
         return Stall.getCollisionBounds(getFieldLogicalBounds());
     }
@@ -912,6 +997,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * On redirige vers le helper central qui calcule le centre logique d'une case.
+     */
     private Point getLogicalCellCenter(int gridX, int gridY, Rectangle fieldBounds) {
         return buildLogicalCellCenter(gridX, gridY, fieldBounds);
     }
@@ -1459,6 +1547,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return getFirstAvailableTile(riverTileImages);
     }
 
+    /**
+     * On prend simplement la première variante chargée quand plusieurs tuiles existent.
+     */
     private Image getFirstAvailableTile(Image[] variants) {
         if (variants == null || variants.length == 0) {
             return null;
@@ -1529,6 +1620,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         g2.drawImage(cultureImage, drawX, drawY, drawWidth, drawHeight, this);
     }
 
+    /**
+     * On applique un ancrage spécial aux iris des marais qui montent haut visuellement.
+     */
     private boolean shouldAnchorVisibleBottomAtCellCenter(Culture culture) {
         if (culture == null || culture.getType() != Type.IRIS_DES_MARAIS) {
             return false;
@@ -1538,6 +1632,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return stade == Stade.INTERMEDIAIRE || stade == Stade.MATURE || stade == Stade.FLETRIE;
     }
 
+    /**
+     * On repère la vraie zone opaque d'un sprite pour le centrer sans ses marges transparentes.
+     */
     private Rectangle getVisibleCultureBounds(Image cultureImage, int imageWidth, int imageHeight) {
         Rectangle cachedBounds = visibleCultureBoundsCache.get(cultureImage);
         if (cachedBounds != null) {
@@ -1575,6 +1672,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return visibleBounds;
     }
 
+    /**
+     * On choisit l'échelle d'affichage d'une carotte selon son stade.
+     */
     private double getCarrotMapScale(Stade stade) {
         if (stade == Stade.JEUNE_POUSSE) {
             return CARROT_YOUNG_MAP_SCALE;
@@ -1591,6 +1691,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return CARROT_MATURE_MAP_SCALE;
     }
 
+    /**
+     * On choisit l'échelle d'affichage d'un radis selon son stade.
+     */
     private double getRadishMapScale(Stade stade) {
         if (stade == Stade.JEUNE_POUSSE) {
             return RADISH_YOUNG_MAP_SCALE;
@@ -1607,6 +1710,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return RADISH_MATURE_MAP_SCALE;
     }
 
+    /**
+     * On choisit l'échelle d'affichage d'un chou-fleur selon son stade.
+     */
     private double getCauliflowerMapScale(Stade stade) {
         if (stade == Stade.JEUNE_POUSSE) {
             return CAULIFLOWER_YOUNG_MAP_SCALE;
@@ -1623,6 +1729,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return CAULIFLOWER_MATURE_MAP_SCALE;
     }
 
+    /**
+     * On applique la seule réduction spéciale utile aux jeunes nénuphars.
+     */
     private double getWaterLilyMapScale(Stade stade) {
         if (stade == Stade.JEUNE_POUSSE) {
             return WATER_LILY_YOUNG_MAP_SCALE;
@@ -1630,6 +1739,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return 1.0;
     }
 
+    /**
+     * On applique la seule réduction spéciale utile aux jeunes iris des marais.
+     */
     private double getMarshIrisMapScale(Stade stade) {
         if (stade == Stade.JEUNE_POUSSE) {
             return MARSH_IRIS_YOUNG_MAP_SCALE;
@@ -1637,6 +1749,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return 1.0;
     }
 
+    /**
+     * On convertit une image générique en `BufferedImage` pour pouvoir lire ses pixels.
+     */
     private BufferedImage toBufferedImage(Image image, int imageWidth, int imageHeight) {
         if (image instanceof BufferedImage) {
             return (BufferedImage) image;
@@ -1675,6 +1790,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         drawFencePreviewLine(g2, previewBounds, side, false, 1, FENCE_PREVIEW_SOFT_LIGHT);
     }
 
+    /**
+     * On redirige vers la bonne variante de clôture selon le côté demandé.
+     */
     private void drawFence(Graphics2D g2, int cellX, int cellY, Rectangle cellBounds, CellSide side) {
         switch (side) {
             case TOP:
@@ -1741,6 +1859,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         g2.fillRect(cellBounds.x + 2, shadowY, Math.max(2, cellBounds.width - 4), metrics.getShadowThickness());
     }
 
+    /**
+     * On dessine une clôture verticale complète, raccords compris avec les segments voisins.
+     */
     private void drawVerticalFence(Graphics2D g2, int cellX, int cellY, Rectangle cellBounds, boolean rightSide) {
         FenceMetrics metrics = createFenceMetrics(cellBounds);
         CellSide side = rightSide ? CellSide.RIGHT : CellSide.LEFT;
@@ -1857,18 +1978,27 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         g2.fillRect(capX + (outerOnRight ? 0 : 1), y + 2, 1, getInsetSpan(height, 4));
     }
 
+    /**
+     * On compose un poteau horizontal complet à partir de sa base, de son relief et de son capuchon.
+     */
     private void drawHorizontalPost(Graphics2D g2, int x, int y, int width, int height, boolean outerOnTop) {
         drawPostBase(g2, x, y, width, height);
         drawHorizontalPostRelief(g2, x, y, width, height);
         drawHorizontalPostCap(g2, x, y, width, height, outerOnTop);
     }
 
+    /**
+     * On compose un poteau vertical complet à partir de sa base, de son relief et de son capuchon.
+     */
     private void drawVerticalPost(Graphics2D g2, int x, int y, int width, int height, boolean outerOnRight) {
         drawPostBase(g2, x, y, width, height);
         drawVerticalPostRelief(g2, x, y, width, height);
         drawVerticalPostCap(g2, x, y, width, height, outerOnRight);
     }
 
+    /**
+     * On dessine une latte horizontale avec son petit relief pixel-art.
+     */
     private void drawHorizontalSlat(Graphics2D g2, int x, int y, int width, int height, boolean outerOnTop) {
         drawSlatBase(g2, x, y, width, height);
 
@@ -1881,6 +2011,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         }
     }
 
+    /**
+     * On dessine une latte verticale avec son petit relief pixel-art.
+     */
     private void drawVerticalSlat(Graphics2D g2, int x, int y, int width, int height, boolean outerOnRight) {
         drawSlatBase(g2, x, y, width, height);
 
@@ -1918,6 +2051,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         drawCellGameplayOverlays(g2, gridX, gridY, cellBounds);
     }
 
+    /**
+     * On dessine tout ce qui correspond à la culture elle-même dans la case.
+     */
     private void drawCultureLayer(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
         if (shouldRedrawGroundDynamically(gridX, gridY)) {
             drawGroundTile(g2, gridX, gridY, cellBounds);
@@ -1943,6 +2079,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return grilleCulture.isLabouree(gridX, gridY);
     }
 
+    /**
+     * On superpose ensuite les aides visuelles liées au gameplay de la case.
+     */
     private void drawCellGameplayOverlays(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
         if (grilleCulture.hasCompostAt(gridX, gridY)) {
             drawCompostDecoration(g2, cellBounds);
@@ -1961,6 +2100,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         }
     }
 
+    /**
+     * On invalide complètement le cache du sol fixe pour forcer son recalcul.
+     */
     private void invalidateStaticTerrainCache() {
         staticTerrainCache = null;
         cachedTerrainWidth = -1;
@@ -1979,6 +2121,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         repaint();
     }
 
+    /**
+     * On reconstruit le cache du terrain fixe uniquement si la taille visible a changé.
+     */
     private void ensureStaticTerrainCache() {
         if (getWidth() <= 0 || getHeight() <= 0) {
             invalidateStaticTerrainCache();
@@ -2065,10 +2210,16 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return new Rectangle(mouthX, mouthY, mouthWidth, mouthHeight);
     }
 
+    /**
+     * On fait coïncider la zone de déclenchement avec la bouche visuelle de la grotte.
+     */
     private Rectangle resolveFarmCaveEntryTriggerGridBounds() {
         return resolveFarmCaveMouthGridBounds();
     }
 
+    /**
+     * On convertit l'entrée de grotte logique en vrai rectangle écran du sprite.
+     */
     private Rectangle computeFarmCaveEntranceScreenBounds(Rectangle fieldBounds) {
         Rectangle mouthGridBounds = resolveFarmCaveMouthGridBounds();
         Rectangle mouthScreenBounds = buildScreenAreaBounds(mouthGridBounds, fieldBounds);
@@ -2090,6 +2241,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return new Rectangle(entranceX, entranceY, targetWidth, targetHeight);
     }
 
+    /**
+     * On convertit une petite zone de grille en rectangle écran continu.
+     */
     private Rectangle buildScreenAreaBounds(Rectangle gridArea, Rectangle fieldBounds) {
         if (gridArea == null || fieldBounds == null) {
             return null;
@@ -2150,6 +2304,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         }
     }
 
+    /**
+     * On dessine une tuile sur toute la case avec une interpolation nette.
+     */
     private void drawScaledTile(Graphics2D g2, Image tile, Rectangle cellBounds) {
         if (tile == null || cellBounds == null) {
             return;
@@ -2174,6 +2331,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         drawDecorativeSprite(g2, bushTileImage, cellBounds);
     }
 
+    /**
+     * On dessine les buissons verticaux ancrés à gauche de la zone boutique.
+     */
     private void drawBarnLeftVerticalBushDecoration(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
         if (verticalBushTileImage == null || cellBounds == null || !isBarnAnyLeftVerticalBushCell(gridX, gridY)) {
             return;
@@ -2182,6 +2342,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         drawLeftAnchoredDecorativeSprite(g2, verticalBushTileImage, cellBounds);
     }
 
+    /**
+     * On dessine les buissons verticaux ancrés à droite de la zone boutique.
+     */
     private void drawBarnRightVerticalBushDecoration(Graphics2D g2, int gridX, int gridY, Rectangle cellBounds) {
         if (verticalBushRightTileImage == null || cellBounds == null || !isBarnAnyRightVerticalBushCell(gridX, gridY)) {
             return;
@@ -2190,6 +2353,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         drawRightAnchoredDecorativeSprite(g2, verticalBushRightTileImage, cellBounds);
     }
 
+    /**
+     * On dit si une case appartient à la ligne de buissons posée au-dessus de la boutique.
+     */
     private boolean isBarnTopBushCell(int gridX, int gridY) {
         Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
         if (barnBlockedGridBounds == null || barnBlockedGridBounds.y <= 0) {
@@ -2209,6 +2375,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
                 || (gridX >= stoneEndColumnExclusive && gridX < rightBushEndColumnExclusive));
     }
 
+    /**
+     * On dit si une case fait partie de la colonne pavée qui monte au-dessus de l'entrée.
+     */
     private boolean isBarnTopStoneColumnCell(int gridX, int gridY) {
         Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
         if (barnBlockedGridBounds == null || barnBlockedGridBounds.y <= 0) {
@@ -2225,6 +2394,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
                 && gridX < stoneEndColumnExclusive;
     }
 
+    /**
+     * On dit si une case porte le buisson vertical gauche principal.
+     */
     private boolean isBarnLeftVerticalBushCell(int gridX, int gridY) {
         Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
         int leftColumn = barnBlockedGridBounds == null ? -1 : barnBlockedGridBounds.x - 1;
@@ -2235,6 +2407,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
                 && gridY < barnBlockedGridBounds.y + barnBlockedGridBounds.height;
     }
 
+    /**
+     * On dit si une case porte le petit buisson vertical gauche placé en haut de l'entrée.
+     */
     private boolean isBarnEntranceLeftVerticalBushCell(int gridX, int gridY) {
         Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
         if (barnBlockedGridBounds == null || barnBlockedGridBounds.y <= 0) {
@@ -2247,11 +2422,17 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return gridX == stoneStartColumn && gridY == 0;
     }
 
+    /**
+     * On regroupe ici toutes les variantes de buisson vertical gauche.
+     */
     private boolean isBarnAnyLeftVerticalBushCell(int gridX, int gridY) {
         return isBarnLeftVerticalBushCell(gridX, gridY)
                 || isBarnEntranceLeftVerticalBushCell(gridX, gridY);
     }
 
+    /**
+     * On dit si une case porte le buisson vertical droit principal.
+     */
     private boolean isBarnRightVerticalBushCell(int gridX, int gridY) {
         Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
         int rightColumn = getColumnCount() - 1;
@@ -2261,6 +2442,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
                 && gridY < barnBlockedGridBounds.y + barnBlockedGridBounds.height;
     }
 
+    /**
+     * On dit si une case porte le petit buisson vertical droit placé en haut de l'entrée.
+     */
     private boolean isBarnEntranceRightVerticalBushCell(int gridX, int gridY) {
         Rectangle barnBlockedGridBounds = getBarnBlockedGridBounds();
         if (barnBlockedGridBounds == null || barnBlockedGridBounds.y <= 0) {
@@ -2274,6 +2458,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return gridX == (stoneEndColumnExclusive - 1) && gridY == 0;
     }
 
+    /**
+     * On regroupe ici toutes les variantes de buisson vertical droit.
+     */
     private boolean isBarnAnyRightVerticalBushCell(int gridX, int gridY) {
         return isBarnRightVerticalBushCell(gridX, gridY)
                 || isBarnEntranceRightVerticalBushCell(gridX, gridY);
@@ -2304,17 +2491,26 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return rightExtension || safeLeftExtension;
     }
 
+    /**
+     * On garde la géométrie de la boutique synchronisée avec la taille réelle des cases.
+     */
     private void syncBarnTileSize(Rectangle fieldBounds) {
         if (fieldBounds != null && fieldBounds.width > 0 && fieldBounds.height > 0) {
             Barn.updateTileSize(getTileSize(fieldBounds));
         }
     }
 
+    /**
+     * On relit la colonne de rivière décorative déjà calculée dans le cache.
+     */
     private int findDecorativeRiverColumn() {
         refreshBarnDecorCache();
         return cachedDecorativeRiverColumn;
     }
 
+    /**
+     * On relit la zone de cases bloquées par la boutique déjà calculée dans le cache.
+     */
     private Rectangle getBarnBlockedGridBounds() {
         refreshBarnDecorCache();
         return cachedBarnBlockedGridBounds;
@@ -2350,6 +2546,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * On retrouve la colonne de rivière décorative à partir de la première ligne de la grille.
+     */
     private int computeDecorativeRiverColumn() {
         // La rivière décorative est une colonne continue :
         // il suffit donc de lire la première ligne pour retrouver son index.
@@ -2362,6 +2561,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         return -1;
     }
 
+    /**
+     * On reconstruit l'emprise en cases de la boutique à partir du vrai test de blocage.
+     */
     private Rectangle computeBarnBlockedGridBounds() {
         int minBlockedColumn = Integer.MAX_VALUE;
         int maxBlockedColumn = Integer.MIN_VALUE;
@@ -2395,6 +2597,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * On calcule la grande zone logique décorative située en haut à droite de la rivière.
+     */
     private Rectangle computeRightRiverUpperDecorationLogicalBounds(
             Rectangle fieldBounds,
             Rectangle barnBlockedGridBounds,
@@ -2427,6 +2632,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * On dessine un décor simple centré en bas de la case sans casser son ratio.
+     */
     private void drawDecorativeSprite(
             Graphics2D g2,
             Image sprite,
@@ -2462,6 +2670,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         g2.drawImage(sprite, drawX, drawY, drawWidth, drawHeight, this);
     }
 
+    /**
+     * On dessine un décor vertical collé au bord gauche de la case.
+     */
     private void drawLeftAnchoredDecorativeSprite(Graphics2D g2, Image sprite, Rectangle cellBounds) {
         if (sprite == null || cellBounds == null) {
             return;
@@ -2492,6 +2703,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         g2.drawImage(sprite, drawX, drawY, drawWidth, drawHeight, this);
     }
 
+    /**
+     * On dessine un décor vertical collé au bord droit de la case.
+     */
     private void drawRightAnchoredDecorativeSprite(Graphics2D g2, Image sprite, Rectangle cellBounds) {
         if (sprite == null || cellBounds == null) {
             return;
@@ -2522,6 +2736,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         g2.drawImage(sprite, drawX, drawY, drawWidth, drawHeight, this);
     }
 
+    /**
+     * On dessine la base commune d'une latte avant d'y ajouter son relief.
+     */
     private void drawSlatBase(Graphics2D g2, int x, int y, int width, int height) {
         g2.setColor(FENCE_OUTLINE);
         g2.fillRect(x, y, width, height);
@@ -2532,18 +2749,30 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         g2.fillRect(x + 1, y + 1, getInsetSpan(width, 2), getInsetSpan(height, 2));
     }
 
+    /**
+     * On retire un inset global tout en gardant au moins un pixel visible.
+     */
     private int getInsetSpan(int size, int totalInset) {
         return Math.max(1, size - totalInset);
     }
 
+    /**
+     * On redimensionne une valeur entière avec un ratio en gardant au moins 1 pixel.
+     */
     private int scaleSize(int size, double ratio) {
         return Math.max(1, (int) Math.round(size * ratio));
     }
 
+    /**
+     * On transforme un ratio en décalage entier simple.
+     */
     private int scaleOffset(int size, double ratio) {
         return (int) Math.round(size * ratio);
     }
 
+    /**
+     * On force un décalage calculé à rester positif pour les petits sprites décoratifs.
+     */
     private int scalePositiveOffset(int size) {
         return Math.max(0, scaleOffset(size, FieldPanel.BARN_BUSH_UPWARD_OFFSET_RATIO));
     }

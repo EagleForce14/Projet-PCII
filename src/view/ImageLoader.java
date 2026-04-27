@@ -13,6 +13,7 @@ import javax.imageio.ImageIO;
  * Classe utilitaire dédiée à l'importation d'images.
  */
 public class ImageLoader {
+    // Cache partagé des images déjà lues pour éviter de relire les mêmes fichiers.
     private static final ConcurrentMap<String, Optional<Image>> IMAGE_CACHE = new ConcurrentHashMap<>();
 
     /**

@@ -42,10 +42,15 @@ import java.util.Map;
  * Sidebar d'actions placée à droite de l'interface.
  */
 public class SidebarPanel extends JPanel {
+    // Largeur fixe de la colonne latérale.
     public static final int SIDEBAR_WIDTH = 320;
+    // Hauteur réservée à la zone centrale des actions.
     private static final int ACTIONS_CONTENT_HEIGHT = 620;
+    // Hauteur réservée à la grille de boutons.
     private static final int BUTTONS_GRID_HEIGHT = 250;
+    // Taille de police normale du bouton de labour.
     private static final float LABOUR_BUTTON_DEFAULT_FONT_SIZE = 13.5f;
+    // Taille de police compacte du bouton de labour quand son texte s'allonge.
     private static final float LABOUR_BUTTON_COMPACT_FONT_SIZE = 11.5f;
     // Largeur de wrapping des intitulés d'objectifs
     private static final int OBJECTIVE_TITLE_WRAP_WIDTH = 270;
@@ -63,6 +68,7 @@ public class SidebarPanel extends JPanel {
     // Texture de fond en bois (chargée via la classe utilitaire du projet).
     private final Image woodBackground;
 
+    // Bouton principal de labour ou de désactivation du labour.
     private final JButton labourButton;
     // Les 4 boutons de contrôle des actions des unités déplaçables.
     private final JButton plantButton;
@@ -73,12 +79,19 @@ public class SidebarPanel extends JPanel {
     private final JButton compostButton;
     private final JButton cutTreeButton;
     private final JButton bridgeButton;
+    // Bouton qui permet d'entrer dans la grotte.
     private final JButton caveButton;
+    // Message d'avertissement lié au labour.
     private final JLabel labourWarningLabel;
+    // Indication affichée pendant le placement d'un pont.
     private final JLabel bridgePlacementHintLabel;
+    // Ligne dédiée à l'action chemin.
     private final JPanel pathActionRow;
+    // Ligne dédiée à l'action compost.
     private final JPanel compostActionRow;
+    // Ligne dédiée à l'action couper un arbre.
     private final JPanel cutTreeActionRow;
+    // Ligne dédiée à l'action poser un pont.
     private final JPanel bridgeActionRow;
 
     // Blocs UI dédiés à la zone objectifs et au bilan du jour.
@@ -116,6 +129,7 @@ public class SidebarPanel extends JPanel {
     private String currentLabourButtonLabel;
     private String currentCompostButtonLabel;
     private boolean currentLabourWarningVisibleState;
+    // Indique si la sidebar doit afficher son comportement spécial de grotte.
     private boolean caveMode;
 
     // Cache de contenu objectifs pour éviter de redessiner inutilement et supprimer le clignotement.

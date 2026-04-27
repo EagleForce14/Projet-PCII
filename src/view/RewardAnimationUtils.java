@@ -9,9 +9,15 @@ import java.awt.Point;
  * lueur, arc de déplacement et petite canopée de parachute.
  */
 public final class RewardAnimationUtils {
+    /**
+     * On empêche toute instanciation de cette classe utilitaire.
+     */
     private RewardAnimationUtils() {
     }
 
+    /**
+     * On dessine une lueur circulaire centrée autour d'un point.
+     */
     public static void drawCenteredGlow(Graphics2D g2d, int centerX, int centerY, int diameter, Color color, int alpha) {
         if (g2d == null || color == null || diameter <= 0) {
             return;
@@ -21,6 +27,9 @@ public final class RewardAnimationUtils {
         g2d.fillOval(centerX - (diameter / 2), centerY - (diameter / 2), diameter, diameter);
     }
 
+    /**
+     * On dessine la petite canopée qui accompagne certaines récompenses volantes.
+     */
     public static void drawParachuteCanopy(
             Graphics2D g2d,
             int centerX,
@@ -43,6 +52,9 @@ public final class RewardAnimationUtils {
         g2d.drawLine(centerX + 4, canopyY + canopyHeight - 1, centerX + 2, canopyBaseY);
     }
 
+    /**
+     * On calcule la position courante d'une récompense qui suit une trajectoire en arc.
+     */
     public static Point computeArcPosition(
             int startX,
             int startY,
@@ -57,6 +69,9 @@ public final class RewardAnimationUtils {
         return new Point(currentX, currentY);
     }
 
+    /**
+     * On renvoie la même couleur avec une nouvelle transparence bornée entre 0 et 255.
+     */
     public static Color withAlpha(Color color, int alpha) {
         if (color == null) {
             return new Color(0, 0, 0, 0);
@@ -66,10 +81,16 @@ public final class RewardAnimationUtils {
         return new Color(color.getRed(), color.getGreen(), color.getBlue(), clampedAlpha);
     }
 
+    /**
+     * On interpole linéairement entre deux valeurs.
+     */
     private static double lerp(double start, double end, double progress) {
         return start + ((end - start) * progress);
     }
 
+    /**
+     * On applique un easing de sortie pour rendre la trajectoire plus naturelle.
+     */
     private static double easeOutCubic(double progress) {
         double inverse = 1.0 - progress;
         return 1.0 - (inverse * inverse * inverse);

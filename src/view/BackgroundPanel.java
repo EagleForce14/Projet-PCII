@@ -9,12 +9,19 @@ public class BackgroundPanel extends JPanel {
     // On définit une constante indiquant le facteur de zoom dans l'image.
     private static final double BACKGROUND_ZOOM = 1.035;
 
+    // Image de fond réellement dessinée dans le panneau.
     private final Image backgroundImage;
 
+    /**
+     * On prépare un panneau chargé d'afficher une image de fond unique.
+     */
     public BackgroundPanel(Image backgroundImage) {
         this.backgroundImage = backgroundImage;
     }
 
+    /**
+     * On dessine l'image de fond légèrement zoomée avant tous les autres composants.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

@@ -15,19 +15,30 @@ import java.util.List;
  * On réalise une interface graphique très simple afin de mieux tester la fonctionnalité
  */
 public class MovementView extends JPanel {
+    // Réduction horizontale de la zone d'interaction des pieds du joueur à la ferme.
     private static final int FARM_INTERACTION_FOOTPRINT_HORIZONTAL_INSET = 5;
+    // Petit retrait depuis le bas du sprite pour la zone d'interaction à la ferme.
     private static final int FARM_INTERACTION_FOOTPRINT_BOTTOM_INSET = 2;
+    // Hauteur de la zone d'interaction des pieds du joueur à la ferme.
     private static final int FARM_INTERACTION_FOOTPRINT_HEIGHT = 12;
+    // Taille de rendu de base du jardinier à la ferme.
     private static final double GARDENER_BASE_RENDER_SCALE = 1.25;
+    // Taille de rendu pendant les animations de marche.
     private static final double GARDENER_WALK_RENDER_SCALE = 1.32;
+    // Taille de rendu pendant les animations d'action.
     private static final double GARDENER_ACTION_RENDER_SCALE = 1.45;
+    // Banque partagée de sprites du jardinier de la ferme.
     private static Map<Unit.SpriteAnimation, Image[]> sharedGardenerSprites;
+    // Banque partagée de sprites de l'explorateur de grotte.
     private static Map<Unit.SpriteAnimation, Image[]> sharedCaveExplorerSprites;
 
     // Le modèle contenant la liste des unités à afficher
     private final MovementModel model;
+    // Map actuellement affichée sous les unités.
     private final PlayableMapPanel mapPanel;
+    // Banque locale de sprites du jardinier de la ferme.
     private final Map<Unit.SpriteAnimation, Image[]> gardenerSprites;
+    // Banque locale de sprites de l'explorateur de grotte.
     private final Map<Unit.SpriteAnimation, Image[]> caveExplorerSprites;
 
     /**

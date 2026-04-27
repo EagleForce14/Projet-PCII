@@ -12,6 +12,9 @@ import java.awt.geom.RoundRectangle2D;
  * - éviter de recopier la même logique de dessin dans plusieurs vues.
  */
 public final class HudProgressBarPainter {
+    /**
+     * On empêche toute instanciation de cette classe utilitaire.
+     */
     private HudProgressBarPainter() {
         // Classe utilitaire : aucune instance n'a de sens ici.
     }
@@ -55,6 +58,9 @@ public final class HudProgressBarPainter {
         }
     }
 
+    /**
+     * On remplit une couche arrondie simple de la barre.
+     */
     private static void fillRoundedLayer(Graphics2D g2, int x, int y, int width, int height, int arc, Color fillColor) {
         g2.setColor(fillColor);
         g2.fillRoundRect(x, y, width, height, arc, arc);

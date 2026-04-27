@@ -25,24 +25,41 @@ import java.util.Map;
  * elle ne pilote jamais l'IA, elle se contente de lire le modèle et d'afficher le bon sprite.
  */
 public class EnemyView extends JPanel {
+    // Distance maximale entre le clic et un ennemi pour autoriser sa sélection.
     private static final int ENEMY_CLICK_RADIUS = 27;
+    // Largeur d'affichage de base des lapins.
     private static final int RABBIT_FRAME_WIDTH = 54;
+    // Hauteur d'affichage de base des lapins.
     private static final int RABBIT_FRAME_HEIGHT = 54;
+    // Largeur d'affichage de base des monstres de grotte.
     private static final int MONSTER_FRAME_WIDTH = 48;
+    // Hauteur d'affichage de base des monstres de grotte.
     private static final int MONSTER_FRAME_HEIGHT = 48;
+    // Couleur du fond de la barre de vie affichée dans la grotte.
     private static final Color CAVE_HEALTH_BACKGROUND = new Color(28, 14, 16, 196);
+    // Couleur du remplissage de la barre de vie affichée dans la grotte.
     private static final Color CAVE_HEALTH_FILL = new Color(212, 74, 74, 235);
+    // Couleur de contour de la barre de vie affichée dans la grotte.
     private static final Color CAVE_HEALTH_BORDER = new Color(245, 208, 184, 214);
+    // Léger flash blanc affiché quand un monstre est touché.
     private static final Color CAVE_HIT_FLASH = new Color(255, 255, 255, 68);
+    // Banque partagée de tous les sprites déjà chargés pour les ennemis.
     private static Map<SpriteKey, BufferedImage> sharedSpritesByKey;
+    // Petite image de secours utilisée si un sprite manque.
     private static BufferedImage sharedMissingSprite;
 
+    // Modèle lu pour connaître les ennemis présents et leur état courant.
     private final EnemyModel model;
+    // Carte jouable sur laquelle on projette visuellement les ennemis.
     private final PlayableMapPanel mapPanel;
+    // Petit overlay chargé d'afficher la fiche d'un ennemi sélectionné.
     private final EnemyStatusOverlay statusOverlay;
+    // Vue locale sur la banque de sprites partagée.
     private final Map<SpriteKey, BufferedImage> spritesByKey;
+    // Sprite de secours utilisé si une clé d'animation n'existe pas.
     private final BufferedImage missingSprite;
 
+    // Ennemi actuellement sélectionné par le joueur, s'il y en a un.
     private EnemyUnit selectedEnemy;
 
     /**
