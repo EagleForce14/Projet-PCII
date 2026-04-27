@@ -50,61 +50,101 @@ import java.util.Map;
  * - une colonne droite pour la selection courante et le panier.
  */
 public class ShopOverlay extends JPanel {
+    // Chemin de la police pixel utilisée par la boutique.
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
 
+    // Couleur principale des textes importants.
     private static final Color TEXT_PRIMARY = new Color(255, 248, 226);
+    // Couleur des textes secondaires.
     private static final Color TEXT_SECONDARY = new Color(216, 199, 164);
+    // Couleur des textes peu prioritaires.
     private static final Color TEXT_MUTED = new Color(169, 151, 124);
+    // Couleur d'accent des boutons d'action.
     private static final Color ACCENT = new Color(216, 181, 96);
+    // Variante de survol de la couleur d'accent.
     private static final Color ACCENT_HOVER = new Color(236, 202, 114);
+    // Couleur des messages de succès.
     private static final Color SUCCESS = new Color(163, 216, 130);
+    // Couleur des messages d'erreur.
     private static final Color ERROR = new Color(255, 151, 126);
 
+    // Boutique réelle que l'overlay pilote.
     private final Shop shop;
+    // Argent du joueur affiché et débité au moment du paiement.
     private final Money playerMoney;
+    // Inventaire du joueur à remplir lors des achats validés.
     private final Inventaire inventaire;
+    // Composant auquel on rend le focus quand on ferme la boutique.
     private final JComponent focusReturnTarget;
+    // Contrôleur global de pause partagé avec le reste du jeu.
     private final GamePauseController pauseController;
+    // Texture bois légère utilisée dans tout l'habillage.
     private final Image woodTexture;
 
+    // Police du grand titre.
     private final Font titleFont;
+    // Police des petits sous-titres en capitales.
     private final Font subtitleFont;
+    // Police des petits boutons et labels compacts.
     private final Font labelFont;
+    // Police du corps de texte.
     private final Font bodyFont;
+    // Police des prix et valeurs importantes.
     private final Font priceFont;
 
     // Ces deux panneaux sont les deux zones qui bougent le plus souvent.
     // On les garde en references pour pouvoir les reconstruire facilement.
     private final JPanel productsGrid;
     private final JPanel cartItemsPanel;
+    // Libellé qui affiche combien d'articles sont visibles dans le catalogue.
     private final JLabel catalogCountLabel;
+    // Libellé qui affiche le solde courant du joueur.
     private final JLabel balanceValueLabel;
+    // Libellé du nom de l'article sélectionné.
     private final JLabel selectedNameLabel;
+    // Libellé de catégorie de l'article sélectionné.
     private final JLabel selectedMetaLabel;
+    // Libellé de prix de l'article sélectionné.
     private final JLabel selectedPriceLabel;
+    // Libellé de stock disponible de l'article sélectionné.
     private final JLabel selectedStockLabel;
+    // Libellé qui rappelle combien d'exemplaires sont déjà dans le panier.
     private final JLabel selectedCartLabel;
+    // Libellé numérique de la quantité voulue.
     private final JLabel desiredQuantityLabel;
+    // Libellé du total du panier.
     private final JLabel totalValueLabel;
+    // Zone de message courte affichée en bas à droite.
     private final JLabel messageLabel;
     // Le panneau de droite a volontairement son propre petit focus visuel:
     // une preview plus grande de l'article selectionné.
     private final ProductPreview productPreview;
+    // Bouton qui ajoute la sélection courante au panier.
     private final ShopPixelButton addToCartButton;
+    // Bouton qui baisse la quantité désirée.
     private final ShopPixelButton decreaseDesiredButton;
+    // Bouton qui augmente la quantité désirée.
     private final ShopPixelButton increaseDesiredButton;
+    // Bouton qui vide complètement le panier.
     private final ShopPixelButton clearCartButton;
+    // Bouton qui valide l'achat du panier.
     private final ShopPixelButton checkoutButton;
+    // Table des boutons de filtre affichés à gauche.
     private final Map<ShopFilterCategory, ShopFilterChip> filterButtons;
 
     // État local purement visuel de la boutique.
+    // Filtre actuellement actif dans le catalogue.
     private ShopFilterCategory activeFilter = ShopFilterCategory.ALL;
+    // Produit actuellement sélectionné dans le catalogue.
     private Product selectedProduct;
+    // Quantité actuellement demandée pour le produit sélectionné.
     private int desiredQuantity = 0;
+    // Opacité globale de l'overlay.
     private float overlayAlpha = 0f;
 
-    // Le constructeur branche une fois pour toutes les polices,
-    // les composants Swing et les actions globales.
+    /**
+     * On prépare toute l'interface de boutique une bonne fois pour toutes.
+     */
     public ShopOverlay(Shop shop, Money playerMoney, Inventaire inventaire, JComponent focusReturnTarget) {
         this.shop = shop;
         this.playerMoney = playerMoney;
@@ -163,10 +203,9 @@ public class ShopOverlay extends JPanel {
         setMessage(null, TEXT_MUTED);
     }
 
-    // Ouvrir la boutique revient surtout à :
-    // 1) mettre le jeu en pause,
-    // 2) resynchroniser l'UI avec le modele,
-    // 3) recuperer le focus clavier pour Echap.
+    /**
+     * On ouvre la boutique, on met le jeu en pause et on resynchronise tout l'affichage.
+     */
     public void openShop() {
         if (isVisible()) {
             requestFocusInWindow();
@@ -181,8 +220,9 @@ public class ShopOverlay extends JPanel {
         requestFocusInWindow();
     }
 
-    // A la fermeture, on remet simplement le jeu en marche
-    // puis on rend le focus au panneau de jeu.
+    /**
+     * On ferme la boutique, on relance le jeu puis on rend le focus au terrain.
+     */
     public void closeShop() {
         if (!isVisible()) {
             return;
@@ -196,6 +236,9 @@ public class ShopOverlay extends JPanel {
         }
     }
 
+    /**
+     * On applique ici l'opacité globale de l'overlay à tout son sous-arbre Swing.
+     */
     @Override
     public void paint(Graphics g) {
         // On passe par paint() plutot que paintComponent() pour que tout le sous-arbre
@@ -206,6 +249,9 @@ public class ShopOverlay extends JPanel {
         g2d.dispose();
     }
 
+    /**
+     * On dessine le fond d'ambiance de la boutique derrière tous les composants Swing.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -234,6 +280,9 @@ public class ShopOverlay extends JPanel {
         g2d.dispose();
     }
 
+    /**
+     * On assemble la structure racine de l'overlay : en-tête puis zone de travail.
+     */
     private JComponent buildContent() {
         // Un header, puis la zone de travail. Rien de plus.
         JPanel root = new JPanel(new BorderLayout(0, 20));
@@ -244,6 +293,9 @@ public class ShopOverlay extends JPanel {
         return root;
     }
 
+    /**
+     * On construit la barre haute avec le titre de la boutique et le bouton de fermeture.
+     */
     private JComponent buildHeader() {
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
@@ -266,6 +318,9 @@ public class ShopOverlay extends JPanel {
         return header;
     }
 
+    /**
+     * On construit les grandes colonnes de la boutique selon le type de shop affiché.
+     */
     private JComponent buildColumns() {
         // La boutique principale garde 3 colonnes,
         // mais l'échoppe n'en a besoin que de 2.
@@ -297,6 +352,9 @@ public class ShopOverlay extends JPanel {
         return columns;
     }
 
+    /**
+     * On construit la colonne de filtres affichée seulement pour la boutique principale.
+     */
     private JComponent buildFiltersPanel() {
         ShopSectionPanel filtersPanel = new ShopSectionPanel(woodTexture);
         filtersPanel.setPreferredSize(new Dimension(210, 0));
@@ -332,6 +390,9 @@ public class ShopOverlay extends JPanel {
         return filtersPanel;
     }
 
+    /**
+     * On construit la zone centrale du catalogue avec son compteur et sa liste scrollable.
+     */
     private JComponent buildCatalogPanel() {
         ShopSectionPanel catalogPanel = new ShopSectionPanel(woodTexture);
         catalogPanel.setLayout(new BorderLayout(0, 16));
@@ -357,6 +418,9 @@ public class ShopOverlay extends JPanel {
         return catalogPanel;
     }
 
+    /**
+     * On construit la colonne de droite avec la sélection courante, le panier et les actions.
+     */
     private JComponent buildSummaryPanel() {
         ShopSectionPanel summaryPanel = new ShopSectionPanel(woodTexture);
         summaryPanel.setPreferredSize(new Dimension(330, 0));
@@ -433,6 +497,9 @@ public class ShopOverlay extends JPanel {
         return summaryPanel;
     }
 
+    /**
+     * On construit le panneau de détail du produit actuellement sélectionné.
+     */
     private JComponent buildSelectionPanel() {
         ShopSectionPanel selectionPanel = new ShopSectionPanel(woodTexture);
         selectionPanel.setLayout(new BorderLayout(0, 14));
@@ -484,6 +551,9 @@ public class ShopOverlay extends JPanel {
         return selectionPanel;
     }
 
+    /**
+     * On branche ici tous les clics principaux de la boutique.
+     */
     private void wireActions() {
         // Toute la logique de clic reste ici pour eviter de disperser
         // les comportements de la boutique dans plusieurs classes internes.
@@ -498,6 +568,9 @@ public class ShopOverlay extends JPanel {
         checkoutButton.addActionListener(event -> checkout());
     }
 
+    /**
+     * On relit tout l'état du modèle puis on reconstruit les zones visibles concernées.
+     */
     private void syncFromModel() {
         // Ici on assume qu'une reconstruction est plus simple qu'une synchro fine.
         // On recalcule tout l'etat visible a partir du modele courant.
@@ -512,12 +585,18 @@ public class ShopOverlay extends JPanel {
         repaint();
     }
 
+    /**
+     * On met à jour l'état visuel de chaque bouton de filtre.
+     */
     private void refreshFilterButtons() {
         for (Map.Entry<ShopFilterCategory, ShopFilterChip> entry : filterButtons.entrySet()) {
             entry.getValue().setSelected(entry.getKey() == activeFilter);
         }
     }
 
+    /**
+     * On reconstruit la grille des cartes produit à partir de la liste actuellement visible.
+     */
     private void refreshCatalog(List<Product> visibleProducts) {
         productsGrid.removeAll();
 
@@ -589,6 +668,9 @@ public class ShopOverlay extends JPanel {
         catalogCountLabel.setText(visibleProducts.size() + " " + suffix);
     }
 
+    /**
+     * On met à jour le panneau de droite qui décrit le produit sélectionné.
+     */
     private void refreshSelectionPanel() {
         // Le panneau de selection est strictement drive par selectedProduct.
         // S'il n'y a rien, on montre un etat neutre tres simple.
@@ -631,6 +713,9 @@ public class ShopOverlay extends JPanel {
         increaseDesiredButton.setEnabled(canIncreaseDesiredQuantity(selectedProduct, desiredQuantity));
     }
 
+    /**
+     * On reconstruit la liste des lignes du panier.
+     */
     private void refreshCartPanel() {
         cartItemsPanel.removeAll();
 
@@ -652,6 +737,9 @@ public class ShopOverlay extends JPanel {
         cartItemsPanel.add(Box.createVerticalGlue());
     }
 
+    /**
+     * On met à jour le total du panier et l'état des boutons globaux.
+     */
     private void refreshSummary() {
         // Le total et l'etat des boutons suivent le vrai panier du modele.
         balanceValueLabel.setText(playerMoney.getAmount() + " EUR");
@@ -662,6 +750,9 @@ public class ShopOverlay extends JPanel {
         checkoutButton.setEnabled(hasCart);
     }
 
+    /**
+     * On construit une ligne visuelle autonome pour un article déjà présent dans le panier.
+     */
     private JComponent createCartRow(CartItem item) {
         // Chaque ligne du panier recompose un mini panneau autonome.
         // Ca garde le rendu homogène avec le reste de l'overlay
@@ -747,6 +838,9 @@ public class ShopOverlay extends JPanel {
         return row;
     }
 
+    /**
+     * On garde une sélection cohérente quand le filtre ou le panier modifie le catalogue visible.
+     */
     private void ensureSelection(List<Product> visibleProducts) {
         // Quand le filtre change, on essaie de garder la selection courante.
         // Si elle disparait, on retombe proprement sur le premier article visible.
@@ -773,6 +867,9 @@ public class ShopOverlay extends JPanel {
         }
     }
 
+    /**
+     * On recale la quantité demandée dans des bornes encore valides pour le produit courant.
+     */
     private void updateDesiredQuantity(int nextQuantity) {
         // Pour les articles limités, on reste borné par le stock libre.
         // Pour les autres, on laisse simplement monter la quantité demandée.
@@ -798,6 +895,9 @@ public class ShopOverlay extends JPanel {
         repaint();
     }
 
+    /**
+     * On change le produit sélectionné puis on remet sa quantité de départ à une valeur saine.
+     */
     private void selectProduct(Product product) {
         selectedProduct = product;
         desiredQuantity = getInitialDesiredQuantity(product);
@@ -805,6 +905,9 @@ public class ShopOverlay extends JPanel {
         syncFromModel();
     }
 
+    /**
+     * On ajoute la quantité demandée du produit sélectionné dans le panier.
+     */
     private void addSelectedProductToCart() {
         // Ici on ajoute la quantite choisie d'un coup.
         // Shop fait encore la vraie validation, la vue ne fait qu'anticiper.
@@ -824,6 +927,9 @@ public class ShopOverlay extends JPanel {
         syncFromModel();
     }
 
+    /**
+     * On tente de finaliser l'achat de tout le panier.
+     */
     private void checkout() {
         // La validation reste volontairement simple:
         // si le modele refuse, on affiche juste une raison courte.
@@ -845,6 +951,9 @@ public class ShopOverlay extends JPanel {
         closeShop();
     }
 
+    /**
+     * On reconstruit la liste des produits visibles en appliquant le filtre actif.
+     */
     private List<Product> getVisibleProducts() {
         // On reconstruit la liste visible a la volée:
         // peu d'articles, donc aucun interêt à maintenir un cache.
@@ -865,6 +974,9 @@ public class ShopOverlay extends JPanel {
         return products;
     }
 
+    /**
+     * On affiche ou masque le message d'état en bas de la colonne droite.
+     */
     private void setMessage(String text, Color color) {
         // Quand il n'y a rien a dire, on cache vraiment le label
         // pour eviter un trou visuel gratuit.
@@ -874,6 +986,9 @@ public class ShopOverlay extends JPanel {
         messageLabel.setVisible(hasMessage);
     }
 
+    /**
+     * On renvoie le grand libellé de catégorie affiché sur une carte produit.
+     */
     private String getProductCategoryLabel(Product product) {
         if (product instanceof Seed) {
             return "Graine";
@@ -912,11 +1027,17 @@ public class ShopOverlay extends JPanel {
         }
     }
 
+    /**
+     * On renvoie le petit badge affiché sur une carte quand l'article est déjà dans le panier.
+     */
     private String getCatalogBadgeText(Product product) {
         int cartQuantity = shop.getShoppingCardQuantity(product);
         return cartQuantity > 0 ? "Panier " + cartQuantity : "";
     }
 
+    /**
+     * On renvoie le texte de pied de carte, surtout utilisé pour les stocks limités.
+     */
     private String getProductFooterLabel(Product product) {
         if (product == null || !shop.usesManagedStock(product)) {
             return "";
@@ -925,14 +1046,23 @@ public class ShopOverlay extends JPanel {
         return "Stock : " + shop.getRemainingStock(product);
     }
 
+    /**
+     * On dit si le produit sélectionné peut encore être demandé en quantité positive.
+     */
     private boolean hasAvailableQuantity(Product product) {
         return product != null && (!shop.usesManagedStock(product) || shop.getRemainingStock(product) > 0);
     }
 
+    /**
+     * On choisit la quantité de départ la plus simple à proposer pour un produit.
+     */
     private int getInitialDesiredQuantity(Product product) {
         return hasAvailableQuantity(product) ? 1 : 0;
     }
 
+    /**
+     * On dit si la quantité désirée peut encore être augmentée d'un cran.
+     */
     private boolean canIncreaseDesiredQuantity(Product product, int currentQuantity) {
         if (product == null || currentQuantity <= 0) {
             return false;
@@ -945,10 +1075,16 @@ public class ShopOverlay extends JPanel {
         return currentQuantity < shop.getRemainingStock(product);
     }
 
+    /**
+     * On incrémente une quantité sans jamais dépasser la borne entière maximale.
+     */
     private int incrementQuantity(int quantity) {
         return quantity >= Integer.MAX_VALUE ? Integer.MAX_VALUE : quantity + 1;
     }
 
+    /**
+     * On force un composant à rester bien ancré à gauche dans un BoxLayout.
+     */
     private JComponent createLeftAlignedRow(JComponent component) {
         // Petit helper utilitaire: BoxLayout aime recentrer certains labels.
         // Ce wrapper impose une vraie ancre a gauche, sans magie supplementaire.
@@ -960,6 +1096,9 @@ public class ShopOverlay extends JPanel {
         return row;
     }
 
+    /**
+     * On crée le bouton standard du stepper principal de quantité.
+     */
     private ShopPixelButton createControlButton(String label) {
         // Version standard pour le stepper principal.
         ShopPixelButton button = new ShopPixelButton(label, labelFont, new Color(87, 63, 44), new Color(109, 79, 55), new Color(53, 36, 24), TEXT_PRIMARY);
@@ -970,6 +1109,9 @@ public class ShopOverlay extends JPanel {
         return button;
     }
 
+    /**
+     * On crée la version compacte des boutons utilisée dans les lignes du panier.
+     */
     private ShopPixelButton createCompactControlButton(String label) {
         // Version plus petite reservee au panier.
         ShopPixelButton button = new ShopPixelButton(label, labelFont, new Color(87, 63, 44), new Color(109, 79, 55), new Color(53, 36, 24), TEXT_PRIMARY);
@@ -980,6 +1122,9 @@ public class ShopOverlay extends JPanel {
         return button;
     }
 
+    /**
+     * On crée le petit bouton de suppression complète d'une ligne de panier.
+     */
     private ShopPixelButton createCompactDangerButton() {
         // Meme gabarit que les petits boutons du panier,
         // mais avec une teinte plus chaude pour signaler la suppression.
@@ -991,6 +1136,9 @@ public class ShopOverlay extends JPanel {
         return button;
     }
 
+    /**
+     * On crée un label au style principal de la boutique.
+     */
     private JLabel createPrimaryLabel(Font font) {
         JLabel label = new JLabel();
         label.setForeground(TEXT_PRIMARY);
@@ -998,6 +1146,9 @@ public class ShopOverlay extends JPanel {
         return label;
     }
 
+    /**
+     * On crée un label au style secondaire de la boutique.
+     */
     private JLabel createSecondaryLabel(Font font) {
         JLabel label = new JLabel();
         label.setForeground(TEXT_SECONDARY);
@@ -1005,6 +1156,9 @@ public class ShopOverlay extends JPanel {
         return label;
     }
 
+    /**
+     * On crée un scroll transparent avec la scrollbar visuelle dédiée à la boutique.
+     */
     private JScrollPane createScrollPane(JComponent content) {
         // Le but est juste d'avoir le comportement de scroll,
         // pas l'apparence standard assez lourde de Swing.

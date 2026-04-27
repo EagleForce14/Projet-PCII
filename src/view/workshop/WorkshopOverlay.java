@@ -43,47 +43,85 @@ import java.awt.RenderingHints;
  * mais recentrée sur les constructions et sur l'état du chantier.
  */
 public class WorkshopOverlay extends JPanel {
+    // Chemin de la police pixel utilisée par la menuiserie.
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
 
+    // Couleur principale des textes importants.
     private static final Color TEXT_PRIMARY = new Color(255, 248, 226);
+    // Couleur des textes secondaires.
     private static final Color TEXT_SECONDARY = new Color(216, 199, 164);
+    // Couleur des textes peu prioritaires.
     private static final Color TEXT_MUTED = new Color(169, 151, 124);
+    // Couleur d'accent du bouton principal.
     private static final Color ACCENT = new Color(92, 166, 196);
+    // Variante de survol de la couleur d'accent.
     private static final Color ACCENT_HOVER = new Color(116, 191, 221);
+    // Couleur des messages de succès.
     private static final Color SUCCESS = new Color(163, 216, 130);
+    // Couleur des messages d'erreur.
     private static final Color ERROR = new Color(255, 151, 126);
 
+    // Inventaire sur lequel on lit le bois et les ponts fabriqués.
     private final Inventaire inventaire;
+    // Manager qui pilote la fabrication réelle du pont.
     private final WorkshopConstructionManager constructionManager;
+    // Composant auquel on rend le focus quand on ferme la menuiserie.
     private final JComponent focusReturnTarget;
+    // Contrôleur global de pause partagé avec le reste du jeu.
     private final GamePauseController pauseController;
+    // Texture bois légère utilisée dans l'habillage.
     private final Image woodTexture;
+    // Produit factice utilisé pour réutiliser la carte produit de la boutique.
     private final Facility bridgeProduct;
 
+    // Police du grand titre.
     private final Font titleFont;
+    // Police des petits sous-titres.
     private final Font subtitleFont;
+    // Police des petits libellés.
     private final Font labelFont;
+    // Police du corps de texte.
     private final Font bodyFont;
+    // Police des valeurs importantes.
     private final Font priceFont;
 
+    // Grille centrale qui reçoit les cartes de plans disponibles.
     private final JPanel productsGrid;
+    // Aperçu visuel dédié à la ressource bois.
     private final WoodPreviewPanel woodPreviewPanel;
+    // Libellé du stock de bois dans la colonne de droite.
     private final JLabel woodValueLabel;
+    // Libellé d'information de stock dans la colonne de gauche.
     private final JLabel infoWoodLabel;
+    // Libellé d'état du chantier dans la colonne de gauche.
     private final JLabel infoQueueLabel;
+    // Nom du plan sélectionné.
     private final JLabel selectedNameLabel;
+    // Coût du plan sélectionné.
     private final JLabel selectedCostLabel;
+    // Nombre de ponts déjà présents dans l'inventaire.
     private final JLabel selectedBridgeStockLabel;
+    // État général du chantier en cours.
     private final JLabel constructionStateLabel;
+    // Temps restant ou durée totale affichée.
     private final JLabel remainingTimeLabel;
+    // Message court affiché en bas de la colonne de droite.
     private final JLabel messageLabel;
+    // Aperçu visuel du plan sélectionné.
     private final ProductPreview productPreview;
+    // Bouton principal qui lance la fabrication.
     private final ShopPixelButton constructButton;
+    // Timer de rafraîchissement périodique de l'overlay.
     private final Timer refreshTimer;
 
+    // Opacité globale de l'overlay.
     private float overlayAlpha;
+    // Mémorise l'ancien état du chantier pour détecter une fin de fabrication.
     private boolean wasConstructionInProgress;
 
+    /**
+     * On prépare toute l'interface de la menuiserie une bonne fois pour toutes.
+     */
     public WorkshopOverlay(Inventaire inventaire, WorkshopConstructionManager constructionManager, JComponent focusReturnTarget) {
         this.inventaire = inventaire;
         this.constructionManager = constructionManager;
@@ -133,6 +171,9 @@ public class WorkshopOverlay extends JPanel {
         setMessage(null, TEXT_MUTED);
     }
 
+    /**
+     * On ouvre la menuiserie, on met le jeu en pause et on lance le rafraîchissement périodique.
+     */
     public void openWorkshop() {
         if (isVisible()) {
             requestFocusInWindow();
@@ -149,6 +190,9 @@ public class WorkshopOverlay extends JPanel {
         requestFocusInWindow();
     }
 
+    /**
+     * On ferme la menuiserie, on coupe le rafraîchissement puis on rend le focus au jeu.
+     */
     public void closeWorkshop() {
         if (!isVisible()) {
             return;
@@ -163,6 +207,9 @@ public class WorkshopOverlay extends JPanel {
         }
     }
 
+    /**
+     * On applique ici l'opacité globale de l'overlay à tout son sous-arbre Swing.
+     */
     @Override
     public void paint(Graphics g) {
         Graphics2D g2d = (Graphics2D) g.create();
@@ -171,6 +218,9 @@ public class WorkshopOverlay extends JPanel {
         g2d.dispose();
     }
 
+    /**
+     * On dessine le fond d'ambiance de la menuiserie derrière tous les composants.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -197,6 +247,9 @@ public class WorkshopOverlay extends JPanel {
         g2d.dispose();
     }
 
+    /**
+     * On assemble la structure racine de l'overlay : en-tête puis zone de travail.
+     */
     private JComponent buildContent() {
         JPanel root = new JPanel(new BorderLayout(0, 20));
         root.setOpaque(false);
@@ -205,6 +258,9 @@ public class WorkshopOverlay extends JPanel {
         return root;
     }
 
+    /**
+     * On construit la barre haute avec le titre de la menuiserie et le bouton de fermeture.
+     */
     private JComponent buildHeader() {
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
@@ -231,6 +287,9 @@ public class WorkshopOverlay extends JPanel {
         return header;
     }
 
+    /**
+     * On construit les trois grandes colonnes de la menuiserie.
+     */
     private JComponent buildColumns() {
         JPanel columns = new JPanel(new GridBagLayout());
         columns.setOpaque(false);
@@ -256,6 +315,9 @@ public class WorkshopOverlay extends JPanel {
         return columns;
     }
 
+    /**
+     * On construit la colonne d'information de gauche.
+     */
     private JComponent buildInfoPanel() {
         ShopSectionPanel infoPanel = new ShopSectionPanel(woodTexture);
         infoPanel.setPreferredSize(new Dimension(286, 0));
@@ -285,6 +347,9 @@ public class WorkshopOverlay extends JPanel {
         return infoPanel;
     }
 
+    /**
+     * On construit la colonne centrale qui liste les plans disponibles.
+     */
     private JComponent buildCatalogPanel() {
         ShopSectionPanel catalogPanel = new ShopSectionPanel(woodTexture);
         catalogPanel.setLayout(new BorderLayout(0, 16));
@@ -311,6 +376,9 @@ public class WorkshopOverlay extends JPanel {
         return catalogPanel;
     }
 
+    /**
+     * On construit la colonne de droite avec la sélection, le chantier et l'action principale.
+     */
     private JComponent buildSummaryPanel() {
         ShopSectionPanel summaryPanel = new ShopSectionPanel(woodTexture);
         summaryPanel.setPreferredSize(new Dimension(350, 0));
@@ -362,6 +430,9 @@ public class WorkshopOverlay extends JPanel {
         return summaryPanel;
     }
 
+    /**
+     * On construit le petit panneau qui décrit le plan actuellement affiché.
+     */
     private JComponent buildSelectionPanel() {
         ShopSectionPanel selectionPanel = new ShopSectionPanel(woodTexture);
         selectionPanel.setLayout(new BorderLayout(0, 14));
@@ -385,10 +456,16 @@ public class WorkshopOverlay extends JPanel {
         return selectionPanel;
     }
 
+    /**
+     * On branche ici les clics principaux de la menuiserie.
+     */
     private void wireActions() {
         constructButton.addActionListener(event -> startBridgeConstruction());
     }
 
+    /**
+     * On relit l'état du chantier puis on rafraîchit toutes les zones visibles de l'overlay.
+     */
     private void syncFromState() {
         boolean constructionInProgress = constructionManager.isConstructionInProgress();
         if (wasConstructionInProgress && !constructionInProgress) {
@@ -403,6 +480,9 @@ public class WorkshopOverlay extends JPanel {
         repaint();
     }
 
+    /**
+     * On met à jour la colonne d'information de gauche.
+     */
     private void refreshInfoPanel() {
         int woodQuantity = inventaire.getQuantiteBois();
         infoWoodLabel.setText(toHtmlLines(woodQuantity + " unites", "disponibles"));
@@ -411,6 +491,9 @@ public class WorkshopOverlay extends JPanel {
                 : toHtmlLines("Aucune construction", "active"));
     }
 
+    /**
+     * On reconstruit la liste des plans disponibles dans la colonne centrale.
+     */
     private void refreshCatalog() {
         productsGrid.removeAll();
 
@@ -445,6 +528,9 @@ public class WorkshopOverlay extends JPanel {
         productsGrid.add(Box.createGlue(), filler);
     }
 
+    /**
+     * On met à jour les valeurs affichées dans la colonne de droite.
+     */
     private void refreshSummary() {
         int woodQuantity = inventaire.getQuantiteBois();
         int bridgeQuantity = inventaire.getQuantiteInstallation(FacilityType.PONT);
@@ -465,6 +551,9 @@ public class WorkshopOverlay extends JPanel {
         constructButton.setEnabled(!constructionInProgress && inventaire.possedeBois(constructionManager.getBridgeWoodCost()));
     }
 
+    /**
+     * On force simplement la sélection visuelle du plan de pont.
+     */
     private void selectBridgeProduct() {
         productPreview.setProduct(bridgeProduct);
         repaint();
@@ -477,6 +566,9 @@ public class WorkshopOverlay extends JPanel {
         return quantity + " unités de bois";
     }
 
+    /**
+     * On tente de lancer une nouvelle fabrication de pont.
+     */
     private void startBridgeConstruction() {
         if (constructionManager.isConstructionInProgress()) {
             setMessage("La menuiserie est déjà occupée par un pont.", ERROR);
@@ -504,6 +596,9 @@ public class WorkshopOverlay extends JPanel {
         syncFromState();
     }
 
+    /**
+     * On renvoie le texte d'aide court affiché sur la carte du pont.
+     */
     private String getBridgeCardDetailLabel() {
         if (constructionManager.isConstructionInProgress()) {
             return "Permet de franchir la rivière\nChantier en cours";
@@ -511,6 +606,9 @@ public class WorkshopOverlay extends JPanel {
         return "Permet de franchir la rivière";
     }
 
+    /**
+     * On renvoie le badge court affiché sur la carte du pont.
+     */
     private String getBridgeCardBadgeText() {
         if (constructionManager.isConstructionInProgress()) {
             return "En cours";
@@ -521,6 +619,9 @@ public class WorkshopOverlay extends JPanel {
         return "Bois requis";
     }
 
+    /**
+     * On renvoie la durée pertinente à afficher selon qu'un chantier est actif ou non.
+     */
     private String getFormattedDuration() {
         long durationMs = constructionManager.isConstructionInProgress()
                 ? constructionManager.getRemainingConstructionMs()
@@ -528,6 +629,9 @@ public class WorkshopOverlay extends JPanel {
         return WorkshopConstructionManager.formatDuration(durationMs);
     }
 
+    /**
+     * On affiche ou masque le message d'état en bas de la colonne de droite.
+     */
     private void setMessage(String text, Color color) {
         boolean hasMessage = text != null && !text.isBlank();
         messageLabel.setText(hasMessage ? text : "");
@@ -535,6 +639,9 @@ public class WorkshopOverlay extends JPanel {
         messageLabel.setVisible(hasMessage);
     }
 
+    /**
+     * On construit le bloc visuel qui montre le stock de bois disponible.
+     */
     private JComponent buildWoodStockPanel() {
         ShopSectionPanel stockPanel = new ShopSectionPanel(woodTexture);
         stockPanel.setLayout(new BorderLayout(12, 0));
@@ -562,6 +669,9 @@ public class WorkshopOverlay extends JPanel {
         return stockPanel;
     }
 
+    /**
+     * On force un composant à rester bien ancré à gauche dans une pile verticale.
+     */
     private JComponent createLeftAlignedRow(JComponent component) {
         JPanel row = new JPanel(new BorderLayout());
         row.setOpaque(false);
@@ -571,6 +681,9 @@ public class WorkshopOverlay extends JPanel {
         return row;
     }
 
+    /**
+     * On crée un label au style principal de la menuiserie.
+     */
     private JLabel createPrimaryLabel(Font font) {
         JLabel label = new JLabel();
         label.setForeground(TEXT_PRIMARY);
@@ -578,6 +691,9 @@ public class WorkshopOverlay extends JPanel {
         return label;
     }
 
+    /**
+     * On crée un label au style secondaire de la menuiserie.
+     */
     private JLabel createSecondaryLabel(Font font) {
         JLabel label = new JLabel();
         label.setForeground(TEXT_SECONDARY);
@@ -585,12 +701,18 @@ public class WorkshopOverlay extends JPanel {
         return label;
     }
 
+    /**
+     * On crée un label secondaire déjà formaté sur plusieurs lignes HTML.
+     */
     private JLabel createWrappedSecondaryLabel(Font font, String... lines) {
         JLabel label = createSecondaryLabel(font);
         label.setText(toHtmlLines(lines));
         return label;
     }
 
+    /**
+     * On transforme plusieurs lignes logiques en petit bloc HTML Swing.
+     */
     private String toHtmlLines(String... lines) {
         StringBuilder builder = new StringBuilder("<html>");
         for (int index = 0; index < lines.length; index++) {
@@ -603,6 +725,9 @@ public class WorkshopOverlay extends JPanel {
         return builder.toString();
     }
 
+    /**
+     * On crée un scroll transparent avec la scrollbar visuelle partagée avec la boutique.
+     */
     private JScrollPane createScrollPane(JComponent content) {
         JScrollPane scrollPane = new JScrollPane(content);
         scrollPane.setOpaque(false);

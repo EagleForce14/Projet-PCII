@@ -16,11 +16,16 @@ import java.awt.RenderingHints;
  * il sert juste à lire vite les catégories et à changer de vue.
  */
 public class ShopFilterChip extends JToggleButton {
+    // Couleur du texte des filtres.
     private static final Color TEXT_PRIMARY = new Color(255, 248, 226);
+    // Couleur de bordure utilisée quand le filtre n'est pas actif.
     private static final Color BORDER_SOFT = new Color(138, 110, 73, 180);
+    // Couleur d'accent utilisée quand le filtre est sélectionné.
     private static final Color ACCENT = new Color(216, 181, 96);
 
-    // Le constructeur de la vue
+    /**
+     * On prépare un bouton de filtre compact, stable en hauteur et entièrement cliquable.
+     */
     public ShopFilterChip(String label, Font font) {
         super(label);
         setOpaque(false);
@@ -37,6 +42,9 @@ public class ShopFilterChip extends JToggleButton {
         setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
     }
 
+    /**
+     * On dessine le fond du filtre selon son état puis on laisse Swing peindre le texte.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         Graphics2D g2d = (Graphics2D) g.create();

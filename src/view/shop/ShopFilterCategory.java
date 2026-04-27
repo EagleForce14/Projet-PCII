@@ -18,17 +18,26 @@ public enum ShopFilterCategory {
     FACILITIES("Installations"),
     DECOR("Décor / Boosts");
 
+    // Libellé lisible affiché dans la colonne des filtres.
     private final String label;
 
-    // Le constructeur
+    /**
+     * On associe à chaque filtre son texte d'affichage.
+     */
     ShopFilterCategory(String label) {
         this.label = label;
     }
 
+    /**
+     * On renvoie le libellé affiché dans l'interface.
+     */
     public String getLabel() {
         return label;
     }
 
+    /**
+     * On dit si le produit reçu doit apparaître dans cette catégorie de filtre.
+     */
     public boolean matches(Product product) {
         if (this == ALL) {
             return true;

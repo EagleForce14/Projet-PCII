@@ -30,50 +30,93 @@ import java.awt.image.BufferedImage;
  * et la surbrillance de la case active.
  */
 public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
+    // Chemin de la police pixel utilisée autour du sanctuaire.
     private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
+    // Largeur de référence souhaitée pour le panneau de grotte.
     private static final int PREF_WIDTH = 1180;
+    // Hauteur de référence souhaitée pour le panneau de grotte.
     private static final int PREF_HEIGHT = 850;
 
+    // Couleur de fond générale de la scène.
     private static final Color SCENE_BACKGROUND = new Color(12, 10, 18);
+    // Ombre des reliefs de mur.
     private static final Color WALL_SHADOW = new Color(7, 6, 10, 118);
+    // Léger liseré lumineux des arêtes de roche.
     private static final Color EDGE_LIGHT = new Color(255, 198, 128, 34);
+    // Vignette sombre posée sur les bords de l'écran.
     private static final Color VIGNETTE = new Color(0, 0, 0, 48);
+    // Remplissage d'alerte quand le sanctuaire clignote à l'état fort.
     private static final Color SHRINE_WARNING_FILL_ON = new Color(206, 36, 36, 126);
+    // Remplissage d'alerte quand le sanctuaire clignote à l'état faible.
     private static final Color SHRINE_WARNING_FILL_OFF = new Color(128, 24, 24, 48);
+    // Bordure d'alerte quand le sanctuaire clignote à l'état fort.
     private static final Color SHRINE_WARNING_BORDER_ON = new Color(255, 126, 126, 220);
+    // Bordure d'alerte quand le sanctuaire clignote à l'état faible.
     private static final Color SHRINE_WARNING_BORDER_OFF = new Color(168, 70, 70, 118);
+    // Cadre de la barre de compte à rebours du sanctuaire.
     private static final Color SHRINE_BAR_FRAME = new Color(214, 106, 106, 248);
+    // Fond de la barre de compte à rebours du sanctuaire.
     private static final Color SHRINE_BAR_BACKGROUND = new Color(38, 10, 12, 228);
+    // Remplissage de la barre de compte à rebours du sanctuaire.
     private static final Color SHRINE_BAR_FILL = new Color(202, 42, 42, 248);
+    // Reflet de la barre de compte à rebours du sanctuaire.
     private static final Color SHRINE_BAR_HIGHLIGHT = new Color(255, 184, 184, 210);
+    // Couleur du texte principal affiché près de la barre.
     private static final Color SHRINE_BAR_LABEL = new Color(255, 223, 223);
+    // Ombre portée du texte affiché près de la barre.
     private static final Color SHRINE_BAR_LABEL_SHADOW = new Color(60, 10, 10, 220);
+    // Remplissage des cases de soin.
     private static final Color HEAL_ZONE_FILL = new Color(44, 172, 78, 54);
+    // Bordure des cases de soin.
     private static final Color HEAL_ZONE_BORDER = new Color(130, 236, 162, 160);
+    // Couleur principale des petits signes plus de soin.
     private static final Color HEAL_PLUS_COLOR = new Color(194, 255, 210, 220);
+    // Ombre des petits signes plus de soin.
     private static final Color HEAL_PLUS_SHADOW = new Color(14, 50, 26, 180);
 
+    // Carte logique de grotte utilisée pour tout le rendu.
     private final GrotteMap grotteMap;
+    // État temporel du sanctuaire utilisé pour les alertes visuelles.
     private final ShrineHazardState shrineHazardState;
+    // Variantes de tuiles de roche prêtes à dessiner.
     private final Image[] rockTiles;
+    // Variantes de tuiles de sol de salle prêtes à dessiner.
     private final Image[] roomFloorTiles;
+    // Variantes de tuiles de chemin prêtes à dessiner.
     private final Image[] pathTiles;
+    // Texture source des murs horizontaux.
     private final Image horizontalWallTile;
+    // Texture source des murs verticaux.
     private final Image verticalWallTile;
+    // Sprite de la statue du sanctuaire.
     private final Image shrineStatueImage;
+    // Police du titre de l'alerte du sanctuaire.
     private final Font shrineHazardTitleFont;
+    // Police du compte à rebours du sanctuaire.
     private final Font shrineHazardTimerFont;
 
+    // Cache complet du décor statique déjà pré-rendu.
     private BufferedImage staticSceneCache;
+    // Version déjà mise à l'échelle du mur horizontal.
     private BufferedImage scaledHorizontalWallTile;
+    // Version déjà mise à l'échelle du mur vertical.
     private BufferedImage scaledVerticalWallTile;
+    // Largeur de panneau associée au cache statique courant.
     private int cachedSceneWidth = -1;
+    // Hauteur de panneau associée au cache statique courant.
     private int cachedSceneHeight = -1;
+    // Taille de tuile associée au cache du mur horizontal.
     private int cachedHorizontalWallTileSize = -1;
+    // Hauteur associée au cache du mur horizontal.
     private int cachedHorizontalWallTileHeight = -1;
+    // Taille de tuile associée au cache du mur vertical.
     private int cachedVerticalWallTileSize = -1;
+    // Largeur associée au cache du mur vertical.
     private int cachedVerticalWallTileWidth = -1;
 
+    /**
+     * On prépare toute la vue de grotte avec ses tuiles, ses polices et ses caches de base.
+     */
     public GrotteFieldPanel(GrotteMap grotteMap, ShrineHazardState shrineHazardState) {
         this.grotteMap = grotteMap;
         this.shrineHazardState = shrineHazardState;
@@ -89,18 +132,30 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         setOpaque(false);
     }
 
+    /**
+     * On renvoie le nombre total de colonnes logiques de la grotte.
+     */
     public int getColumnCount() {
         return grotteMap.getWidth();
     }
 
+    /**
+     * On renvoie le nombre total de lignes logiques de la grotte.
+     */
     public int getRowCount() {
         return grotteMap.getHeight();
     }
 
+    /**
+     * On expose la carte logique de grotte utilisée par cette vue.
+     */
     public GrotteMap getGrotteMap() {
         return grotteMap;
     }
 
+    /**
+     * On calcule le rectangle réel occupé par la grille de grotte dans le panneau.
+     */
     @Override
     public Rectangle getFieldBounds() {
         int columns = getColumnCount();
@@ -120,6 +175,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         return new Rectangle(startX, startY, gridWidth, gridHeight);
     }
 
+    /**
+     * On renvoie le décalage logique de départ du joueur à partir de la case de spawn.
+     */
     @Override
     public Point getInitialPlayerOffset() {
         Point spawnCell = grotteMap.getSpawnCell();
@@ -131,6 +189,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * On dit si la hitbox donnée tient entièrement dans une seule case de la grotte.
+     */
     @Override
     public Point getFullyOccupiedCell(Rectangle unitBounds) {
         if (unitBounds == null) {
@@ -154,11 +215,17 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         return topLeftCell;
     }
 
+    /**
+     * En grotte, toute case marchable peut servir de case active de déplacement.
+     */
     @Override
     public boolean isFarmableCell(Point cell) {
         return cell != null && grotteMap.isWalkableCell(cell.x, cell.y);
     }
 
+    /**
+     * On convertit un pixel écran en coordonnées de case dans la grille de grotte.
+     */
     @Override
     public Point getGridPositionAt(int pixelX, int pixelY) {
         Rectangle fieldBounds = getFieldBounds();
@@ -172,22 +239,34 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         return grotteMap.isInside(gridX, gridY) ? new Point(gridX, gridY) : null;
     }
 
+    /**
+     * La grotte n'utilise pas de surbrillance de case, donc on ignore simplement cette demande.
+     */
     @Override
     public void setHighlightedCell(Point highlightedCell) {
         // En grotte, la surbrillance de case est volontairement désactivée.
         // On ignore donc les mises à jour de highlight.
     }
 
+    /**
+     * On renvoie la vitesse à appliquer selon que la case est un chemin ou non.
+     */
     @Override
     public int resolveMovementSpeed(Point cell) {
         return cell != null && grotteMap.isPathCell(cell.x, cell.y) ? Unit.PATH_SPEED : Unit.NORMAL_SPEED;
     }
 
+    /**
+     * On expose ce panneau lui-même comme composant de carte jouable.
+     */
     @Override
     public Component getMapComponent() {
         return this;
     }
 
+    /**
+     * On renvoie le rectangle écran exact d'une case de la grille.
+     */
     public Rectangle getCellBounds(int column, int row) {
         if (!grotteMap.isInside(column, row)) {
             return null;
@@ -203,6 +282,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * On renvoie le rectangle logique centré d'une case, dans le même repère que les entités.
+     */
     public Rectangle getLogicalCellBounds(int column, int row) {
         if (!grotteMap.isInside(column, row)) {
             return null;
@@ -218,6 +300,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * On convertit un point logique centré en coordonnées de case de grotte.
+     */
     public Point getLogicalGridPositionAt(int logicalPixelX, int logicalPixelY) {
         Rectangle fieldBounds = getFieldBounds();
         int tileSize = getTileSize(fieldBounds);
@@ -243,6 +328,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         return new Rectangle(cellBounds.x, cellBounds.y, cellBounds.width, wallHeight);
     }
 
+    /**
+     * On renvoie la zone logique occupée par une façade de mur basse.
+     */
     public Rectangle getBottomWallCollisionBounds(int column, int row) {
         Rectangle cellBounds = getLogicalCellBounds(column, row);
         if (cellBounds == null) {
@@ -258,6 +346,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * On renvoie la zone logique occupée par une façade de mur à gauche.
+     */
     public Rectangle getLeftWallCollisionBounds(int column, int row) {
         Rectangle cellBounds = getLogicalCellBounds(column, row);
         if (cellBounds == null) {
@@ -268,6 +359,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         return new Rectangle(cellBounds.x, cellBounds.y, wallWidth, cellBounds.height);
     }
 
+    /**
+     * On renvoie la zone logique occupée par une façade de mur à droite.
+     */
     public Rectangle getRightWallCollisionBounds(int column, int row) {
         Rectangle cellBounds = getLogicalCellBounds(column, row);
         if (cellBounds == null) {
@@ -311,6 +405,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * On s'assure que le décor statique est bien en cache pour la taille actuelle du panneau.
+     */
     private void ensureStaticSceneCache() {
         if (getWidth() <= 0 || getHeight() <= 0) {
             staticSceneCache = null;
@@ -335,6 +432,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         g2.dispose();
     }
 
+    /**
+     * On dessine une fois tout le décor statique complet de la grotte dans le buffer.
+     */
     private void paintStaticScene(Graphics2D g2) {
         g2.setColor(SCENE_BACKGROUND);
         g2.fillRect(0, 0, getWidth(), getHeight());
@@ -349,6 +449,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         drawVignette(g2);
     }
 
+    /**
+     * On dessine toute la couche de roche de base sur la grille complète.
+     */
     private void drawRockLayer(Graphics2D g2, Rectangle fieldBounds, int tileSize) {
         for (int row = 0; row < getRowCount(); row++) {
             for (int column = 0; column < getColumnCount(); column++) {
@@ -357,6 +460,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         }
     }
 
+    /**
+     * On dessine ensuite le sol uniquement sur les cases réellement marchables.
+     */
     private void drawWalkableGroundLayer(Graphics2D g2, Rectangle fieldBounds, int tileSize) {
         for (int row = 0; row < getRowCount(); row++) {
             for (int column = 0; column < getColumnCount(); column++) {
@@ -369,6 +475,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         }
     }
 
+    /**
+     * On ajoute les façades et bordures de mur qui donnent du relief aux zones rocheuses.
+     */
     private void drawRockEdgeRelief(Graphics2D g2, Rectangle fieldBounds, int tileSize) {
         int shadowThickness = Math.max(5, tileSize / 7);
         int lightThickness = Math.max(2, tileSize / 14);
@@ -468,6 +577,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         return scaledVerticalWallTile;
     }
 
+    /**
+     * On dessine une façade de mur horizontale au bord d'une case marchable.
+     */
     private void drawHorizontalWallFront(
             Graphics2D g2,
             Rectangle cellBounds,
@@ -510,6 +622,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, Math.max(2, wallHeight / 12));
     }
 
+    /**
+     * On dessine une bordure de mur verticale à gauche ou à droite d'une case marchable.
+     */
     private void drawVerticalWallBorder(
             Graphics2D g2,
             Rectangle cellBounds,
@@ -538,6 +653,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * On dessine la bordure basse d'un mur quand une roche ferme la case par le bas.
+     */
     private void drawBottomWallBorder(
             Graphics2D g2,
             Rectangle cellBounds,
@@ -606,6 +724,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * On assombrit légèrement les bords de l'écran pour fermer visuellement la scène.
+     */
     private void drawVignette(Graphics2D g2) {
         int band = Math.max(36, Math.min(getWidth(), getHeight()) / 8);
         g2.setColor(VIGNETTE);
@@ -615,10 +736,16 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         g2.fillRect(getWidth() - band, 0, band, getHeight());
     }
 
+    /**
+     * On choisit une variante de roche à partir des coordonnées de la case.
+     */
     private Image getRockTile(int column, int row) {
         return rockTiles[Math.floorMod((column * 13) + (row * 7), rockTiles.length)];
     }
 
+    /**
+     * On choisit la bonne tuile de sol selon que la case est un chemin ou un sol de salle.
+     */
     private Image getGroundTile(int column, int row) {
         if (grotteMap.isPathCell(column, row)) {
             return pathTiles[Math.floorMod((column * 31) + (row * 17), pathTiles.length)];
@@ -627,6 +754,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         return roomFloorTiles[Math.floorMod((column * 19) + (row * 11), roomFloorTiles.length)];
     }
 
+    /**
+     * On construit le rectangle écran d'une case à partir des bornes du terrain.
+     */
     private Rectangle buildCellBounds(Rectangle fieldBounds, int tileSize, int column, int row) {
         return new Rectangle(
                 fieldBounds.x + (column * tileSize),
@@ -636,6 +766,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * On construit le rectangle écran correspondant à une zone rectangulaire de la grille.
+     */
     private Rectangle buildAreaBounds(Rectangle fieldBounds, int tileSize, Rectangle gridArea) {
         if (gridArea == null) {
             return null;
@@ -649,6 +782,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         );
     }
 
+    /**
+     * On construit le rectangle logique centré correspondant à une zone rectangulaire de la grille.
+     */
     private Rectangle buildLogicalAreaBounds(Rectangle gridArea) {
         if (gridArea == null) {
             return null;
@@ -689,10 +825,16 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         return new Rectangle(drawX, drawY, drawWidth, drawHeight);
     }
 
+    /**
+     * On renvoie la taille de tuile logique actuellement utilisée par la grotte.
+     */
     private int getLogicalTileSize() {
         return getTileSize(getFieldBounds());
     }
 
+    /**
+     * On calcule la hauteur cible des façades murales horizontales.
+     */
     private int resolveHorizontalWallHeight(int tileSize) {
         if (horizontalWallTile == null) {
             return Math.max(10, (int) Math.round(tileSize * 0.72));
@@ -709,6 +851,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         return Math.max(10, Math.min(tileSize, Math.max(naturalWallHeight, targetWallHeight)));
     }
 
+    /**
+     * On calcule la largeur cible des façades murales verticales.
+     */
     private int resolveVerticalWallWidth(int tileSize) {
         if (verticalWallTile == null) {
             return Math.max(8, (int) Math.round(tileSize * 0.42));
@@ -725,10 +870,16 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         return Math.max(8, Math.min(tileSize, Math.max(naturalWallWidth, targetWallWidth)));
     }
 
+    /**
+     * On déduit la taille d'une tuile à partir du rectangle terrain courant.
+     */
     private int getTileSize(Rectangle fieldBounds) {
         return Math.max(1, fieldBounds.width / getColumnCount());
     }
 
+    /**
+     * On reconstruit les bornes idéales du terrain à partir de la taille préférée du panneau.
+     */
     private Rectangle getPreferredFieldBounds() {
         Dimension preferredSize = getPreferredSize();
         if (preferredSize == null) {
@@ -746,6 +897,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         return new Rectangle(startX, startY, gridWidth, gridHeight);
     }
 
+    /**
+     * On dessine une tuile mise à l'échelle dans les bornes exactes de sa case.
+     */
     private void drawScaledTile(Graphics2D g2, Image tile, Rectangle cellBounds) {
         if (tile == null || cellBounds == null) {
             return;
@@ -832,6 +986,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         drawShadowedCenteredText(g2, remainingText, barX, timerBaselineY, barWidth, shrineHazardTimerFont);
     }
 
+    /**
+     * On centre un texte avec son ombre dans la largeur donnée.
+     */
     private void drawShadowedCenteredText(Graphics2D g2, String text, int x, int baselineY, int width, Font font) {
         if (text == null || text.isEmpty() || font == null) {
             return;
@@ -877,6 +1034,9 @@ public final class GrotteFieldPanel extends JPanel implements PlayableMapPanel {
         }
     }
 
+    /**
+     * On dessine le décor dynamique de grotte par-dessus le cache statique.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

@@ -16,14 +16,22 @@ import view.ImageLoader;
  * - produire uniquement des visuels statiques, donc faciles à mettre en cache.
  */
 public final class GrotteTileFactory {
+    // Taille de base utilisée pour construire les visuels procéduraux.
     private static final int BASE_TILE_SIZE = 48;
+    // Cache partagé des variantes de roche.
     private static Image[] rockTilesCache;
+    // Cache partagé des variantes de sol de salle.
     private static Image[] roomFloorTilesCache;
+    // Cache partagé des tuiles de chemin.
     private static Image[] pathTilesCache;
+    // Cache partagé du visuel de mur horizontal.
     private static Image horizontalWallTileCache;
+    // Cache partagé du visuel de mur vertical.
     private static Image verticalWallTileCache;
+    // Cache partagé du visuel de statue du sanctuaire.
     private static Image shrineStatueImageCache;
 
+    // Couleurs de base utilisées pour générer la roche.
     private static final Color ROCK_BACKGROUND = new Color(28, 23, 35);
     private static final Color ROCK_OUTLINE = new Color(18, 14, 22);
     private static final Color ROCK_DARK = new Color(58, 48, 66);
@@ -31,12 +39,14 @@ public final class GrotteTileFactory {
     private static final Color ROCK_LIGHT = new Color(116, 98, 122);
     private static final Color ROCK_HIGHLIGHT = new Color(143, 123, 148);
 
+    // Couleurs de base utilisées pour générer le sol des salles.
     private static final Color ROOM_FLOOR_BACKGROUND = new Color(41, 34, 41);
     private static final Color ROOM_FLOOR_GROUT = new Color(60, 48, 51);
     private static final Color ROOM_FLOOR_DARK = new Color(88, 69, 67);
     private static final Color ROOM_FLOOR_MID = new Color(123, 94, 82);
     private static final Color ROOM_FLOOR_LIGHT = new Color(156, 121, 96);
 
+    // Couleurs de base utilisées pour générer les chemins.
     private static final Color PATH_BACKGROUND = new Color(77, 50, 33);
     private static final Color PATH_GROUT = new Color(92, 56, 31);
     private static final Color PATH_DARK = new Color(150, 99, 50);
@@ -44,6 +54,7 @@ public final class GrotteTileFactory {
     private static final Color PATH_LIGHT = new Color(222, 159, 86);
     private static final Color PATH_HIGHLIGHT = new Color(244, 190, 118);
 
+    // Couleurs utilitaires des torches et flammes décoratives.
     private static final Color TORCH_METAL = new Color(87, 64, 45);
     private static final Color TORCH_HANDLE = new Color(63, 42, 29);
     private static final Color FLAME_CORE = new Color(255, 235, 146);
@@ -51,6 +62,7 @@ public final class GrotteTileFactory {
     private static final Color FLAME_OUTER = new Color(234, 92, 33);
     private static final Color FLAME_GLOW = new Color(255, 183, 72, 78);
 
+    // Couleurs utilisées pour l'eau et les cristaux.
     private static final Color WATER_DEEP = new Color(38, 92, 124);
     private static final Color WATER_MID = new Color(61, 138, 177);
     private static final Color WATER_LIGHT = new Color(144, 228, 244);
@@ -58,18 +70,21 @@ public final class GrotteTileFactory {
     private static final Color CRYSTAL_MID = new Color(76, 197, 244);
     private static final Color CRYSTAL_DARK = new Color(41, 120, 177);
 
+    // Couleurs utilisées pour la statue et les os du sanctuaire.
     private static final Color STATUE_DARK = new Color(83, 72, 66);
     private static final Color STATUE_MID = new Color(119, 102, 90);
     private static final Color STATUE_LIGHT = new Color(155, 137, 115);
     private static final Color BONE = new Color(213, 198, 170);
     private static final Color SKULL_SHADOW = new Color(136, 108, 86);
 
+    // Couleurs utilisées pour la lave et les gemmes.
     private static final Color LAVA_DARK = new Color(130, 29, 18);
     private static final Color LAVA_MID = new Color(214, 71, 24);
     private static final Color LAVA_LIGHT = new Color(255, 149, 47);
     private static final Color GEM_RED = new Color(227, 57, 46);
     private static final Color GEM_HIGHLIGHT = new Color(255, 178, 145);
 
+    // Couleurs utilisées pour les éléments d'atelier, de bois et de stockage.
     private static final Color POT_DARK = new Color(51, 56, 48);
     private static final Color POT_MID = new Color(82, 95, 80);
     private static final Color POT_LIGHT = new Color(116, 134, 114);

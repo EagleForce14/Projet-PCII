@@ -13,9 +13,14 @@ import java.awt.RenderingHints;
  * Aperçu dédié à la ressource bois dans la menuiserie.
  */
 public final class WoodPreviewPanel extends JPanel {
+    // Couleur de fond du cadre d'aperçu du bois.
     private static final Color PREVIEW_FILL = new Color(56, 40, 28, 210);
+    // Couleur de bordure du cadre d'aperçu du bois.
     private static final Color PREVIEW_BORDER = new Color(138, 110, 73, 180);
 
+    /**
+     * On prépare un aperçu fixe pour afficher la ressource bois dans la menuiserie.
+     */
     public WoodPreviewPanel() {
         setOpaque(false);
         setPreferredSize(new Dimension(118, 102));
@@ -23,6 +28,9 @@ public final class WoodPreviewPanel extends JPanel {
         setMaximumSize(new Dimension(118, 102));
     }
 
+    /**
+     * On dessine le cadre puis l'icône pixel art du bois centrée dedans.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

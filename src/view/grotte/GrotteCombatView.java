@@ -27,22 +27,39 @@ import java.awt.RenderingHints;
  * projectiles, flash de dégâts et petite barre de vie du joueur.
  */
 public final class GrotteCombatView extends JPanel {
+    // Halo des projectiles du joueur.
     private static final Color PLAYER_PROJECTILE_GLOW = new Color(72, 214, 120, 96);
+    // Noyau des projectiles du joueur.
     private static final Color PLAYER_PROJECTILE_CORE = new Color(156, 255, 188, 255);
+    // Halo des projectiles ennemis.
     private static final Color ENEMY_PROJECTILE_GLOW = new Color(255, 88, 88, 88);
+    // Noyau des projectiles ennemis.
     private static final Color ENEMY_PROJECTILE_CORE = new Color(255, 146, 146, 255);
+    // Voile rouge affiché quand le joueur est touché.
     private static final Color HIT_VIGNETTE = new Color(170, 20, 20, 150);
+    // Fond de la petite barre de vie du joueur.
     private static final Color PLAYER_HEALTH_BACKGROUND = new Color(28, 14, 16, 196);
+    // Remplissage de la petite barre de vie du joueur.
     private static final Color PLAYER_HEALTH_FILL = new Color(212, 74, 74, 235);
+    // Bordure de la petite barre de vie du joueur.
     private static final Color PLAYER_HEALTH_BORDER = new Color(245, 208, 184, 214);
+    // Ombre des drops posés au sol.
     private static final Color DROP_SHADOW = new Color(8, 6, 10, 104);
+    // Léger halo des drops ramassables.
     private static final Color DROP_GLOW = new Color(255, 233, 176, 62);
+    // Halo des récompenses qui volent vers l'inventaire.
     private static final Color REWARD_GLOW = new Color(255, 229, 149, 120);
+    // Couleur du petit parachute décoratif des récompenses.
     private static final Color REWARD_PARACHUTE = new Color(255, 247, 225, 220);
 
+    // Modèle de combat dont on lit l'état à afficher.
     private final CaveCombatModel combatModel;
+    // Carte de grotte utilisée pour convertir les cases et repères logiques.
     private final GrotteFieldPanel mapPanel;
 
+    /**
+     * On prépare la couche d'affichage du combat de grotte.
+     */
     public GrotteCombatView(CaveCombatModel combatModel, GrotteFieldPanel mapPanel) {
         this.combatModel = combatModel;
         this.mapPanel = mapPanel;
@@ -50,10 +67,16 @@ public final class GrotteCombatView extends JPanel {
         setDoubleBuffered(true);
     }
 
+    /**
+     * On convertit ici les bornes du terrain de grotte dans le repère de cette vue de combat.
+     */
     private Rectangle getFieldBoundsInView() {
         return SwingUtilities.convertRectangle(mapPanel.getMapComponent(), mapPanel.getFieldBounds(), this);
     }
 
+    /**
+     * On dessine les éléments de combat superposés à la grotte dans le bon ordre visuel.
+     */
     @Override
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
@@ -113,6 +136,9 @@ public final class GrotteCombatView extends JPanel {
         }
     }
 
+    /**
+     * On dessine tous les projectiles actifs avec leur petite traînée lumineuse.
+     */
     private void drawProjectiles(Graphics2D g2d, int centerX, int centerY) {
         for (CaveProjectile projectile : combatModel.getProjectiles()) {
             double projectileX = centerX + projectile.getX();
@@ -242,6 +268,9 @@ public final class GrotteCombatView extends JPanel {
         }
     }
 
+    /**
+     * On associe un type de drop au slot d'inventaire qu'il doit rejoindre visuellement.
+     */
     private int resolveTargetSlotIndex(CaveDropDefinition definition) {
         if (definition == null) {
             return -1;
@@ -258,6 +287,9 @@ public final class GrotteCombatView extends JPanel {
         return -1;
     }
 
+    /**
+     * On dessine le flash rouge périphérique qui signale un coup reçu par le joueur.
+     */
     private void drawPlayerHitVignette(Graphics2D g2d) {
         double flashRatio = combatModel.getPlayerHitFlashRatio();
         if (flashRatio <= 0.0) {
@@ -301,6 +333,9 @@ public final class GrotteCombatView extends JPanel {
         );
     }
 
+    /**
+     * On renvoie la largeur du pixel art à dessiner pour ce drop.
+     */
     private int getDropArtWidth(CaveDropDefinition definition, int pixelSize) {
         if (definition == null) {
             return 0;
@@ -317,6 +352,9 @@ public final class GrotteCombatView extends JPanel {
         return 0;
     }
 
+    /**
+     * On renvoie la hauteur du pixel art à dessiner pour ce drop.
+     */
     private int getDropArtHeight(CaveDropDefinition definition, int pixelSize) {
         if (definition == null) {
             return 0;
@@ -333,6 +371,9 @@ public final class GrotteCombatView extends JPanel {
         return 0;
     }
 
+    /**
+     * On dessine le bon pixel art selon la vraie nature du drop reçu.
+     */
     private void drawDropArt(Graphics2D g2d, CaveDropDefinition definition, int drawX, int drawY, int pixelSize) {
         if (definition == null) {
             return;

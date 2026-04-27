@@ -12,18 +12,29 @@ import java.awt.RenderingHints;
  * Panneau de base pour le background des différentes zones de la boutique.
  */
 public class ShopSectionPanel extends JPanel {
+    // Bordure lumineuse principale du panneau.
     private static final Color BORDER = new Color(230, 214, 157, 215);
+    // Deuxième bordure plus douce pour donner un léger relief.
     private static final Color BORDER_SOFT = new Color(138, 110, 73, 180);
+    // Teinte sombre de fond du panneau.
     private static final Color PANEL_TINT = new Color(44, 31, 22, 232);
+    // Ombre portée posée derrière le panneau.
     private static final Color PANEL_SHADOW = new Color(0, 0, 0, 90);
 
+    // Texture bois légère réutilisée sur le fond du panneau.
     private final Image woodTexture;
 
+    /**
+     * On prépare un panneau de section réutilisable pour les blocs de boutique.
+     */
     public ShopSectionPanel(Image woodTexture) {
         this.woodTexture = woodTexture;
         setOpaque(false);
     }
 
+    /**
+     * On dessine l'ombre, le fond texturé puis la double bordure de la section.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

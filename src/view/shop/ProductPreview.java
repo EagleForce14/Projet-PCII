@@ -15,22 +15,34 @@ import java.awt.RenderingHints;
  * Elle reste volontairement sobre: un cadre, puis l'illustration pixel-art.
  */
 public class ProductPreview extends JPanel {
+    // Couleur de fond du cadre d'aperçu.
     private static final Color PREVIEW_FILL = new Color(56, 40, 28, 210);
+    // Couleur de bordure du cadre d'aperçu.
     private static final Color PREVIEW_BORDER = new Color(138, 110, 73, 180);
 
+    // Produit actuellement affiché dans l'aperçu.
     private Product product;
 
+    /**
+     * On prépare un petit cadre fixe pour afficher un seul produit à la fois.
+     */
     public ProductPreview() {
         setOpaque(false);
         setPreferredSize(new Dimension(88, 88));
         setMinimumSize(new Dimension(88, 88));
     }
 
+    /**
+     * On remplace le produit affiché puis on redessine l'aperçu.
+     */
     public void setProduct(Product product) {
         this.product = product;
         repaint();
     }
 
+    /**
+     * On dessine le cadre d'aperçu puis, s'il existe, le pixel art du produit centré dedans.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

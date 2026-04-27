@@ -22,36 +22,62 @@ import java.awt.event.MouseEvent;
  * Carte visuelle d'un produit dans le catalogue central.
  */
 public class ProductCardView extends JPanel {
+    // Couleur du texte principal de la carte.
     private static final Color TEXT_PRIMARY = new Color(255, 248, 226);
+    // Couleur du texte secondaire de la carte.
     private static final Color TEXT_SECONDARY = new Color(216, 199, 164);
+    // Ombre portée du bloc carte.
     private static final Color PANEL_SHADOW = new Color(0, 0, 0, 90);
+    // Fond de carte au repos.
     private static final Color CARD_FILL = new Color(67, 49, 34, 238);
+    // Fond de carte au survol.
     private static final Color CARD_FILL_HOVER = new Color(83, 61, 42, 244);
+    // Fond de carte quand elle est sélectionnée.
     private static final Color CARD_FILL_SELECTED = new Color(102, 72, 46, 248);
+    // Bordure douce standard de la carte.
     private static final Color BORDER_SOFT = new Color(138, 110, 73, 180);
+    // Bordure accentuée de la carte sélectionnée.
     private static final Color ACCENT = new Color(216, 181, 96);
+    // Fond du badge dans son état normal.
     private static final Color BADGE_FILL_DEFAULT = new Color(45, 75, 42, 220);
+    // Bordure du badge dans son état normal.
     private static final Color BADGE_BORDER_DEFAULT = new Color(126, 190, 110);
+    // Fond du badge quand il signale un manque de bois.
     private static final Color BADGE_FILL_ERROR = new Color(114, 43, 38, 225);
+    // Bordure du badge quand il signale un manque de bois.
     private static final Color BADGE_BORDER_ERROR = new Color(232, 112, 101);
 
+    // Produit représenté par cette carte.
     private final Product product;
+    // Libellé de catégorie affiché en haut de la carte.
     private final String categoryLabel;
+    // Détail court affiché au centre quand il existe.
     private final String detailLabel;
+    // Valeur ou prix affiché dans la carte.
     private final String valueLabel;
+    // Texte de pied de carte, souvent utilisé pour le stock.
     private final String footerLabel;
+    // Texte du badge éventuel affiché en bas à droite.
     private final String badgeText;
+    // Indique si cette carte représente la sélection courante.
     private final boolean selected;
+    // Texture bois légère appliquée sur le fond.
     private final Image woodTexture;
+    // Police des petits libellés.
     private final Font labelFont;
+    // Police du titre et des valeurs importantes.
     private final Font priceFont;
+    // Police du corps de texte.
     private final Font bodyFont;
+    // Action appelée quand on clique sur la carte.
     private final Runnable onSelect;
 
+    // Indique si le pointeur survole actuellement la carte.
     private boolean hovered;
 
-    // La carte reste un composant purement visuel:
-    // toute la logique de panier ou de filtre reste volontairement dans ShopOverlay.
+    /**
+     * On prépare une carte purement visuelle pour un produit du catalogue.
+     */
     public ProductCardView(
             Product product,
             String categoryLabel,
@@ -108,6 +134,9 @@ public class ProductCardView extends JPanel {
         addMouseListener(mouseAdapter);
     }
 
+    /**
+     * On dessine l'ensemble de la carte produit, du fond jusqu'au badge éventuel.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -206,6 +235,9 @@ public class ProductCardView extends JPanel {
         g2d.dispose();
     }
 
+    /**
+     * On dit si cette carte doit afficher un bloc de détail supplémentaire.
+     */
     private boolean hasDetailLabel() {
         return !detailLabel.isBlank();
     }
@@ -221,10 +253,16 @@ public class ProductCardView extends JPanel {
         return 7;
     }
 
+    /**
+     * On choisit la couleur de fond du badge selon son message.
+     */
     private Color getBadgeFillColor() {
         return "Bois requis".equals(badgeText) ? BADGE_FILL_ERROR : BADGE_FILL_DEFAULT;
     }
 
+    /**
+     * On choisit la couleur de bordure du badge selon son message.
+     */
     private Color getBadgeBorderColor() {
         return "Bois requis".equals(badgeText) ? BADGE_BORDER_ERROR : BADGE_BORDER_DEFAULT;
     }
