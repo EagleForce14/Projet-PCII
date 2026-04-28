@@ -1,11 +1,13 @@
 package view;
 
 import model.management.Money;
+import model.runtime.GamePauseController;
 import model.runtime.Jour;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -37,6 +39,22 @@ public class TopBarPanel extends JPanel {
     private static final Color DAY_PROGRESS_FILL = new Color(238, 191, 62, 250);
     // Reflet de la jauge de progression du jour.
     private static final Color DAY_PROGRESS_HIGHLIGHT = new Color(255, 244, 194, 240);
+    // Fond du bouton de pause quand le jeu tourne normalement.
+    private static final Color PAUSE_BUTTON_BACKGROUND = new Color(86, 52, 18, 238);
+    // Fond du bouton quand le jeu est deja fige.
+    private static final Color PAUSE_BUTTON_BACKGROUND_ACTIVE = new Color(128, 66, 22, 246);
+    // Variante légèrement plus claire affichée au survol.
+    private static final Color PAUSE_BUTTON_BACKGROUND_HOVER = new Color(104, 63, 24, 244);
+    // Ombre légère posée sous le bouton pour l'intégrer au HUD sans l'alourdir.
+    private static final Color PAUSE_BUTTON_SHADOW = new Color(0, 0, 0, 82);
+    // Bordure chaude du bouton de pause.
+    private static final Color PAUSE_BUTTON_BORDER = new Color(244, 215, 125, 245);
+    // Reflet très léger sur la partie haute du bouton.
+    private static final Color PAUSE_BUTTON_HIGHLIGHT = new Color(255, 241, 188, 56);
+    // Couleur du texte du bouton.
+    private static final Color PAUSE_BUTTON_TEXT = new Color(255, 248, 220);
+    // Ombre courte du symbole central pour améliorer la lisibilité.
+    private static final Color PAUSE_BUTTON_TEXT_SHADOW = new Color(73, 48, 22, 220);
     // Couleur du texte affiché dans la jauge.
     private static final Color DAY_PROGRESS_TEXT = new Color(255, 248, 220);
     // Ombre du texte affiché dans la jauge.
@@ -44,6 +62,8 @@ public class TopBarPanel extends JPanel {
 
     // Réserve d'argent du joueur affichée dans le HUD.
     private final Money playerMoney;
+    // Controleur global de pause partage avec toutes les boucles de jeu.
+    private final GamePauseController pauseController;
     // Libellé qui affiche le numéro du jour courant.
     private final JLabel dayLabel;
     // Libellé qui affiche le solde actuel.
@@ -52,6 +72,10 @@ public class TopBarPanel extends JPanel {
     private final Font dayProgressTextFont;
     // Composant graphique de la jauge de progression du jour.
     private final JComponent dayProgressBar;
+    // Bouton unique qui bascule entre pause et reprise sans changer le reste du HUD.
+    private final JButton pauseButton;
+    // Police du bouton de pause.
+    private final Font pauseButtonFont;
     // Référence au cycle de journée en cours.
     private final Jour jour;
 
@@ -60,23 +84,33 @@ public class TopBarPanel extends JPanel {
      */
     public TopBarPanel(Money playerMoney, Jour jour) {
         this.playerMoney = playerMoney;
+        this.pauseController = GamePauseController.getInstance();
         this.jour = jour;
         jour.start();
 
         setOpaque(false);
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
         setBorder(BorderFactory.createEmptyBorder(18, 24, 0, 0));
 
         dayLabel = createLabel(14.0f);
         moneyLabel = createLabel(18.0f);
         dayProgressTextFont = CustomFontLoader.loadFont(FONT_PATH, 8.0f);
+        pauseButtonFont = CustomFontLoader.loadFont(FONT_PATH, 13.0f);
         dayProgressBar = createDayProgressBar();
-
-        add(createDayInfoRow());
-        add(moneyLabel);
 
         syncMoneyText();
         syncDayText(jour.getJour());
+        JPanel infoColumn = createInfoColumn();
+        pauseButton = createPauseButton(infoColumn.getPreferredSize().height);
+
+        infoColumn.setAlignmentY(Component.TOP_ALIGNMENT);
+        pauseButton.setAlignmentY(Component.TOP_ALIGNMENT);
+
+        add(infoColumn);
+        add(Box.createHorizontalStrut(10));
+        add(pauseButton);
+
+        syncPauseButtonState();
     }
 
     /**
@@ -88,6 +122,27 @@ public class TopBarPanel extends JPanel {
         label.setFont(CustomFontLoader.loadFont(FONT_PATH, fontSize));
         label.setAlignmentX(LEFT_ALIGNMENT);
         return label;
+    }
+
+    /**
+     * Le bloc d'informations garde ses deux lignes d'origine :
+     * la première pour le jour et sa jauge,
+     * la seconde pour le solde.
+     * Le bouton de pause vient ensuite se caler à droite sur toute cette hauteur.
+     */
+    private JPanel createInfoColumn() {
+        JPanel column = new JPanel();
+        column.setOpaque(false);
+        column.setAlignmentX(LEFT_ALIGNMENT);
+        column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
+
+        JPanel dayInfoRow = createDayInfoRow();
+        dayInfoRow.setAlignmentX(LEFT_ALIGNMENT);
+        moneyLabel.setAlignmentX(LEFT_ALIGNMENT);
+
+        column.add(dayInfoRow);
+        column.add(moneyLabel);
+        return column;
     }
 
     /**
@@ -107,6 +162,90 @@ public class TopBarPanel extends JPanel {
         row.add(Box.createHorizontalStrut(12));
         row.add(dayProgressBar);
         return row;
+    }
+
+    /**
+     * Le bouton ne porte qu'une seule responsabilite :
+     * geler ou relancer tout le temps de jeu partage par les threads.
+     * On s'appuie donc directement sur le controleur global de pause
+     * au lieu d'introduire une logique parallele dans le HUD.
+     */
+    private JButton createPauseButton(int buttonSize) {
+        JButton button = new JButton() {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                Graphics2D g2 = (Graphics2D) graphics.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int width = getWidth();
+                int height = getHeight();
+                if (width <= 0 || height <= 0) {
+                    g2.dispose();
+                    return;
+                }
+
+                // Le bouton reste grand pour être confortable à cliquer,
+                // mais son dessin utile est volontairement rentré à l'intérieur
+                // pour qu'il se fonde mieux dans la barre du haut.
+                int inset = Math.max(3, Math.min(width, height) / 12);
+                int drawX = inset;
+                int drawY = inset;
+                int drawWidth = width - (inset * 2);
+                int drawHeight = height - (inset * 2);
+                int arc = Math.max(12, drawHeight / 3);
+
+                Color background = getBackground();
+                if (getModel().isRollover() && !pauseController.isPaused()) {
+                    background = PAUSE_BUTTON_BACKGROUND_HOVER;
+                }
+
+                g2.setColor(PAUSE_BUTTON_SHADOW);
+                g2.fillRoundRect(drawX + 2, drawY + 2, drawWidth, drawHeight, arc, arc);
+
+                g2.setColor(background);
+                g2.fillRoundRect(drawX, drawY, drawWidth, drawHeight, arc, arc);
+
+                g2.setColor(PAUSE_BUTTON_HIGHLIGHT);
+                g2.fillRoundRect(drawX, drawY, drawWidth, Math.max(8, drawHeight / 4), arc, arc);
+
+                g2.setColor(PAUSE_BUTTON_BORDER);
+                g2.drawRoundRect(drawX, drawY, drawWidth - 1, drawHeight - 1, arc, arc);
+
+                String symbol = getText();
+                g2.setFont(getFont());
+                int textWidth = g2.getFontMetrics().stringWidth(symbol);
+                int textX = drawX + ((drawWidth - textWidth) / 2);
+                int textY = drawY + ((drawHeight - g2.getFontMetrics().getHeight()) / 2) + g2.getFontMetrics().getAscent() - 1;
+
+                g2.setColor(PAUSE_BUTTON_TEXT_SHADOW);
+                g2.drawString(symbol, textX + 1, textY + 1);
+                g2.setColor(PAUSE_BUTTON_TEXT);
+                g2.drawString(symbol, textX, textY);
+                g2.dispose();
+            }
+        };
+        button.setFocusable(false);
+        button.setOpaque(false);
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
+        button.setForeground(PAUSE_BUTTON_TEXT);
+        button.setBackground(PAUSE_BUTTON_BACKGROUND);
+        button.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        button.setFont(pauseButtonFont);
+        button.setRolloverEnabled(true);
+        button.setPreferredSize(new Dimension(buttonSize, buttonSize));
+        button.setMinimumSize(new Dimension(buttonSize, buttonSize));
+        button.setMaximumSize(new Dimension(buttonSize, buttonSize));
+
+        // Le meme bouton sert toujours :
+        // quand le jeu tourne il lance la pause,
+        // et quand le jeu est fige il relance exactement la meme session.
+        button.addActionListener(event -> {
+            pauseController.setPaused(!pauseController.isPaused());
+            syncPauseButtonState();
+            repaint();
+        });
+        return button;
     }
 
     /**
@@ -205,6 +344,19 @@ public class TopBarPanel extends JPanel {
     }
 
     /**
+     * Le libelle et l'infobulle restent cales sur l'etat global de pause.
+     * Ainsi, si une autre interface met temporairement le jeu en pause,
+     * le bouton continue d'expliquer clairement ce qu'un nouveau clic fera.
+     */
+    private void syncPauseButtonState() {
+        boolean paused = pauseController.isPaused();
+        pauseButton.setText(paused ? ">" : "||");
+        pauseButton.setToolTipText(paused ? "Relancer le jeu" : "Mettre le jeu en pause");
+        pauseButton.setBackground(paused ? PAUSE_BUTTON_BACKGROUND_ACTIVE : PAUSE_BUTTON_BACKGROUND);
+        pauseButton.setForeground(PAUSE_BUTTON_TEXT);
+    }
+
+    /**
      * Donne aux overlays un point d'arrivée exact vers la zone d'argent du HUD.
      * On évite ainsi de recalculer à la main un ancrage fragile dans plusieurs vues.
      */
@@ -227,6 +379,7 @@ public class TopBarPanel extends JPanel {
     protected void paintComponent(Graphics g) {
         syncMoneyText();
         syncDayText(jour.getJour());
+        syncPauseButtonState();
         super.paintComponent(g);
     }
 }

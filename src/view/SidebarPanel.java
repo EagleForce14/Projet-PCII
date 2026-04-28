@@ -12,6 +12,7 @@ import model.management.Inventaire;
 import model.objective.ObjectifCompteur;
 import model.objective.ObjectifJournalier;
 import model.objective.TypeObjectif;
+import model.runtime.GamePauseController;
 import model.runtime.Jour;
 import model.shop.FacilityType;
 
@@ -64,6 +65,8 @@ public class SidebarPanel extends JPanel {
     private final FieldPanel fieldPanel;
     private final Inventaire inventaire;
     private final Jour jour;
+    // La sidebar relit l'etat de pause global pour adapter le message d'information sur les objectifs.
+    private final GamePauseController pauseController;
 
     // Texture de fond en bois (chargée via la classe utilitaire du projet).
     private final Image woodBackground;
@@ -145,6 +148,7 @@ public class SidebarPanel extends JPanel {
         this.fieldPanel = fieldPanel;
         this.inventaire = inventaire;
         this.jour = jour;
+        this.pauseController = GamePauseController.getInstance();
         this.woodBackground = ImageLoader.load("/assets/bois.png");
         // Ces maps servent d'index rapide vers les widgets par type d'objectif.
         this.objectiveTitleLabelsByType = new EnumMap<>(TypeObjectif.class);
@@ -221,7 +225,7 @@ public class SidebarPanel extends JPanel {
          * On lui donne donc un bouton plus "spécial" visuellement
          * pour qu'on sente immédiatement qu'il ne joue pas le même rôle qu'un simple chemin.
          */
-        compostButton = createBoostActionButton("Poser compost");
+        compostButton = createBoostActionButton();
         compostActionRow = createSpecialActionRow(compostButton);
         compostActionRow.setVisible(false);
 
@@ -319,10 +323,7 @@ public class SidebarPanel extends JPanel {
         objectivesCardPanel.setAlignmentX(LEFT_ALIGNMENT);
         JPanel objectivesCardRow = createSidebarCardRow(objectivesCardPanel);
 
-        objectivesInfoLabel = new JLabel(
-                "<html>Dans la grotte, le temps est figé.<br>"
-                        + "Les objectifs non réalisés n'entraînent aucune pénalité tant que vous y restez.</html>"
-        );
+        objectivesInfoLabel = new JLabel(resolveObjectivesInfoText(false, false));
         objectivesInfoLabel.setForeground(new Color(196, 230, 255));
         objectivesInfoLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 10.5f));
         objectivesInfoLabel.setBorder(BorderFactory.createEmptyBorder(8, 8, 0, 2));
@@ -519,8 +520,8 @@ public class SidebarPanel extends JPanel {
      * Le fond est plus vert et la bordure plus claire,
      * pour qu'on lise tout de suite un objet spécial différent des actions classiques.
      */
-    private JButton createBoostActionButton(String text) {
-        JButton button = createStyledButton(text, new Color(66, 111, 57, 255), 12.0f);
+    private JButton createBoostActionButton() {
+        JButton button = createStyledButton("Poser compost", new Color(66, 111, 57, 255), 12.0f);
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(222, 214, 123), 2),
                 BorderFactory.createEmptyBorder(8, 8, 8, 8)
@@ -597,8 +598,6 @@ public class SidebarPanel extends JPanel {
         boolean shouldShowBridgeAction = movementModel.getSelectedFacilityType() == FacilityType.PONT;
         boolean shouldEnableBridge = shouldShowBridgeAction && canPlaceBridgeActiveCell();
         boolean shouldShowCutTreeAction = shouldShowCutTreeAction();
-        boolean shouldEnableCutTree = shouldShowCutTreeAction;
-        boolean shouldShowBridgeHint = shouldShowBridgeAction;
         String labourButtonLabel = shouldShowRemettreEnHerbeAction() ? "Remettre en herbe" : "Labourer";
         String pathButtonLabel = shouldShowStorePathAction()
                 ? "<html><center>Remise ce chemin<br>dans l'inventaire</center></html>"
@@ -616,11 +615,11 @@ public class SidebarPanel extends JPanel {
                 || !pathButtonLabel.equals(currentPathButtonLabel)
                 || shouldEnableCompost != currentCompostEnabledState
                 || shouldDisplayCompostAction != currentCompostVisibleState
-                || shouldEnableCutTree != currentCutTreeEnabledState
+                || shouldShowCutTreeAction != currentCutTreeEnabledState
                 || shouldShowCutTreeAction != currentCutTreeVisibleState
                 || shouldEnableBridge != currentBridgeEnabledState
                 || shouldShowBridgeAction != currentBridgeVisibleState
-                || shouldShowBridgeHint != currentBridgeHintVisibleState
+                || shouldShowBridgeAction != currentBridgeHintVisibleState
                 || !labourButtonLabel.equals(currentLabourButtonLabel)
                 || !compostButtonLabel.equals(currentCompostButtonLabel)
                 || shouldShowLabourWarning != currentLabourWarningVisibleState) {
@@ -635,11 +634,11 @@ public class SidebarPanel extends JPanel {
                     pathButtonLabel,
                     shouldEnableCompost,
                     shouldDisplayCompostAction,
-                    shouldEnableCutTree,
+                    shouldShowCutTreeAction,
                     shouldShowCutTreeAction,
                     shouldEnableBridge,
                     shouldShowBridgeAction,
-                    shouldShowBridgeHint,
+                    shouldShowBridgeAction,
                     labourButtonLabel,
                     compostButtonLabel,
                     shouldShowLabourWarning
@@ -785,7 +784,7 @@ public class SidebarPanel extends JPanel {
      * Le chemin se pose uniquement sur de l'herbe:
      * pas sur la boutique principale (à droite), pas sur une case deja labourée,
      * pas sur une case deja occupee.
-     *
+
      * On garde cette regle dans la sidebar aussi
      * pour que le bouton explique visuellement quand l'action est possible.
      */
@@ -886,7 +885,7 @@ public class SidebarPanel extends JPanel {
     /**
      * La coupe se base sur la vraie géométrie de collision des arbres,
      * pas sur la simple case active du champ.
-     *
+
      * C'est important car, près d'un arbre mature, plusieurs cases peuvent être
      * visuellement recouvertes ou désactivées sans que le joueur soit exactement
      * "sur" la case racine de cet arbre.
@@ -992,8 +991,8 @@ public class SidebarPanel extends JPanel {
                 .append("CAVE|")
                 .append(caveMode)
                 .append(';')
-                .append("INFO|")
-                .append(caveMode)
+                .append("PAUSE|")
+                .append(pauseController.isPaused())
                 .append(';')
                 .append("DAY_STATE|")
                 .append(caveMode)
@@ -1033,7 +1032,9 @@ public class SidebarPanel extends JPanel {
             progressionLabel.setForeground(isReached ? new Color(172, 227, 143) : new Color(236, 229, 212));
         }
 
-        objectivesInfoLabel.setVisible(caveMode);
+        boolean frozenTimeInfoVisible = caveMode || pauseController.isPaused();
+        objectivesInfoLabel.setText(resolveObjectivesInfoText(caveMode, pauseController.isPaused()));
+        objectivesInfoLabel.setVisible(frozenTimeInfoVisible);
 
         // Mise à jour du bilan du jour (texte + couleur d'état).
         // Synthèse métier: le jour est validé si le seuil minimal est atteint.
@@ -1177,6 +1178,21 @@ public class SidebarPanel extends JPanel {
             signature.append(type.name()).append(';');
         }
         return signature.toString();
+    }
+
+    /**
+     * Le panneau d'objectifs garde une seule bulle d'explication.
+     * Son contenu change juste selon la raison pour laquelle le temps est actuellement figé.
+     */
+    private String resolveObjectivesInfoText(boolean caveMode, boolean paused) {
+        if (caveMode) {
+            return "<html>Dans la grotte, le temps est figé.<br>"
+                    + "Les objectifs non réalisés n'entraînent aucune pénalité tant que vous y restez.</html>";
+        }
+        if (paused) {
+            return "<html>Le jeu est en pause, le temps est figé.</html>";
+        }
+        return "";
     }
 
     /** Retourne le bouton de plantation. */
