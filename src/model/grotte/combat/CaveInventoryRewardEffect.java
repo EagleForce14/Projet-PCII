@@ -4,12 +4,12 @@ import model.grotte.drop.CaveDropDefinition;
 
 /**
  * Animation courte jouée quand un drop de grotte est ramassé.
- *
+
  * Le modèle garde seulement des données métier simples :
  * - le type d'objet récupéré,
  * - la case d'origine du loot,
  * - l'instant de départ.
- *
+
  * La vue convertit ensuite ces infos en trajectoire visuelle
  * jusqu'au slot d'inventaire correspondant.
  */

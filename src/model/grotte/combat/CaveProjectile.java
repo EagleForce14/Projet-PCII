@@ -2,7 +2,7 @@ package model.grotte.combat;
 
 /**
  * Projectile très léger utilisé par le combat de la grotte.
- *
+
  * Il ne connait que sa géométrie et son déplacement :
  * les collisions et les dégâts restent gérés par le modèle de combat.
  */

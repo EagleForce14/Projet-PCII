@@ -103,7 +103,7 @@ public final class PredefinedFieldLayout {
         }
 
         return isInsideReservedLeftRiverRows(gridY)
-                || isNearTilledCell(fieldPanel.getGrilleCulture(), gridX, gridY, LEFT_TILLED_CLEARANCE_RADIUS);
+                || isNearTilledCell(fieldPanel.getGrilleCulture(), gridX, gridY);
     }
 
     /**
@@ -141,22 +141,21 @@ public final class PredefinedFieldLayout {
      * On dit si la ligne se trouve dans la bande verticale réservée autour des terres à gauche.
      */
     private static boolean isInsideReservedLeftRiverRows(int gridY) {
-        int firstReservedRow = FIRST_TILLED_ROW;
         int lastReservedRow = FIRST_TILLED_ROW + ((TILLED_STRIP_COUNT - 1) * TILLED_ROW_STEP);
-        return gridY >= firstReservedRow && gridY <= lastReservedRow;
+        return gridY >= FIRST_TILLED_ROW && gridY <= lastReservedRow;
     }
 
     /**
      * Même en dehors des lignes complètement réservées,
      * on garde une respiration d'une case autour de toute terre déjà labourée.
      */
-    private static boolean isNearTilledCell(GrilleCulture grilleCulture, int gridX, int gridY, int radius) {
+    private static boolean isNearTilledCell(GrilleCulture grilleCulture, int gridX, int gridY) {
         if (grilleCulture == null) {
             return false;
         }
 
-        for (int offsetX = -radius; offsetX <= radius; offsetX++) {
-            for (int offsetY = -radius; offsetY <= radius; offsetY++) {
+        for (int offsetX = -PredefinedFieldLayout.LEFT_TILLED_CLEARANCE_RADIUS; offsetX <= PredefinedFieldLayout.LEFT_TILLED_CLEARANCE_RADIUS; offsetX++) {
+            for (int offsetY = -PredefinedFieldLayout.LEFT_TILLED_CLEARANCE_RADIUS; offsetY <= PredefinedFieldLayout.LEFT_TILLED_CLEARANCE_RADIUS; offsetY++) {
                 if (grilleCulture.isLabouree(gridX + offsetX, gridY + offsetY)) {
                     return true;
                 }

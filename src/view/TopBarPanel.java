@@ -174,54 +174,53 @@ public class TopBarPanel extends JPanel {
         JButton button = new JButton() {
             @Override
             protected void paintComponent(Graphics graphics) {
-                Graphics2D g2 = (Graphics2D) graphics.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                int width = getWidth();
-                int height = getHeight();
-                if (width <= 0 || height <= 0) {
-                    g2.dispose();
+                ComponentPaintContext paintContext = ComponentPaintContext.create(graphics, this);
+                if (paintContext == null) {
                     return;
                 }
 
-                // Le bouton reste grand pour être confortable à cliquer,
-                // mais son dessin utile est volontairement rentré à l'intérieur
-                // pour qu'il se fonde mieux dans la barre du haut.
-                int inset = Math.max(3, Math.min(width, height) / 12);
-                int drawX = inset;
-                int drawY = inset;
-                int drawWidth = width - (inset * 2);
-                int drawHeight = height - (inset * 2);
-                int arc = Math.max(12, drawHeight / 3);
+                Graphics2D g2 = paintContext.graphics();
+                int width = paintContext.width();
+                int height = paintContext.height();
+                try {
+                    // Le bouton reste grand pour être confortable à cliquer,
+                    // mais son dessin utile est volontairement rentré à l'intérieur
+                    // pour qu'il se fonde mieux dans la barre du haut.
+                    int inset = Math.max(3, Math.min(width, height) / 12);
+                    int drawWidth = width - (inset * 2);
+                    int drawHeight = height - (inset * 2);
+                    int arc = Math.max(12, drawHeight / 3);
 
-                Color background = getBackground();
-                if (getModel().isRollover() && !pauseController.isPaused()) {
-                    background = PAUSE_BUTTON_BACKGROUND_HOVER;
+                    Color background = getBackground();
+                    if (getModel().isRollover() && !pauseController.isPaused()) {
+                        background = PAUSE_BUTTON_BACKGROUND_HOVER;
+                    }
+
+                    g2.setColor(PAUSE_BUTTON_SHADOW);
+                    g2.fillRoundRect(inset + 2, inset + 2, drawWidth, drawHeight, arc, arc);
+
+                    g2.setColor(background);
+                    g2.fillRoundRect(inset, inset, drawWidth, drawHeight, arc, arc);
+
+                    g2.setColor(PAUSE_BUTTON_HIGHLIGHT);
+                    g2.fillRoundRect(inset, inset, drawWidth, Math.max(8, drawHeight / 4), arc, arc);
+
+                    g2.setColor(PAUSE_BUTTON_BORDER);
+                    g2.drawRoundRect(inset, inset, drawWidth - 1, drawHeight - 1, arc, arc);
+
+                    String symbol = getText();
+                    g2.setFont(getFont());
+                    int textWidth = g2.getFontMetrics().stringWidth(symbol);
+                    int textX = inset + ((drawWidth - textWidth) / 2);
+                    int textY = inset + ((drawHeight - g2.getFontMetrics().getHeight()) / 2) + g2.getFontMetrics().getAscent() - 1;
+
+                    g2.setColor(PAUSE_BUTTON_TEXT_SHADOW);
+                    g2.drawString(symbol, textX + 1, textY + 1);
+                    g2.setColor(PAUSE_BUTTON_TEXT);
+                    g2.drawString(symbol, textX, textY);
+                } finally {
+                    paintContext.dispose();
                 }
-
-                g2.setColor(PAUSE_BUTTON_SHADOW);
-                g2.fillRoundRect(drawX + 2, drawY + 2, drawWidth, drawHeight, arc, arc);
-
-                g2.setColor(background);
-                g2.fillRoundRect(drawX, drawY, drawWidth, drawHeight, arc, arc);
-
-                g2.setColor(PAUSE_BUTTON_HIGHLIGHT);
-                g2.fillRoundRect(drawX, drawY, drawWidth, Math.max(8, drawHeight / 4), arc, arc);
-
-                g2.setColor(PAUSE_BUTTON_BORDER);
-                g2.drawRoundRect(drawX, drawY, drawWidth - 1, drawHeight - 1, arc, arc);
-
-                String symbol = getText();
-                g2.setFont(getFont());
-                int textWidth = g2.getFontMetrics().stringWidth(symbol);
-                int textX = drawX + ((drawWidth - textWidth) / 2);
-                int textY = drawY + ((drawHeight - g2.getFontMetrics().getHeight()) / 2) + g2.getFontMetrics().getAscent() - 1;
-
-                g2.setColor(PAUSE_BUTTON_TEXT_SHADOW);
-                g2.drawString(symbol, textX + 1, textY + 1);
-                g2.setColor(PAUSE_BUTTON_TEXT);
-                g2.drawString(symbol, textX, textY);
-                g2.dispose();
             }
         };
         button.setFocusable(false);

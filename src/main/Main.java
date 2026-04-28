@@ -274,7 +274,6 @@ public class Main {
         new MovementController(
                 model,
                 movementView,
-                enemyModel,
                 enemyView,
                 actionSidebarPanel,
                 grilleCulture,

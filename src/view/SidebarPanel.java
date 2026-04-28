@@ -32,7 +32,6 @@ import java.awt.Image;
 import java.awt.Insets;
 import java.awt.BorderLayout;
 import java.awt.Point;
-import java.awt.RenderingHints;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -113,25 +112,10 @@ public class SidebarPanel extends JPanel {
     private final JLabel dayValidationStatusLabel;
 
 
-    // Petit cache local pour éviter d'appliquer setEnabled en boucle inutilement.
-    private boolean currentLabourEnabledState;
-    private boolean currentPlantEnabledState;
-    private boolean currentHarvestEnabledState;
-    private boolean currentCleanEnabledState;
-    private boolean currentWaterEnabledState;
-    private boolean currentPathEnabledState;
-    private boolean currentPathVisibleState;
-    private String currentPathButtonLabel;
-    private boolean currentCompostEnabledState;
-    private boolean currentCompostVisibleState;
-    private boolean currentCutTreeEnabledState;
-    private boolean currentCutTreeVisibleState;
-    private boolean currentBridgeEnabledState;
-    private boolean currentBridgeVisibleState;
-    private boolean currentBridgeHintVisibleState;
-    private String currentLabourButtonLabel;
-    private String currentCompostButtonLabel;
-    private boolean currentLabourWarningVisibleState;
+    // Petit cache local de l'état visuel des actions.
+    // La sidebar reconstruit souvent l'état désiré à partir du modèle :
+    // on mémorise donc la dernière version appliquée pour éviter les mises à jour inutiles.
+    private SidebarActionState currentActionButtonsState;
     // Indique si la sidebar doit afficher son comportement spécial de grotte.
     private boolean caveMode;
 
@@ -293,36 +277,6 @@ public class SidebarPanel extends JPanel {
         objectivesTitleLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 18.0f));
         objectivesTitleRow.add(objectivesTitleLabel, BorderLayout.WEST);
 
-        // Carte d'objectifs inspirée du popup de la top bar.
-        JPanel objectivesCardPanel = new JPanel(new BorderLayout(0, 6)) {
-            @Override
-            protected void paintComponent(Graphics graphics) {
-                Graphics2D g2d = (Graphics2D) graphics.create();
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                int width = getWidth();
-                int height = getHeight();
-                if (width <= 0 || height <= 0) {
-                    g2d.dispose();
-                    return;
-                }
-
-                g2d.setColor(new Color(0, 0, 0, 70));
-                g2d.fillRoundRect(4, 4, width - 8, height - 8, 16, 16);
-
-                g2d.setColor(new Color(57, 41, 24, 232));
-                g2d.fillRoundRect(0, 0, width - 8, height - 8, 16, 16);
-
-                g2d.setColor(new Color(230, 214, 157, 255));
-                g2d.drawRoundRect(0, 0, width - 9, height - 9, 16, 16);
-                g2d.dispose();
-            }
-        };
-        objectivesCardPanel.setOpaque(false);
-        objectivesCardPanel.setBorder(BorderFactory.createEmptyBorder(6, 10, 10, 14));
-        objectivesCardPanel.setAlignmentX(LEFT_ALIGNMENT);
-        JPanel objectivesCardRow = createSidebarCardRow(objectivesCardPanel);
-
         objectivesInfoLabel = new JLabel(resolveObjectivesInfoText(false, false));
         objectivesInfoLabel.setForeground(new Color(196, 230, 255));
         objectivesInfoLabel.setFont(CustomFontLoader.loadFont(FONT_PATH, 10.5f));
@@ -336,50 +290,46 @@ public class SidebarPanel extends JPanel {
         objectivesContentPanel.setLayout(new BoxLayout(objectivesContentPanel, BoxLayout.Y_AXIS));
         objectivesContentPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 6, 2));
         objectivesContentPanel.setAlignmentX(LEFT_ALIGNMENT);
-
-        objectivesCardPanel.add(objectivesInfoLabel, BorderLayout.NORTH);
-        objectivesCardPanel.add(objectivesContentPanel, BorderLayout.CENTER);
+        JPanel objectivesCardRow = createObjectivesCardRow(objectivesInfoLabel, objectivesContentPanel);
 
         // Carte du bilan: style distinct + couleurs dynamiques selon validation du jour.
         dayValidationCardPanel = new JPanel(new BorderLayout(0, 6)) {
             @Override
             protected void paintComponent(Graphics graphics) {
-                Graphics2D g2d = (Graphics2D) graphics.create();
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                int width = getWidth();
-                int height = getHeight();
-                if (width <= 0 || height <= 0) {
-                    g2d.dispose();
+                ComponentPaintContext paintContext = ComponentPaintContext.create(graphics, this);
+                if (paintContext == null) {
                     return;
                 }
 
-                g2d.setColor(new Color(0, 0, 0, 70));
-                g2d.fillRoundRect(4, 4, width - 8, height - 8, 16, 16);
+                Graphics2D g2d = paintContext.graphics();
+                int width = paintContext.width();
+                int height = paintContext.height();
+                try {
+                    // Fond dédié "bilan" pour distinguer clairement cette bulle des objectifs standards.
+                    paintStandardSidebarCard(g2d, width, height, new Color(46, 44, 24, 238));
 
-                // Fond dédié "bilan" pour distinguer clairement cette bulle des objectifs standards.
-                g2d.setColor(new Color(46, 44, 24, 238));
-                g2d.fillRoundRect(0, 0, width - 8, height - 8, 16, 16);
+                    // Bande supérieure qui change de couleur selon l'état de validation du jour.
+                    Color dynamicBandColor = caveMode
+                            ? new Color(74, 116, 162, 230)
+                            : (currentDayValidatedState
+                                ? new Color(72, 150, 83, 230)
+                                : new Color(166, 68, 68, 230));
+                    g2d.setColor(dynamicBandColor);
+                    g2d.fillRoundRect(0, 0, width - 8, 18, 16, 16);
+                    g2d.fillRect(0, 8, width - 8, 10);
 
-                // Bande supérieure qui change de couleur selon l'état de validation du jour.
-                Color dynamicBandColor = caveMode
-                        ? new Color(74, 116, 162, 230)
-                        : (currentDayValidatedState
-                            ? new Color(72, 150, 83, 230)
-                            : new Color(166, 68, 68, 230));
-                g2d.setColor(dynamicBandColor);
-                g2d.fillRoundRect(0, 0, width - 8, 18, 16, 16);
-                g2d.fillRect(0, 8, width - 8, 10);
-
-                // Bordure dynamique verte (validé) ou rouge (non validé).
-                Color dynamicBorderColor = caveMode
-                        ? new Color(148, 201, 255, 255)
-                        : (currentDayValidatedState
-                            ? new Color(96, 214, 126, 255)
-                            : new Color(232, 98, 98, 255));
-                g2d.setColor(dynamicBorderColor);
-                g2d.drawRoundRect(0, 0, width - 9, height - 9, 16, 16);
-                g2d.dispose();
+                    // Bordure dynamique verte (validé) ou rouge (non validé).
+                    // On la redessine après la bande supérieure pour que cette couleur reste dominante visuellement.
+                    Color dynamicBorderColor = caveMode
+                            ? new Color(148, 201, 255, 255)
+                            : (currentDayValidatedState
+                                ? new Color(96, 214, 126, 255)
+                                : new Color(232, 98, 98, 255));
+                    g2d.setColor(dynamicBorderColor);
+                    g2d.drawRoundRect(0, 0, width - 9, height - 9, 16, 16);
+                } finally {
+                    paintContext.dispose();
+                }
             }
         };
         dayValidationCardPanel.setOpaque(false);
@@ -445,26 +395,7 @@ public class SidebarPanel extends JPanel {
 
         // Au démarrage, les boutons sont désactivés tant que l'unité déplaçable n'est pas
         // sur une case valide du champ.
-        applyButtonsEnabledState(
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                "Poser chemin",
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                "Labourer",
-                "Poser compost",
-                false
-        );
+        applyButtonsEnabledState(SidebarActionState.disabled());
     }
 
     /**
@@ -487,6 +418,66 @@ public class SidebarPanel extends JPanel {
         cardRow.setAlignmentX(LEFT_ALIGNMENT);
         cardRow.add(cardPanel, BorderLayout.CENTER);
         return cardRow;
+    }
+
+    /**
+     * Assemble la carte des objectifs à partir de ses deux zones dynamiques :
+     * le message d'information et la liste des objectifs.
+     * Le rendu visuel reste centralisé ici pour que le constructeur garde surtout
+     * la lecture globale de la sidebar.
+     */
+    private JPanel createObjectivesCardRow(JLabel infoLabel, JPanel contentPanel) {
+        JPanel objectivesCardPanel = createObjectivesCardPanel();
+        objectivesCardPanel.add(infoLabel, BorderLayout.NORTH);
+        objectivesCardPanel.add(contentPanel, BorderLayout.CENTER);
+        return createSidebarCardRow(objectivesCardPanel);
+    }
+
+    /**
+     * Fond décoratif partagé par la zone des objectifs.
+     * Cette carte accueille un contenu variable, mais son habillage reste toujours le même.
+     */
+    private JPanel createObjectivesCardPanel() {
+        JPanel objectivesCardPanel = new JPanel(new BorderLayout(0, 6)) {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                ComponentPaintContext paintContext = ComponentPaintContext.create(graphics, this);
+                if (paintContext == null) {
+                    return;
+                }
+
+                try {
+                    paintStandardSidebarCard(
+                            paintContext.graphics(),
+                            paintContext.width(),
+                            paintContext.height(),
+                            new Color(57, 41, 24, 232)
+                    );
+                } finally {
+                    paintContext.dispose();
+                }
+            }
+        };
+        objectivesCardPanel.setOpaque(false);
+        objectivesCardPanel.setBorder(BorderFactory.createEmptyBorder(6, 10, 10, 14));
+        objectivesCardPanel.setAlignmentX(LEFT_ALIGNMENT);
+        return objectivesCardPanel;
+    }
+
+    /**
+     * Dessine la base commune des cartes de la sidebar.
+     * Toutes les cartes partagent la même ombre, le même arrondi et la même bordure,
+     * puis chaque zone peut ajouter ses propres accents par-dessus si elle en a besoin.
+     */
+    private void paintStandardSidebarCard(Graphics2D g2d, int width, int height, Color fillColor) {
+        g2d.setColor(new Color(0, 0, 0, 70));
+        g2d.fillRoundRect(4, 4, width - 8, height - 8, 16, 16);
+
+        g2d.setColor(fillColor);
+        g2d.fillRoundRect(0, 0, width - 8, height - 8, 16, 16);
+
+        g2d.setColor(new Color(230, 214, 157, 255));
+        g2d.drawRoundRect(0, 0, width - 9, height - 9, 16, 16);
     }
 
     /**
@@ -547,165 +538,194 @@ public class SidebarPanel extends JPanel {
     private void syncFromModel() {
         if (caveMode) {
             refreshObjectivesDisplay();
-            if (currentLabourEnabledState
-                    || currentPlantEnabledState
-                    || currentHarvestEnabledState
-                    || currentCleanEnabledState
-                    || currentWaterEnabledState
-                    || currentPathEnabledState
-                    || currentPathVisibleState
-                    || currentCompostEnabledState
-                    || currentCompostVisibleState
-                    || currentCutTreeEnabledState
-                    || currentCutTreeVisibleState
-                    || currentBridgeEnabledState
-                    || currentBridgeVisibleState
-                    || currentBridgeHintVisibleState
-                    || currentLabourWarningVisibleState
-                    || !"Poser compost".equals(currentCompostButtonLabel)) {
-                applyButtonsEnabledState(
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        "Poser chemin",
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        "Labourer",
-                        "Poser compost",
-                        false
-                );
+            SidebarActionState disabledState = SidebarActionState.disabled();
+            if (disabledState.differsFrom(currentActionButtonsState)) {
+                applyButtonsEnabledState(disabledState);
             }
             return;
         }
 
-        boolean shouldEnablePlant = canPlantActiveCell();
-        boolean shouldEnableHarvest = canHarvestActiveCell();
-        boolean shouldEnableClean = canCleanActiveCell();
-        boolean shouldEnableWater = canWaterActiveCell();
-        boolean shouldShowPathAction = shouldShowPathAction();
-        boolean shouldEnablePath = canUsePathButtonOnActiveCell();
-        boolean shouldDisplayCompostAction = shouldShowCompostAction();
-        boolean shouldEnableCompost = canUseCompostButtonOnActiveCell();
-        boolean shouldShowBridgeAction = movementModel.getSelectedFacilityType() == FacilityType.PONT;
-        boolean shouldEnableBridge = shouldShowBridgeAction && canPlaceBridgeActiveCell();
-        boolean shouldShowCutTreeAction = shouldShowCutTreeAction();
-        String labourButtonLabel = shouldShowRemettreEnHerbeAction() ? "Remettre en herbe" : "Labourer";
-        String pathButtonLabel = shouldShowStorePathAction()
-                ? "<html><center>Remise ce chemin<br>dans l'inventaire</center></html>"
-                : "Poser chemin";
-        boolean shouldEnableLabourAction = canUseLabourButtonOnActiveCell();
-        String compostButtonLabel = shouldShowRemiserCompostAction() ? "Remiser compost" : "Poser compost";
-        boolean shouldShowLabourWarning = shouldShowAdjacentFenceLabourWarning();
-        if (shouldEnableLabourAction != currentLabourEnabledState
-                || shouldEnablePlant != currentPlantEnabledState
-                || shouldEnableHarvest != currentHarvestEnabledState
-                || shouldEnableClean != currentCleanEnabledState
-                || shouldEnableWater != currentWaterEnabledState
-                || shouldEnablePath != currentPathEnabledState
-                || shouldShowPathAction != currentPathVisibleState
-                || !pathButtonLabel.equals(currentPathButtonLabel)
-                || shouldEnableCompost != currentCompostEnabledState
-                || shouldDisplayCompostAction != currentCompostVisibleState
-                || shouldShowCutTreeAction != currentCutTreeEnabledState
-                || shouldShowCutTreeAction != currentCutTreeVisibleState
-                || shouldEnableBridge != currentBridgeEnabledState
-                || shouldShowBridgeAction != currentBridgeVisibleState
-                || shouldShowBridgeAction != currentBridgeHintVisibleState
-                || !labourButtonLabel.equals(currentLabourButtonLabel)
-                || !compostButtonLabel.equals(currentCompostButtonLabel)
-                || shouldShowLabourWarning != currentLabourWarningVisibleState) {
-            applyButtonsEnabledState(
-                    shouldEnableLabourAction,
-                    shouldEnablePlant,
-                    shouldEnableHarvest,
-                    shouldEnableClean,
-                    shouldEnableWater,
-                    shouldEnablePath,
-                    shouldShowPathAction,
-                    pathButtonLabel,
-                    shouldEnableCompost,
-                    shouldDisplayCompostAction,
-                    shouldShowCutTreeAction,
-                    shouldShowCutTreeAction,
-                    shouldEnableBridge,
-                    shouldShowBridgeAction,
-                    shouldShowBridgeAction,
-                    labourButtonLabel,
-                    compostButtonLabel,
-                    shouldShowLabourWarning
-            );
+        SidebarActionState desiredState = buildFieldActionButtonsState();
+        if (desiredState.differsFrom(currentActionButtonsState)) {
+            applyButtonsEnabledState(desiredState);
         }
 
         refreshObjectivesDisplay();
     }
 
     /**
-     * Active/désactive les boutons.
+     * Construit l'état complet attendu pour la zone d'actions du champ.
+     * Tout ce qui dépend de la case active ou de l'outil sélectionné est rassemblé ici,
+     * ce qui évite d'éparpiller la logique métier dans la mise à jour visuelle.
      */
-    private void applyButtonsEnabledState(boolean labourEnabled, boolean plantEnabled,
-                                          boolean harvestEnabled, boolean cleanEnabled, boolean waterEnabled,
-                                          boolean pathEnabled, boolean pathVisible, String pathButtonLabel,
-                                          boolean compostEnabled, boolean compostVisible,
-                                          boolean cutTreeEnabled, boolean cutTreeVisible,
-                                          boolean bridgeEnabled, boolean bridgeVisible, boolean bridgeHintVisible,
-                                          String labourButtonLabel,
-                                          String compostButtonLabel,
-                                          boolean labourWarningVisible) {
-        currentLabourEnabledState = labourEnabled;
-        currentPlantEnabledState = plantEnabled;
-        currentHarvestEnabledState = harvestEnabled;
-        currentCleanEnabledState = cleanEnabled;
-        currentWaterEnabledState = waterEnabled;
-        currentPathEnabledState = pathEnabled;
-        currentPathVisibleState = pathVisible;
-        currentPathButtonLabel = pathButtonLabel;
-        currentCompostEnabledState = compostEnabled;
-        currentCompostVisibleState = compostVisible;
-        currentCutTreeEnabledState = cutTreeEnabled;
-        currentCutTreeVisibleState = cutTreeVisible;
-        currentBridgeEnabledState = bridgeEnabled;
-        currentBridgeVisibleState = bridgeVisible;
-        currentBridgeHintVisibleState = bridgeHintVisible;
-        currentLabourButtonLabel = labourButtonLabel;
-        currentCompostButtonLabel = compostButtonLabel;
-        currentLabourWarningVisibleState = labourWarningVisible;
+    private SidebarActionState buildFieldActionButtonsState() {
+        boolean shouldShowBridgeAction = movementModel.getSelectedFacilityType() == FacilityType.PONT;
+        boolean shouldShowCutTreeAction = shouldShowCutTreeAction();
+        return new SidebarActionState(
+                canUseLabourButtonOnActiveCell(),
+                canPlantActiveCell(),
+                canHarvestActiveCell(),
+                canCleanActiveCell(),
+                canWaterActiveCell(),
+                canUsePathButtonOnActiveCell(),
+                shouldShowPathAction(),
+                shouldShowStorePathAction()
+                        ? "<html><center>Remise ce chemin<br>dans l'inventaire</center></html>"
+                        : "Poser chemin",
+                canUseCompostButtonOnActiveCell(),
+                shouldShowCompostAction(),
+                shouldShowCutTreeAction,
+                shouldShowCutTreeAction,
+                shouldShowBridgeAction && canPlaceBridgeActiveCell(),
+                shouldShowBridgeAction,
+                shouldShowBridgeAction,
+                shouldShowRemettreEnHerbeAction() ? "Remettre en herbe" : "Labourer",
+                shouldShowRemiserCompostAction() ? "Remiser compost" : "Poser compost",
+                shouldShowAdjacentFenceLabourWarning()
+        );
+    }
 
-        labourButton.setEnabled(labourEnabled);
-        boolean compactLabourLabel = "Remettre en herbe".equals(labourButtonLabel);
+    /**
+     * Active ou masque les éléments d'interface en fonction d'un état déjà calculé.
+     * Cette méthode ne décide rien : elle traduit simplement l'état en apparence écran.
+     */
+    private void applyButtonsEnabledState(SidebarActionState state) {
+        currentActionButtonsState = state;
+
+        labourButton.setEnabled(state.labourEnabled);
+        boolean compactLabourLabel = "Remettre en herbe".equals(state.labourButtonLabel);
         labourButton.setFont(CustomFontLoader.loadFont(
                 FONT_PATH,
                 compactLabourLabel ? LABOUR_BUTTON_COMPACT_FONT_SIZE : LABOUR_BUTTON_DEFAULT_FONT_SIZE
         ));
         labourButton.setText(compactLabourLabel
                 ? "<html><center>Remettre<br>en herbe</center></html>"
-                : labourButtonLabel);
-        plantButton.setEnabled(plantEnabled);
-        harvestButton.setEnabled(harvestEnabled);
-        waterButton.setEnabled(waterEnabled);
-        cleanButton.setEnabled(cleanEnabled);
-        pathButton.setEnabled(pathEnabled);
-        pathButton.setText(pathButtonLabel);
-        pathActionRow.setVisible(pathVisible);
-        compostButton.setEnabled(compostEnabled);
-        compostActionRow.setVisible(compostVisible);
-        cutTreeButton.setEnabled(cutTreeEnabled);
-        cutTreeActionRow.setVisible(cutTreeVisible);
-        bridgeButton.setEnabled(bridgeEnabled);
-        bridgeActionRow.setVisible(bridgeVisible);
-        bridgePlacementHintLabel.setVisible(bridgeHintVisible);
-        compostButton.setText(compostButtonLabel);
-        labourWarningLabel.setVisible(labourWarningVisible);
+                : state.labourButtonLabel);
+        plantButton.setEnabled(state.plantEnabled);
+        harvestButton.setEnabled(state.harvestEnabled);
+        waterButton.setEnabled(state.waterEnabled);
+        cleanButton.setEnabled(state.cleanEnabled);
+        pathButton.setEnabled(state.pathEnabled);
+        pathButton.setText(state.pathButtonLabel);
+        pathActionRow.setVisible(state.pathVisible);
+        compostButton.setEnabled(state.compostEnabled);
+        compostActionRow.setVisible(state.compostVisible);
+        cutTreeButton.setEnabled(state.cutTreeEnabled);
+        cutTreeActionRow.setVisible(state.cutTreeVisible);
+        bridgeButton.setEnabled(state.bridgeEnabled);
+        bridgeActionRow.setVisible(state.bridgeVisible);
+        bridgePlacementHintLabel.setVisible(state.bridgeHintVisible);
+        compostButton.setText(state.compostButtonLabel);
+        labourWarningLabel.setVisible(state.labourWarningVisible);
 
         repaint();
+    }
+
+    /**
+     * Photographie complète de la zone d'actions.
+     * En regroupant tous les drapeaux et libellés au même endroit,
+     * la comparaison entre "état souhaité" et "état affiché" reste simple à suivre.
+     */
+    private static final class SidebarActionState {
+        private final boolean labourEnabled;
+        private final boolean plantEnabled;
+        private final boolean harvestEnabled;
+        private final boolean cleanEnabled;
+        private final boolean waterEnabled;
+        private final boolean pathEnabled;
+        private final boolean pathVisible;
+        private final String pathButtonLabel;
+        private final boolean compostEnabled;
+        private final boolean compostVisible;
+        private final boolean cutTreeEnabled;
+        private final boolean cutTreeVisible;
+        private final boolean bridgeEnabled;
+        private final boolean bridgeVisible;
+        private final boolean bridgeHintVisible;
+        private final String labourButtonLabel;
+        private final String compostButtonLabel;
+        private final boolean labourWarningVisible;
+
+        private SidebarActionState(boolean labourEnabled, boolean plantEnabled,
+                                   boolean harvestEnabled, boolean cleanEnabled, boolean waterEnabled,
+                                   boolean pathEnabled, boolean pathVisible, String pathButtonLabel,
+                                   boolean compostEnabled, boolean compostVisible,
+                                   boolean cutTreeEnabled, boolean cutTreeVisible,
+                                   boolean bridgeEnabled, boolean bridgeVisible, boolean bridgeHintVisible,
+                                   String labourButtonLabel, String compostButtonLabel,
+                                   boolean labourWarningVisible) {
+            this.labourEnabled = labourEnabled;
+            this.plantEnabled = plantEnabled;
+            this.harvestEnabled = harvestEnabled;
+            this.cleanEnabled = cleanEnabled;
+            this.waterEnabled = waterEnabled;
+            this.pathEnabled = pathEnabled;
+            this.pathVisible = pathVisible;
+            this.pathButtonLabel = pathButtonLabel;
+            this.compostEnabled = compostEnabled;
+            this.compostVisible = compostVisible;
+            this.cutTreeEnabled = cutTreeEnabled;
+            this.cutTreeVisible = cutTreeVisible;
+            this.bridgeEnabled = bridgeEnabled;
+            this.bridgeVisible = bridgeVisible;
+            this.bridgeHintVisible = bridgeHintVisible;
+            this.labourButtonLabel = labourButtonLabel;
+            this.compostButtonLabel = compostButtonLabel;
+            this.labourWarningVisible = labourWarningVisible;
+        }
+
+        /**
+         * État neutre utilisé quand aucune action de champ ne doit rester interactive,
+         * par exemple pendant le mode grotte.
+         */
+        private static SidebarActionState disabled() {
+            return new SidebarActionState(
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    "Poser chemin",
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    "Labourer",
+                    "Poser compost",
+                    false
+            );
+        }
+
+        /**
+         * Compare deux instantanés d'interface sans dépendre de l'identité des objets.
+         * Ce qui compte ici est uniquement ce qui sera visible ou cliquable pour le joueur.
+         */
+        private boolean differsFrom(SidebarActionState other) {
+            return other == null
+                    || labourEnabled != other.labourEnabled
+                    || plantEnabled != other.plantEnabled
+                    || harvestEnabled != other.harvestEnabled
+                    || cleanEnabled != other.cleanEnabled
+                    || waterEnabled != other.waterEnabled
+                    || pathEnabled != other.pathEnabled
+                    || pathVisible != other.pathVisible
+                    || !pathButtonLabel.equals(other.pathButtonLabel)
+                    || compostEnabled != other.compostEnabled
+                    || compostVisible != other.compostVisible
+                    || cutTreeEnabled != other.cutTreeEnabled
+                    || cutTreeVisible != other.cutTreeVisible
+                    || bridgeEnabled != other.bridgeEnabled
+                    || bridgeVisible != other.bridgeVisible
+                    || bridgeHintVisible != other.bridgeHintVisible
+                    || !labourButtonLabel.equals(other.labourButtonLabel)
+                    || !compostButtonLabel.equals(other.compostButtonLabel)
+                    || labourWarningVisible != other.labourWarningVisible;
+        }
     }
 
     /**

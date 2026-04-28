@@ -9,8 +9,8 @@ import view.CustomFontLoader;
 import view.ImageLoader;
 import view.shop.ProductCardView;
 import view.shop.ProductPreview;
+import view.shop.ShopOverlayUiFactory;
 import view.shop.ShopPixelButton;
-import view.shop.ShopScrollBarUI;
 import view.shop.ShopSectionPanel;
 
 import javax.swing.BorderFactory;
@@ -19,8 +19,6 @@ import javax.swing.BoxLayout;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
 import javax.swing.Timer;
 import java.awt.AlphaComposite;
@@ -35,6 +33,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.LayoutManager;
 import java.awt.RenderingHints;
 
 /**
@@ -319,14 +318,8 @@ public class WorkshopOverlay extends JPanel {
      * On construit la colonne d'information de gauche.
      */
     private JComponent buildInfoPanel() {
-        ShopSectionPanel infoPanel = new ShopSectionPanel(woodTexture);
-        infoPanel.setPreferredSize(new Dimension(286, 0));
-        infoPanel.setLayout(new BorderLayout());
-        infoPanel.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
-
-        JPanel content = new JPanel();
-        content.setOpaque(false);
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        ShopSectionPanel infoPanel = createWorkshopSectionPanel(new BorderLayout(), new Insets(18, 18, 18, 18), new Dimension(286, 0));
+        JPanel content = createTransparentVerticalPanel();
 
         JLabel title = createPrimaryLabel(priceFont);
         title.setText("Atelier");
@@ -338,9 +331,7 @@ public class WorkshopOverlay extends JPanel {
         content.add(Box.createVerticalStrut(10));
         content.add(buildWoodStockPanel());
         content.add(Box.createVerticalStrut(18));
-        content.add(createLeftAlignedRow(queueTitle));
-        content.add(Box.createVerticalStrut(6));
-        content.add(createLeftAlignedRow(infoQueueLabel));
+        content.add(createLeftAlignedGroup(new int[] {6}, queueTitle, infoQueueLabel));
         content.add(Box.createVerticalGlue());
 
         infoPanel.add(content, BorderLayout.CENTER);
@@ -351,74 +342,40 @@ public class WorkshopOverlay extends JPanel {
      * On construit la colonne centrale qui liste les plans disponibles.
      */
     private JComponent buildCatalogPanel() {
-        ShopSectionPanel catalogPanel = new ShopSectionPanel(woodTexture);
-        catalogPanel.setLayout(new BorderLayout(0, 16));
-        catalogPanel.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
-
-        JPanel topRow = new JPanel(new BorderLayout());
-        topRow.setOpaque(false);
-
         JLabel title = createPrimaryLabel(priceFont);
         title.setText("Plans disponibles");
 
         JLabel subtitle = createSecondaryLabel(bodyFont);
         subtitle.setText("1 construction");
-        subtitle.setHorizontalAlignment(SwingConstants.RIGHT);
-
-        topRow.add(title, BorderLayout.WEST);
-        topRow.add(subtitle, BorderLayout.EAST);
-
-        JScrollPane scrollPane = createScrollPane(productsGrid);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(24);
-
-        catalogPanel.add(topRow, BorderLayout.NORTH);
-        catalogPanel.add(scrollPane, BorderLayout.CENTER);
-        return catalogPanel;
+        return ShopOverlayUiFactory.createCatalogSectionPanel(
+                woodTexture,
+                title,
+                subtitle,
+                productsGrid,
+                24
+        );
     }
 
     /**
      * On construit la colonne de droite avec la sélection, le chantier et l'action principale.
      */
     private JComponent buildSummaryPanel() {
-        ShopSectionPanel summaryPanel = new ShopSectionPanel(woodTexture);
-        summaryPanel.setPreferredSize(new Dimension(350, 0));
-        summaryPanel.setLayout(new BorderLayout());
-        summaryPanel.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+        ShopSectionPanel summaryPanel = createWorkshopSectionPanel(new BorderLayout(), new Insets(18, 18, 18, 18), new Dimension(350, 0));
+        JPanel topBlock = createTransparentVerticalPanel();
 
-        JPanel topBlock = new JPanel();
-        topBlock.setOpaque(false);
-        topBlock.setLayout(new BoxLayout(topBlock, BoxLayout.Y_AXIS));
-
-        JLabel woodTitle = createSecondaryLabel(subtitleFont);
-        woodTitle.setText("STOCK BOIS");
-        woodTitle.setAlignmentX(LEFT_ALIGNMENT);
-        woodTitle.setHorizontalAlignment(SwingConstants.LEFT);
-        woodValueLabel.setAlignmentX(LEFT_ALIGNMENT);
-        woodValueLabel.setHorizontalAlignment(SwingConstants.LEFT);
-
-        topBlock.add(createLeftAlignedRow(woodTitle));
-        topBlock.add(Box.createVerticalStrut(4));
-        topBlock.add(createLeftAlignedRow(woodValueLabel));
+        JLabel woodTitle = createLeftAlignedSecondaryLabel(subtitleFont);
+        alignLeft(woodValueLabel);
+        topBlock.add(createLeftAlignedGroup(new int[] {4}, woodTitle, woodValueLabel));
         topBlock.add(Box.createVerticalStrut(16));
         topBlock.add(buildSelectionPanel());
         topBlock.add(Box.createVerticalStrut(16));
 
-        JLabel chantierTitle = createPrimaryLabel(priceFont);
-        chantierTitle.setText("Chantier");
-        chantierTitle.setAlignmentX(LEFT_ALIGNMENT);
-        chantierTitle.setHorizontalAlignment(SwingConstants.LEFT);
-        constructionStateLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        remainingTimeLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        JLabel chantierTitle = createLeftAlignedPrimaryLabel(priceFont);
+        alignLeft(constructionStateLabel);
+        alignLeft(remainingTimeLabel);
+        topBlock.add(createLeftAlignedGroup(new int[] {8, 6}, chantierTitle, constructionStateLabel, remainingTimeLabel));
 
-        topBlock.add(createLeftAlignedRow(chantierTitle));
-        topBlock.add(Box.createVerticalStrut(8));
-        topBlock.add(createLeftAlignedRow(constructionStateLabel));
-        topBlock.add(Box.createVerticalStrut(6));
-        topBlock.add(createLeftAlignedRow(remainingTimeLabel));
-
-        JPanel footer = new JPanel();
-        footer.setOpaque(false);
-        footer.setLayout(new BoxLayout(footer, BoxLayout.Y_AXIS));
+        JPanel footer = createTransparentVerticalPanel();
         footer.add(Box.createVerticalStrut(12));
         footer.add(constructButton);
         footer.add(Box.createVerticalStrut(10));
@@ -434,25 +391,15 @@ public class WorkshopOverlay extends JPanel {
      * On construit le petit panneau qui décrit le plan actuellement affiché.
      */
     private JComponent buildSelectionPanel() {
-        ShopSectionPanel selectionPanel = new ShopSectionPanel(woodTexture);
-        selectionPanel.setLayout(new BorderLayout(0, 14));
-        selectionPanel.setBorder(BorderFactory.createEmptyBorder(14, 14, 14, 14));
-
-        JPanel top = new JPanel(new BorderLayout(12, 0));
-        top.setOpaque(false);
-        top.add(productPreview, BorderLayout.WEST);
-
-        JPanel meta = new JPanel();
-        meta.setOpaque(false);
-        meta.setLayout(new BoxLayout(meta, BoxLayout.Y_AXIS));
+        ShopSectionPanel selectionPanel = createWorkshopSectionPanel(new BorderLayout(0, 14), new Insets(14, 14, 14, 14), null);
+        JPanel meta = createTransparentVerticalPanel();
         meta.add(selectedNameLabel);
         meta.add(Box.createVerticalStrut(6));
         meta.add(selectedCostLabel);
         meta.add(Box.createVerticalStrut(4));
         meta.add(selectedBridgeStockLabel);
 
-        top.add(meta, BorderLayout.CENTER);
-        selectionPanel.add(top, BorderLayout.NORTH);
+        selectionPanel.add(createPreviewMetaPanel(productPreview, meta), BorderLayout.NORTH);
         return selectionPanel;
     }
 
@@ -643,30 +590,59 @@ public class WorkshopOverlay extends JPanel {
      * On construit le bloc visuel qui montre le stock de bois disponible.
      */
     private JComponent buildWoodStockPanel() {
-        ShopSectionPanel stockPanel = new ShopSectionPanel(woodTexture);
-        stockPanel.setLayout(new BorderLayout(12, 0));
-        stockPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        ShopSectionPanel stockPanel = createWorkshopSectionPanel(new BorderLayout(12, 0), new Insets(12, 12, 12, 12), new Dimension(250, 154));
         stockPanel.setAlignmentX(LEFT_ALIGNMENT);
-        stockPanel.setPreferredSize(new Dimension(250, 154));
         stockPanel.setMinimumSize(new Dimension(250, 154));
         stockPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 154));
-        stockPanel.add(woodPreviewPanel, BorderLayout.WEST);
+        JPanel meta = createTransparentVerticalPanel();
 
-        JPanel meta = new JPanel();
-        meta.setOpaque(false);
-        meta.setLayout(new BoxLayout(meta, BoxLayout.Y_AXIS));
-
-        JLabel stockTitle = createSecondaryLabel(subtitleFont);
-        stockTitle.setText("STOCK BOIS");
-        stockTitle.setAlignmentX(LEFT_ALIGNMENT);
+        JLabel stockTitle = createLeftAlignedSecondaryLabel(subtitleFont);
         infoWoodLabel.setAlignmentX(LEFT_ALIGNMENT);
 
         meta.add(stockTitle);
         meta.add(Box.createVerticalStrut(10));
         meta.add(infoWoodLabel);
 
-        stockPanel.add(meta, BorderLayout.CENTER);
+        stockPanel.add(createPreviewMetaPanel(woodPreviewPanel, meta), BorderLayout.CENTER);
         return stockPanel;
+    }
+
+    /**
+     * Crée l'habillage standard des sections de la menuiserie.
+     * Les trois colonnes et les encarts internes partagent la même matière visuelle,
+     * puis chaque méthode se concentre seulement sur son contenu propre.
+     */
+    private ShopSectionPanel createWorkshopSectionPanel(LayoutManager layout, Insets padding, Dimension preferredSize) {
+        ShopSectionPanel panel = new ShopSectionPanel(woodTexture);
+        panel.setLayout(layout);
+        panel.setBorder(BorderFactory.createEmptyBorder(padding.top, padding.left, padding.bottom, padding.right));
+        if (preferredSize != null) {
+            panel.setPreferredSize(preferredSize);
+        }
+        return panel;
+    }
+
+    /**
+     * Crée une pile verticale transparente.
+     * Ce format revient partout dans l'overlay dès qu'on empile du texte ou plusieurs contrôles.
+     */
+    private JPanel createTransparentVerticalPanel() {
+        JPanel panel = new JPanel();
+        panel.setOpaque(false);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        return panel;
+    }
+
+    /**
+     * Assemble un aperçu à gauche et son bloc descriptif à droite.
+     * Cela garde le même squelette visuel pour le panneau de sélection et pour le stock de bois.
+     */
+    private JPanel createPreviewMetaPanel(JComponent preview, JComponent metaPanel) {
+        JPanel panel = new JPanel(new BorderLayout(12, 0));
+        panel.setOpaque(false);
+        panel.add(preview, BorderLayout.WEST);
+        panel.add(metaPanel, BorderLayout.CENTER);
+        return panel;
     }
 
     /**
@@ -679,6 +655,51 @@ public class WorkshopOverlay extends JPanel {
         row.setAlignmentX(LEFT_ALIGNMENT);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, component.getPreferredSize().height));
         return row;
+    }
+
+    /**
+     * Empile plusieurs lignes déjà alignées à gauche avec des espacements définis entre elles.
+     * On l'utilise pour les petits blocs de statut afin d'éviter de répéter la même séquence
+     * "ligne + espace + ligne" dans chaque colonne.
+     */
+    private JComponent createLeftAlignedGroup(int[] gapsAfterRows, JComponent... components) {
+        JPanel group = createTransparentVerticalPanel();
+        for (int index = 0; index < components.length; index++) {
+            group.add(createLeftAlignedRow(components[index]));
+            if (index < gapsAfterRows.length) {
+                group.add(Box.createVerticalStrut(gapsAfterRows[index]));
+            }
+        }
+        return group;
+    }
+
+    /**
+     * Positionne explicitement un label sur la gauche.
+     * Les BoxLayout gardent ainsi un alignement cohérent même quand les polices changent.
+     */
+    private void alignLeft(JLabel label) {
+        label.setAlignmentX(LEFT_ALIGNMENT);
+        label.setHorizontalAlignment(SwingConstants.LEFT);
+    }
+
+    /**
+     * Variante pratique pour créer un titre principal déjà calé à gauche.
+     */
+    private JLabel createLeftAlignedPrimaryLabel(Font font) {
+        JLabel label = createPrimaryLabel(font);
+        label.setText("Chantier");
+        alignLeft(label);
+        return label;
+    }
+
+    /**
+     * Variante pratique pour créer un titre secondaire déjà calé à gauche.
+     */
+    private JLabel createLeftAlignedSecondaryLabel(Font font) {
+        JLabel label = createSecondaryLabel(font);
+        label.setText("STOCK BOIS");
+        alignLeft(label);
+        return label;
     }
 
     /**
@@ -702,15 +723,6 @@ public class WorkshopOverlay extends JPanel {
     }
 
     /**
-     * On crée un label secondaire déjà formaté sur plusieurs lignes HTML.
-     */
-    private JLabel createWrappedSecondaryLabel(Font font, String... lines) {
-        JLabel label = createSecondaryLabel(font);
-        label.setText(toHtmlLines(lines));
-        return label;
-    }
-
-    /**
      * On transforme plusieurs lignes logiques en petit bloc HTML Swing.
      */
     private String toHtmlLines(String... lines) {
@@ -725,17 +737,4 @@ public class WorkshopOverlay extends JPanel {
         return builder.toString();
     }
 
-    /**
-     * On crée un scroll transparent avec la scrollbar visuelle partagée avec la boutique.
-     */
-    private JScrollPane createScrollPane(JComponent content) {
-        JScrollPane scrollPane = new JScrollPane(content);
-        scrollPane.setOpaque(false);
-        scrollPane.getViewport().setOpaque(false);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.getVerticalScrollBar().setOpaque(false);
-        scrollPane.getVerticalScrollBar().setUI(new ShopScrollBarUI());
-        return scrollPane;
-    }
 }

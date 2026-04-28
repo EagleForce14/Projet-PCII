@@ -96,36 +96,6 @@ public class Shop implements DayChangeListener {
         return totalPrice;
     }
 
-    /** Une methode pour modifier le prix des produits dans la boutique
-     * @param product : le produit dont on veut modifier le prix
-     * @param newPrice : le nouveau prix du produit
-     * **/
-    public synchronized boolean updateProductPrice(Product product, int newPrice) {
-
-        // Validation des paramètres d'entrée
-        if (product == null || newPrice < 0) {
-            return false;
-        }
-
-        // Recherche du produit dans les graines
-        for (Seed seed : seeds) {
-            if (seed.getName().equals(product.getName())) {
-                seed.setPrice(newPrice);
-                return true;
-            }
-        }
-
-        // Recherche du produit dans les installations
-        for (Facility facility : facilities) {
-            if (facility.getName().equals(product.getName())) {
-                facility.setPrice(newPrice);
-                return true;
-            }
-        }
-
-        return false; // Produit non trouvé
-    }
-
     /**
      * une méthode pour ajouter un produit à la liste des produits que le joueur souhaite acheter
      *
@@ -139,9 +109,6 @@ public class Shop implements DayChangeListener {
 
         long desiredQuantity = (long) getShoppingCardQuantity(product) + quantity;
         if (desiredQuantity > getShoppingCardQuantityLimit(product)) {
-            return false;
-        }
-        if (desiredQuantity > Integer.MAX_VALUE) {
             return false;
         }
 
@@ -254,7 +221,6 @@ public class Shop implements DayChangeListener {
         int totalPrice = 0;
         int totalItemsAchetes = 0;
         int playerAmount = playerMoney.getAmount();
-        boolean achatReussi = false;
         // calcul du prix total des produits dans le panier
         for (CartItem item : shoppingCard) {
             totalPrice += item.totalPrice();
@@ -265,8 +231,6 @@ public class Shop implements DayChangeListener {
         if (playerAmount >= totalPrice) {
             // mise à jour de l'argent du joueur et des quantités des produits dans le magasin
             playerMoney.subtract(new Money(totalPrice));
-            ;
-
 
             // mise à jour des quantités des produits dans le magasin
             // en parcourant tout le panier et en mettant à jour les quantités des produits correspondants 
@@ -291,7 +255,6 @@ public class Shop implements DayChangeListener {
                     inventaire.ajoutInstallation(((Facility) item.product).getType(), item.quantity);
                 }
             }
-            achatReussi = true;
 
             if (gestionnaireObjectifs != null) {
                 gestionnaireObjectifs.mettreAJourObjectifsAcheterItems(totalItemsAchetes);
@@ -302,15 +265,12 @@ public class Shop implements DayChangeListener {
             clearShoppingCard();
             // affichage de l'argent restant du joueur après l'achat
 
-            return achatReussi;
+            return true;
         }
         // cas d'achat échoué : le joueur n'a pas assez d'argent pour acheter les produits du panier
         else {
-
-            return achatReussi;
+            return false;
         }
-
-
     }
 
     private CartItem findCartItem(Product product) {
@@ -371,21 +331,13 @@ public class Shop implements DayChangeListener {
      * Petit helper local pour retrouver rapidement une installation par son type.
      * Le magasin a peu d'objets, donc une simple boucle reste largement suffisante.
      */
-    private Facility getFacilityByType(FacilityType type) {
+    private Facility getFacilityByType() {
         for (Facility facility : facilities) {
-            if (facility.getType() == type) {
+            if (facility.getType() == FacilityType.COMPOST) {
                 return facility;
             }
         }
         return null;
-    }
-
-    /**
-     * Expose le jour courant à l'interface pour que la boutique puisse
-     * expliquer clairement quand le second compost devient disponible.
-     */
-    public synchronized int getCurrentDay() {
-        return currentDay;
     }
 
     /**
@@ -424,14 +376,6 @@ public class Shop implements DayChangeListener {
         if (volatilityPercent < 0) {
             volatilityPercent = Math.abs(volatilityPercent);
         }
-
-        // on fixe la volatilité pour éviter les problèmes de concurrence avec les lambda
-        double finalVolatilityPercent = volatilityPercent;
-        // lambda pour calculer la variation aléatoire en fonction de la volatilité
-        java.util.function.Supplier<Double> nextPercent = () -> {
-            double rand = (new Random().nextDouble() * 2.0 - 1.0) * finalVolatilityPercent; // entre -volatilityPercent et +volatilityPercent
-            return percent * rand;
-        };
 
         // on applique la variation aléatoire à chaque produit, avec un bonus pour les produits chers
         for (Seed seed : seeds) {
@@ -485,7 +429,7 @@ public class Shop implements DayChangeListener {
          * sans toucher au reste de la logique du panier.
          */
         if (!compostRestockUnlocked && day >= COMPOST_RESTOCK_DAY) {
-            Facility compost = getFacilityByType(FacilityType.COMPOST);
+            Facility compost = getFacilityByType();
             if (compost != null) {
                 compost.setQuantity(compost.getQuantity() + 1);
             }

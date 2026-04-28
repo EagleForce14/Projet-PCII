@@ -8,5 +8,5 @@ public enum FacilityType {
     CHEMIN,
     COMPOST,
     JARDINIER,
-    PONT;
+    PONT
 }

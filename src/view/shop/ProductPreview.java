@@ -2,24 +2,16 @@ package view.shop;
 
 import model.shop.Product;
 import view.ProductPixelArt;
+import view.PreviewCardPanel;
 
-import javax.swing.JPanel;
-import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 
 /**
  * Petite preview d'un produit dans la colonne de droite.
  * Elle reste volontairement sobre: un cadre, puis l'illustration pixel-art.
  */
-public class ProductPreview extends JPanel {
-    // Couleur de fond du cadre d'aperçu.
-    private static final Color PREVIEW_FILL = new Color(56, 40, 28, 210);
-    // Couleur de bordure du cadre d'aperçu.
-    private static final Color PREVIEW_BORDER = new Color(138, 110, 73, 180);
-
+public class ProductPreview extends PreviewCardPanel {
     // Produit actuellement affiché dans l'aperçu.
     private Product product;
 
@@ -40,30 +32,15 @@ public class ProductPreview extends JPanel {
         repaint();
     }
 
-    /**
-     * On dessine le cadre d'aperçu puis, s'il existe, le pixel art du produit centré dedans.
-     */
     @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-
-        Graphics2D g2d = (Graphics2D) g.create();
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-        g2d.setColor(PREVIEW_FILL);
-        g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 18, 18);
-        g2d.setColor(PREVIEW_BORDER);
-        g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 18, 18);
-
+    protected void paintPreviewContent(Graphics2D g2d, int width, int height) {
         if (product != null) {
             int pixelSize = 8;
             int artWidth = ProductPixelArt.getProductArtWidth(product, pixelSize);
             int artHeight = ProductPixelArt.getProductArtHeight(product, pixelSize);
-            int artX = (getWidth() - artWidth) / 2;
-            int artY = (getHeight() - artHeight) / 2;
+            int artX = (width - artWidth) / 2;
+            int artY = (height - artHeight) / 2;
             ProductPixelArt.drawProduct(g2d, product, artX, artY, pixelSize);
         }
-
-        g2d.dispose();
     }
 }

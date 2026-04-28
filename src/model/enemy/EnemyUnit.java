@@ -350,7 +350,7 @@ public class EnemyUnit {
         for (int attempt = 0; attempt < attempts; attempt++) {
             double candidateX = randomCoordinateInBounds(bounds.x, bounds.width);
             double candidateY = randomCoordinateInBounds(bounds.y, bounds.height);
-            if (!canOccupy(candidateX, candidateY)) {
+            if (canOccupy(candidateX, candidateY)) {
                 continue;
             }
             return new Point2D.Double(candidateX, candidateY);
@@ -448,7 +448,7 @@ public class EnemyUnit {
     public synchronized void update(EnemyModel enemyModel, Unit player, GrilleCulture grilleCulture, int viewportWidth, int viewportHeight,
                                     int fieldWidth, int fieldHeight) {
         if (worldType == WorldType.CAVE) {
-            updateCaveMonster(enemyModel, player, viewportWidth, viewportHeight, fieldWidth, fieldHeight);
+            updateCaveMonster(player, viewportWidth, viewportHeight, fieldWidth, fieldHeight);
             return;
         }
 
@@ -486,14 +486,7 @@ public class EnemyUnit {
      * certains monstres patrouillent comme éclaireurs,
      * les autres restent immobiles jusqu'à l'alerte.
      */
-    private void updateCaveMonster(
-            EnemyModel enemyModel,
-            Unit player,
-            int viewportWidth,
-            int viewportHeight,
-            int fieldWidth,
-            int fieldHeight
-    ) {
+    private void updateCaveMonster(Unit player, int viewportWidth, int viewportHeight, int fieldWidth, int fieldHeight) {
         refreshDimensions(viewportWidth, viewportHeight, fieldWidth, fieldHeight);
         if (!combatUnit.isAlive()) {
             caveMoving = false;
@@ -1042,34 +1035,34 @@ public class EnemyUnit {
      * On calcule le petit recul horizontal avant la charge suivante contre la clôture.
      */
     private double getFenceBackstepTargetX(double contactTargetX, CellSide side) {
-        switch (side) {
-            case LEFT:
-                return contactTargetX - FENCE_ATTACK_BACKSTEP_DISTANCE;
-            case RIGHT:
-                return contactTargetX + FENCE_ATTACK_BACKSTEP_DISTANCE;
-            case TOP:
-            case BOTTOM:
-                return contactTargetX;
-            default:
-                return x;
-        }
+        return getFenceBackstepTarget(contactTargetX, side, CellSide.LEFT, CellSide.RIGHT, x);
     }
 
     /**
      * On calcule le petit recul vertical avant la charge suivante contre la clôture.
      */
     private double getFenceBackstepTargetY(double contactTargetY, CellSide side) {
-        switch (side) {
-            case TOP:
-                return contactTargetY - FENCE_ATTACK_BACKSTEP_DISTANCE;
-            case BOTTOM:
-                return contactTargetY + FENCE_ATTACK_BACKSTEP_DISTANCE;
-            case LEFT:
-            case RIGHT:
-                return contactTargetY;
-            default:
-                return y;
+        return getFenceBackstepTarget(contactTargetY, side, CellSide.TOP, CellSide.BOTTOM, y);
+    }
+
+    /**
+     * Traduit un côté de clôture en petit recul sur un seul axe.
+     * Le côté "négatif" recule avant la clôture, le côté "positif" recule après,
+     * et les deux autres côtés laissent la coordonnée inchangée.
+     */
+    private double getFenceBackstepTarget(double contactTarget, CellSide side,
+                                          CellSide negativeSide, CellSide positiveSide,
+                                          double fallbackCoordinate) {
+        if (side == negativeSide) {
+            return contactTarget - FENCE_ATTACK_BACKSTEP_DISTANCE;
         }
+        if (side == positiveSide) {
+            return contactTarget + FENCE_ATTACK_BACKSTEP_DISTANCE;
+        }
+        if (side == null) {
+            return fallbackCoordinate;
+        }
+        return contactTarget;
     }
 
     /**
@@ -1584,7 +1577,7 @@ public class EnemyUnit {
         double nextX = x + stepX;
         double nextY = y + stepY;
 
-        if (!canOccupy(nextX, nextY)) {
+        if (canOccupy(nextX, nextY)) {
             return false;
         }
 
@@ -1656,12 +1649,12 @@ public class EnemyUnit {
      */
     private boolean canOccupy(double centerX, double centerY) {
         if (worldType == WorldType.CAVE) {
-            return movementCollisionMap == null
-                    || movementCollisionMap.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE);
+            return movementCollisionMap != null
+                    && !movementCollisionMap.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE);
         }
 
-        return Barn.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE)
-                && (farmObstacleMap == null || farmObstacleMap.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE, true));
+        return !Barn.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE)
+                || (farmObstacleMap != null && !farmObstacleMap.canOccupyCenteredBox(centerX, centerY, HITBOX_SIZE, HITBOX_SIZE, true));
     }
 
     /**
@@ -1715,7 +1708,7 @@ public class EnemyUnit {
      * On n'accepte la cible proposée que si le lapin peut vraiment l'occuper.
      */
     private boolean trySetNavigableGroundTarget(double candidateX, double candidateY) {
-        if (!canOccupy(candidateX, candidateY)) {
+        if (canOccupy(candidateX, candidateY)) {
             return false;
         }
 
@@ -1770,13 +1763,6 @@ public class EnemyUnit {
     }
 
     /**
-     * On expose la salle d'origine du monstre pour les aides visuelles et le debug.
-     */
-    public synchronized int getAssignedRoomIndex() {
-        return caveRoomIndex;
-    }
-
-    /**
      * On indique si le monstre est actuellement en état d'alerte.
      */
     public synchronized boolean isCaveAggroed() {
@@ -1784,31 +1770,10 @@ public class EnemyUnit {
     }
 
     /**
-     * On expose le rayon d'aggro de la grotte pour l'overlay et le debug.
-     */
-    public synchronized int getCaveInfluenceRadius() {
-        return worldType == WorldType.CAVE ? CAVE_INFLUENCE_RADIUS : 0;
-    }
-
-    /**
      * On fournit la vie normalisée pour les barres de santé.
      */
     public synchronized double getHealthRatio() {
         return combatUnit.getHealthRatio();
-    }
-
-    /**
-     * On expose la vie actuelle brute de l'unité.
-     */
-    public synchronized int getHealth() {
-        return combatUnit.getHealth();
-    }
-
-    /**
-     * On expose la vie maximale de l'unité.
-     */
-    public synchronized int getMaxHealth() {
-        return combatUnit.getMaxHealth();
     }
 
     /**
@@ -1822,7 +1787,7 @@ public class EnemyUnit {
      * On indique si l'unité peut encore agir.
      */
     public synchronized boolean isAlive() {
-        return combatUnit.isAlive();
+        return !combatUnit.isAlive();
     }
 
     /**
@@ -1925,13 +1890,6 @@ public class EnemyUnit {
         }
 
         return displayVectorY >= 0 ? DisplaySprite.FRONT : DisplaySprite.BACK;
-    }
-
-    /**
-     * On expose le sprite lapin déjà résolu pour ne pas refaire la logique dans la vue.
-     */
-    public synchronized DisplaySprite getDisplaySprite() {
-        return resolveDisplaySprite();
     }
 
     /**

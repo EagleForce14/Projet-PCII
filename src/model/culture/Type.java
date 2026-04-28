@@ -43,21 +43,6 @@ public enum Type {
         return displayName;
     }
 
-    /** Getter pour la catégorie du type de culture. */
-    public Categorie getCategorie() {
-        return categorie;
-    }
-
-    /** Getter pour la zone de terrain autorisée. */
-    public FieldZone getAllowedFieldZone() {
-        return allowedFieldZone;
-    }
-
-    /** Getter pour le type de boutique dans laquelle la culture est vendue. */
-    public ShopKind getShopKind() {
-        return shopKind;
-    }
-
     /** Vérifie si la culture est vendue dans la boutique principale. */
     public boolean isSoldInMainShop() {
         return shopKind == ShopKind.MAIN;

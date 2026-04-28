@@ -4,10 +4,10 @@ package model.objective;
 public class ObjectifCompteur implements ObjectifJournalier {
 
     /** Attribut qui stocke le type de l'objectif */
-    private TypeObjectif type;
+    private final TypeObjectif type;
 
     /** Attribut qui stocke le valeur cible */
-    private int valeurCible;
+    private final int valeurCible;
 
     /** Attribut qui stocke la progression de l'objectif */
     private int progression;

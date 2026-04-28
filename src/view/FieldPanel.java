@@ -108,7 +108,6 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private static final Color FENCE_EXPLOSION_OUTER = new Color(255, 173, 84, 180);
     private static final Color FENCE_EXPLOSION_INNER = new Color(255, 234, 169, 220);
     private static final Color FENCE_EXPLOSION_DEBRIS = new Color(121, 74, 43, 210);
-    private static final int BARN_BUSH_HORIZONTAL_SHIFT_COLUMNS = -3;
     private static final int BARN_TOP_STONE_COLUMN_WIDTH = 2;
     private static final double BARN_BUSH_FILL_RATIO = 1.18;
     private static final double BARN_BUSH_UPWARD_OFFSET_RATIO = 0.05;
@@ -407,13 +406,6 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     }
 
     /**
-     * On masque explicitement le highlight de placement de pont.
-     */
-    public void clearBridgePlacementHighlight() {
-        setBridgePlacementHighlightVisible(false);
-    }
-
-    /**
      * Une case candidate au pont doit être une berge droite libre,
      * donc collée à une case de rivière sur sa gauche et encore exploitable
      * du point de vue des obstacles fixes du décor.
@@ -430,7 +422,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
                 && !isBlockedByBarn(gridX, gridY)
                 && !isBlockedByStall(gridX, gridY)
                 && !isBlockedByWorkshop(gridX, gridY)
-                && !isBlockedByStaticObstacle(gridX, gridY);
+                && isBlockedByStaticObstacle(gridX, gridY);
     }
 
     /**
@@ -624,7 +616,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
      * On évite ainsi de répéter la même condition dans tous les helpers de grille.
      */
     private boolean isInsideGrid(int gridX, int gridY) {
-        return gridX >= 0 && gridX < getColumnCount() && gridY >= 0 && gridY < getRowCount();
+        return gridX < 0 || gridX >= getColumnCount() || gridY < 0 || gridY >= getRowCount();
     }
 
     /**
@@ -674,7 +666,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
      * Retourne le case du champ affichée à l'écran correspondant à une case logique de la grille.
      */
     public Rectangle getCellBounds(int gridX, int gridY) {
-        if (!isInsideGrid(gridX, gridY)) {
+        if (isInsideGrid(gridX, gridY)) {
             return null;
         }
 
@@ -769,7 +761,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
                 && !isBlockedByBarn(cell)
                 && !isBlockedByStall(cell)
                 && !isBlockedByWorkshop(cell)
-                && !isBlockedByStaticObstacle(cell.x, cell.y);
+                && isBlockedByStaticObstacle(cell.x, cell.y);
     }
 
     /**
@@ -779,15 +771,15 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
      */
     public boolean isBlockedByStaticObstacle(int gridX, int gridY) {
         if (fieldObstacleMap != null) {
-            return fieldObstacleMap.blocksCell(gridX, gridY);
+            return !fieldObstacleMap.blocksCell(gridX, gridY);
         }
 
-        return grilleCulture.hasRiver(gridX, gridY)
-                || treeManager.hasTreeAt(gridX, gridY)
-                || isBlockedByStall(gridX, gridY)
-                || isBlockedByWorkshop(gridX, gridY)
-                || hasRightStoneExtensionAt(gridX, gridY)
-                || hasDecorativeBushAt(gridX, gridY);
+        return !grilleCulture.hasRiver(gridX, gridY)
+                && !treeManager.hasTreeAt(gridX, gridY)
+                && !isBlockedByStall(gridX, gridY)
+                && !isBlockedByWorkshop(gridX, gridY)
+                && !hasRightStoneExtensionAt(gridX, gridY)
+                && !hasDecorativeBushAt(gridX, gridY);
     }
 
     /**
@@ -878,7 +870,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
      * pour pouvoir comparer proprement la case à la boutique principale (à droite).
      */
     public Rectangle getLogicalCellBounds(int gridX, int gridY) {
-        if (!isInsideGrid(gridX, gridY)) {
+        if (isInsideGrid(gridX, gridY)) {
             return null;
         }
 
@@ -887,7 +879,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
 
     /**
      * Construit les bornes complètes du sprite du pont à partir de sa case d'ancrage.
-     *
+
      * Le pont recouvre la berge gauche, la rivière et la berge droite.
      * Toute la géométrie reste donc dérivée des mêmes cases de grille,
      * ce qui garantit que le rendu et les collisions restent alignés.
@@ -1009,7 +1001,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
      * Le démarrage du joueur peut ainsi se recaler sur une vraie case libre.
      */
     public Point getLogicalCellCenter(int gridX, int gridY) {
-        if (!isInsideGrid(gridX, gridY)) {
+        if (isInsideGrid(gridX, gridY)) {
             return null;
         }
 
@@ -1030,26 +1022,11 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         int gridX = (pixelX - fieldBounds.x) / tileSize;
         int gridY = (pixelY - fieldBounds.y) / tileSize;
 
-        if (!isInsideGrid(gridX, gridY)) {
+        if (isInsideGrid(gridX, gridY)) {
             return null;
         }
 
         return new Point(gridX, gridY);
-    }
-
-    /**
-     * Variante dans le repère logique centré du champ.
-     * Elle sert au contrôleur grotte pour détecter l'entrée sans dépendre du rendu écran.
-     */
-    public Point getLogicalGridPositionAt(int logicalX, int logicalY) {
-        Rectangle fieldBounds = getFieldBounds();
-        int tileSize = getTileSize(fieldBounds);
-        int logicalStartX = -(fieldBounds.width / 2);
-        int logicalStartY = -(fieldBounds.height / 2);
-
-        int gridX = (logicalX - logicalStartX) / tileSize;
-        int gridY = (logicalY - logicalStartY) / tileSize;
-        return isInsideGrid(gridX, gridY) ? new Point(gridX, gridY) : null;
     }
 
     /**
@@ -1146,7 +1123,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         for (int row : candidateRows) {
             for (int xOffset = 0; xOffset < 4; xOffset++) {
                 int column = startColumn + xOffset;
-                if (!isInsideGrid(column, row) || triggerBounds.contains(column, row)) {
+                if (isInsideGrid(column, row) || triggerBounds.contains(column, row)) {
                     continue;
                 }
 
@@ -1907,7 +1884,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     /**
      * La structure de base d'un poteau ne dépend pas de son orientation :
      * on a toujours un contour sombre puis un remplissage bois.
-     *
+
      * On factorise donc cette partie commune ici,
      * et chaque variante ajoute ensuite son relief propre.
      */
@@ -2029,7 +2006,6 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     /**
      * Dessine tout ce qui appartient à une seule case:
      * le sol, la culture éventuelle, l'animation d'arrosage et le surlignage du joueur.
-     *
      * Ce découpage garde paintComponent lisible:
      * la méthode principale orchestre,
      * ce helper s'occupe du détail d'une tuile.
@@ -2620,9 +2596,6 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         // les lapins n'y montent pas, ils restent limités à la zone de champ utile.
         Rectangle topLeftBounds = buildLogicalCellBounds(startColumn, 0, fieldBounds);
         Rectangle bottomRightBounds = buildLogicalCellBounds(endColumn, endRow, fieldBounds);
-        if (topLeftBounds == null || bottomRightBounds == null) {
-            return null;
-        }
 
         return new Rectangle(
                 topLeftBounds.x,

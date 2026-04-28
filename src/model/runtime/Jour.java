@@ -109,10 +109,6 @@ public class Jour extends Thread {
         }
     }
 
-    public boolean isTempsFige() {
-        return tempsFige;
-    }
-
     /** Méthode pour arrêter le thread */
     public void arreter() {
         actif = false;
@@ -158,11 +154,6 @@ public class Jour extends Thread {
         if (listener != null) {
             dayChangeListeners.add(listener);
         }
-    }
-
-    /** Retrait d'un listener */
-    public void removeDayChangeListener(DayChangeListener listener) {
-        dayChangeListeners.remove(listener);
     }
 
     private void notifyDayChangeListeners() {

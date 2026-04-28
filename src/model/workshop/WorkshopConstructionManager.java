@@ -57,13 +57,6 @@ public final class WorkshopConstructionManager {
     }
 
     /**
-     * On dit si une nouvelle fabrication peut démarrer tout de suite.
-     */
-    public boolean canStartBridgeConstruction() {
-        return !isConstructionInProgress() && inventaire.possedeBois(bridgeWoodCost);
-    }
-
-    /**
      * On lance une fabrication de pont si rien ne l'empêche déjà.
      */
     public boolean startBridgeConstruction() {
@@ -144,13 +137,6 @@ public final class WorkshopConstructionManager {
      */
     public long getBridgeDurationMs() {
         return bridgeDurationMs;
-    }
-
-    /**
-     * On renvoie le libellé court de l'objet fabriqué par ce manager.
-     */
-    public String getConstructionLabel() {
-        return "Pont";
     }
 
     /**

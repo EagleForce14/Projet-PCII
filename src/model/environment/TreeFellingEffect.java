@@ -2,7 +2,7 @@ package model.environment;
 
 /**
  * Petit effet visuel lancé quand un arbre est coupé.
- *
+
  * On ne garde volontairement que la position de la souche
  * et l'instant de départ de l'animation :
  * la vue recalcule ensuite toutes les tailles et transparences

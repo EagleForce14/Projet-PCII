@@ -364,24 +364,10 @@ public class MovementView extends JPanel {
      * en fonction de son animation et de sa frame courante.
      */
     private Image resolveGardenerSprite(Unit unit) {
-        Image[] frames = gardenerSprites.get(unit.getSpriteAnimation());
-        if (frames == null || frames.length == 0) {
-            return null;
-        }
-
-        int frameIndex = Math.max(0, Math.min(unit.getAnimationFrameIndex(), frames.length - 1));
-        Image sprite = frames[frameIndex];
-        if (sprite != null) {
-            return sprite;
-        }
-
-        for (Image frame : frames) {
-            if (frame != null) {
-                return frame;
-            }
-        }
-
-        return null;
+        return resolveSpriteFrame(
+                gardenerSprites.get(unit.getSpriteAnimation()),
+                unit.getAnimationFrameIndex()
+        );
     }
 
     /**
@@ -402,7 +388,20 @@ public class MovementView extends JPanel {
             return null;
         }
 
-        int frameIndex = Math.max(0, Math.min(unit.getAnimationFrameIndex(), frames.length - 1));
+        return resolveSpriteFrame(frames, unit.getAnimationFrameIndex());
+    }
+
+    /**
+     * Extrait la frame réellement affichable dans une animation.
+     * On tente d'abord la frame courante, puis on retombe sur la première image non nulle
+     * pour éviter qu'une animation incomplète rende le personnage invisible.
+     */
+    private Image resolveSpriteFrame(Image[] frames, int requestedFrameIndex) {
+        if (frames == null || frames.length == 0) {
+            return null;
+        }
+
+        int frameIndex = Math.max(0, Math.min(requestedFrameIndex, frames.length - 1));
         Image sprite = frames[frameIndex];
         if (sprite != null) {
             return sprite;

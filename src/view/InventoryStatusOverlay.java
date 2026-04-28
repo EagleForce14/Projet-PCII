@@ -21,12 +21,12 @@ import java.awt.RenderingHints;
 
 /**
  * Vue dédiée à l'inventaire affiché en bas de l'écran.
- *
+
  * L'inventaire est découpé en trois blocs :
  * - les graines du champ principal,
  * - les graines du côté gauche de la rivière,
  * - puis les ressources et objets de pose.
- *
+
  * Le modèle métier ne change pas :
  * ce panneau ne fait que présenter différemment les mêmes slots logiques.
  */

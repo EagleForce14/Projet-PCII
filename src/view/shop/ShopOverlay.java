@@ -19,7 +19,6 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
 import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
@@ -43,7 +42,7 @@ import java.util.Map;
 /**
  * Classe permettant d'afficher la boutique en plein ecran dans le jeu.
  * Elle gêle l'état actuel du jeu tant qu'elle reste ouverte.
- *
+
  * L'idée générale:
  * - une colonne fine pour les filtres,
  * - une grande zone centrale pour le catalogue,
@@ -394,28 +393,15 @@ public class ShopOverlay extends JPanel {
      * On construit la zone centrale du catalogue avec son compteur et sa liste scrollable.
      */
     private JComponent buildCatalogPanel() {
-        ShopSectionPanel catalogPanel = new ShopSectionPanel(woodTexture);
-        catalogPanel.setLayout(new BorderLayout(0, 16));
-        catalogPanel.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
-
-        JPanel topRow = new JPanel(new BorderLayout());
-        topRow.setOpaque(false);
-
         JLabel title = createPrimaryLabel(priceFont);
         title.setText("Articles");
-        catalogCountLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-
-        topRow.add(title, BorderLayout.WEST);
-        topRow.add(catalogCountLabel, BorderLayout.EAST);
-
-        // Le catalogue est scrollable, mais sans chrome par defaut de Swing
-        // pour garder le rendu propre et "jeu".
-        JScrollPane scrollPane = createScrollPane(productsGrid);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(24);
-
-        catalogPanel.add(topRow, BorderLayout.NORTH);
-        catalogPanel.add(scrollPane, BorderLayout.CENTER);
-        return catalogPanel;
+        return ShopOverlayUiFactory.createCatalogSectionPanel(
+                woodTexture,
+                title,
+                catalogCountLabel,
+                productsGrid,
+                24
+        );
     }
 
     /**
@@ -461,7 +447,7 @@ public class ShopOverlay extends JPanel {
 
         // La liste du panier occupe l'espace restant.
         // C'est la seule zone de cette colonne qui doit "respirer" verticalement.
-        JScrollPane cartScroll = createScrollPane(cartItemsPanel);
+        JScrollPane cartScroll = ShopOverlayUiFactory.createTransparentScrollPane(cartItemsPanel);
         cartScroll.getVerticalScrollBar().setUnitIncrement(20);
 
         JPanel footer = new JPanel();
@@ -754,18 +740,7 @@ public class ShopOverlay extends JPanel {
      * On construit une ligne visuelle autonome pour un article déjà présent dans le panier.
      */
     private JComponent createCartRow(CartItem item) {
-        // Chaque ligne du panier recompose un mini panneau autonome.
-        // Ca garde le rendu homogène avec le reste de l'overlay
-        // sans regonfler ShopOverlay avec une classe dediee de plus.
-        ShopSectionPanel row = new ShopSectionPanel(woodTexture);
-        row.setLayout(new BorderLayout(8, 0));
-        row.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
-        row.setAlignmentX(LEFT_ALIGNMENT);
-        // On fige la hauteur de chaque ligne de panier pour eviter
-        // les gros boutons verticaux apercus pendant les essais.
-        row.setPreferredSize(new Dimension(0, 84));
-        row.setMinimumSize(new Dimension(0, 84));
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 84));
+        ShopSectionPanel row = createCartRowPanel();
 
         Product product = item.getProduct();
 
@@ -835,6 +810,22 @@ public class ShopOverlay extends JPanel {
 
         row.add(meta, BorderLayout.CENTER);
         row.add(controls, BorderLayout.EAST);
+        return row;
+    }
+
+    /**
+     * Prépare le conteneur standard d'une ligne du panier.
+     * Le contenu de la ligne varie, mais son enveloppe visuelle reste stable
+     * pour garder un panier homogène et compact.
+     */
+    private ShopSectionPanel createCartRowPanel() {
+        ShopSectionPanel row = new ShopSectionPanel(woodTexture);
+        row.setLayout(new BorderLayout(8, 0));
+        row.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
+        row.setAlignmentX(LEFT_ALIGNMENT);
+        row.setPreferredSize(new Dimension(0, 84));
+        row.setMinimumSize(new Dimension(0, 84));
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 84));
         return row;
     }
 
@@ -1005,7 +996,7 @@ public class ShopOverlay extends JPanel {
 
     /**
      * Petit texte court affiché directement sur la carte produit du catalogue.
-     *
+
      * On le réserve surtout aux objets "décor / boosts".
      */
     private String getProductCatalogDetailLabel(Product product) {
@@ -1079,15 +1070,13 @@ public class ShopOverlay extends JPanel {
      * On incrémente une quantité sans jamais dépasser la borne entière maximale.
      */
     private int incrementQuantity(int quantity) {
-        return quantity >= Integer.MAX_VALUE ? Integer.MAX_VALUE : quantity + 1;
+        return quantity == Integer.MAX_VALUE ? Integer.MAX_VALUE : quantity + 1;
     }
 
     /**
      * On force un composant à rester bien ancré à gauche dans un BoxLayout.
      */
     private JComponent createLeftAlignedRow(JComponent component) {
-        // Petit helper utilitaire: BoxLayout aime recentrer certains labels.
-        // Ce wrapper impose une vraie ancre a gauche, sans magie supplementaire.
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         row.setOpaque(false);
         row.add(component);
@@ -1156,21 +1145,4 @@ public class ShopOverlay extends JPanel {
         return label;
     }
 
-    /**
-     * On crée un scroll transparent avec la scrollbar visuelle dédiée à la boutique.
-     */
-    private JScrollPane createScrollPane(JComponent content) {
-        // Le but est juste d'avoir le comportement de scroll,
-        // pas l'apparence standard assez lourde de Swing.
-        JScrollPane scrollPane = new JScrollPane(content);
-        scrollPane.setOpaque(false);
-        scrollPane.getViewport().setOpaque(false);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.getVerticalScrollBar().setOpaque(false);
-        // La scrollbar a son propre composant top-level pour que ShopOverlay
-        // reste un simple orchestrateur de layout et d'etat.
-        scrollPane.getVerticalScrollBar().setUI(new ShopScrollBarUI());
-        return scrollPane;
-    }
 }

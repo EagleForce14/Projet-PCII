@@ -59,17 +59,6 @@ public class TreeManager {
     }
 
     /**
-     * On renvoie une copie de l'arbre demandé pour protéger l'état interne.
-     */
-    public synchronized TreeInstance getTreeAt(int gridX, int gridY) {
-        if (!isInsideGrid(gridX, gridY) || trees[gridX][gridY] == null) {
-            return null;
-        }
-
-        return trees[gridX][gridY].copy();
-    }
-
-    /**
      * Un arbre ne peut apparaître que sur une case encore en herbe,
      * donc non labourée, sans culture, sans chemin, sans rivière, sans compost
      * et sans autre arbre.
@@ -133,7 +122,7 @@ public class TreeManager {
 
     /**
      * Enregistre un clic de coupe sur un arbre précis.
-     *
+
      * Tant que le nombre d'impacts requis n'est pas atteint,
      * on ne fait qu'augmenter la progression.
      * Au dernier impact, l'arbre disparaît, sa hitbox aussi,

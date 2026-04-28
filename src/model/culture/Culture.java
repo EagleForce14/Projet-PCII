@@ -145,15 +145,6 @@ public class Culture {
         return isBoostedByRiver() ? RIVER_WILT_DELAY_MULTIPLIER : 1.0;
     }
 
-    /**
-     * Quand le contexte change autour de la culture,
-     * on réveille simplement le thread pour qu'il recalcule son temps restant.
-     * C'est plus léger et plus sûr que de bricoler directement son chrono depuis la grille.
-     */
-    public void notifierContexteCroissanceModifie() {
-        threadCroissance.reveillerPourRecalculDelai();
-    }
-
     /** Méthode qui permet de manger la culture seulement si elle est à maturité */
     public boolean manger() {
         // Vérifie si la culture est à maturité avant de la manger

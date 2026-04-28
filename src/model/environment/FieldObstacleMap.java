@@ -10,14 +10,14 @@ import java.awt.Rectangle;
 
 /**
  * Centralise les règles spatiales des obstacles fixes du champ.
- *
+
  * Aujourd'hui cela couvre :
  * - les arbres,
  * - la rivière,
  * - l'échoppe,
  * - la menuiserie,
  * - et toutes les validations géométriques nécessaires autour d'eux.
- *
+
  * Le but est simple :
  * éviter que le joueur, les lapins, les arbres et la vue
  * ne réinventent chacun leur propre définition d'une case bloquante.
@@ -442,7 +442,7 @@ public class FieldObstacleMap implements MovementCollisionMap {
 
     /**
      * La rivière est bloquante par défaut.
-     *
+
      * Seule exception : pour le joueur, un pont posé ouvre un couloir étroit
      * au milieu de la rivière. On vérifie alors que tout le corps de l'entité
      * reste bien contenu dans ce passage central, afin d'interdire la marche
@@ -483,7 +483,7 @@ public class FieldObstacleMap implements MovementCollisionMap {
      * Le pont est ancré sur la case de berge droite.
      * Si cette ancre existe pour la ligne courante, on considère désormais
      * toute l'image logique du pont comme zone traversable.
-     *
+
      * Cela adoucit la règle précédente :
      * tant que le corps du joueur reste dans le sprite du pont,
      * la rivière ne doit plus le bloquer.

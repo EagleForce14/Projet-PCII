@@ -4,10 +4,8 @@ import model.culture.Type;
 import model.shop.FacilityType;
 import model.shop.Seed;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
 public class Inventaire {
     /** Une classe qui modélise l'inventaire du joueur et la gestion de ses ressources **/
 
@@ -208,38 +206,6 @@ public class Inventaire {
     }
 
     /**
-     * Retourne un instantané des graines réellement disponibles.
-     *
-     * On itère directement sur le contenu courant de l'inventaire
-     * au lieu d'utiliser une liste codée en dur.
-     * Si de nouveaux types sont ajoutés plus tard dans l'inventaire,
-     * ils entreront automatiquement dans ce résultat.
-     */
-    public List<Type> getAvailableSeedTypes() {
-        List<Type> availableSeedTypes = new ArrayList<>();
-        for (Map.Entry<Type, Integer> entry : new HashMap<>(graines).entrySet()) {
-            if (entry.getKey() != null && entry.getValue() != null && entry.getValue() > 0) {
-                availableSeedTypes.add(entry.getKey());
-            }
-        }
-        return availableSeedTypes;
-    }
-
-    /**
-     * Même logique pour les installations :
-     * seul le stock réellement positif est proposé au système de drops.
-     */
-    public List<FacilityType> getAvailableFacilityTypes() {
-        List<FacilityType> availableFacilityTypes = new ArrayList<>();
-        for (Map.Entry<FacilityType, Integer> entry : new HashMap<>(installations).entrySet()) {
-            if (entry.getKey() != null && entry.getValue() != null && entry.getValue() > 0) {
-                availableFacilityTypes.add(entry.getKey());
-            }
-        }
-        return availableFacilityTypes;
-    }
-
-    /**
      * On dit si le stock de bois couvre bien la quantité demandée.
      */
     public boolean possedeBois(int quantiteDemandee) {
@@ -269,7 +235,7 @@ public class Inventaire {
 
     /**
      * Retourne les graines autorisées pour les drops de grotte.
-     *
+
      * On ne filtre volontairement pas par quantité possédée :
      * une nouvelle partie démarre avec un stock à zéro,
      * mais les types existent déjà dans l'inventaire visible.
@@ -277,16 +243,8 @@ public class Inventaire {
      */
     public List<Type> getDropCandidateSeedTypes() {
         List<Type> dropCandidateSeedTypes = new ArrayList<>();
-        for (Type type : MAIN_ZONE_SEED_SLOT_ORDER) {
-            if (type != null) {
-                dropCandidateSeedTypes.add(type);
-            }
-        }
-        for (Type type : LEFT_ZONE_SEED_SLOT_ORDER) {
-            if (type != null) {
-                dropCandidateSeedTypes.add(type);
-            }
-        }
+        Collections.addAll(dropCandidateSeedTypes, MAIN_ZONE_SEED_SLOT_ORDER);
+        Collections.addAll(dropCandidateSeedTypes, LEFT_ZONE_SEED_SLOT_ORDER);
         return dropCandidateSeedTypes;
     }
 
@@ -295,11 +253,7 @@ public class Inventaire {
      */
     public List<FacilityType> getDropCandidateFacilityTypes() {
         List<FacilityType> dropCandidateFacilityTypes = new ArrayList<>();
-        for (FacilityType type : FACILITY_SLOT_ORDER) {
-            if (type != null) {
-                dropCandidateFacilityTypes.add(type);
-            }
-        }
+        Collections.addAll(dropCandidateFacilityTypes, FACILITY_SLOT_ORDER);
         return dropCandidateFacilityTypes;
     }
 

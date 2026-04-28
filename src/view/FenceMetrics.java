@@ -2,7 +2,7 @@ package view;
 
 /**
  * Regroupe toutes les proportions utilisées pour dessiner une clôture.
- *
+
  * Parce que ces valeurs ne décrivent pas vraiment le panneau lui-même :
  * elles décrivent la "géométrie visuelle" d'une clôture.
  */

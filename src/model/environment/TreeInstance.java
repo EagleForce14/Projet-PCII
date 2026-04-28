@@ -2,7 +2,7 @@ package model.environment;
 
 /**
  * Représente un arbre posé sur une case précise du champ.
- *
+
  * - non mature -> on affiche le tronc,
  * - mature -> on affiche l'arbre complet.
  */

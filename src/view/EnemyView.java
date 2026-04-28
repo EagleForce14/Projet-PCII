@@ -318,14 +318,6 @@ public class EnemyView extends JPanel {
     }
 
     /**
-     * Sélectionne un ennemi à partir d'un point cliqué puis redessine la vue.
-     */
-    public void selectEnemyAt(Point point) {
-        selectedEnemy = findEnemyAt(point);
-        repaint();
-    }
-
-    /**
      * Traite un clic sur le monde exactement comme une sélection d'ennemi.
      */
     public void handleWorldClick(Point point) {
@@ -396,7 +388,7 @@ public class EnemyView extends JPanel {
         double frameX = enemyCenterX - (frameWidth / 2.0);
         double frameY = enemyCenterY - (frameHeight / 2.0);
         g2d.drawImage(sprite, AffineTransform.getTranslateInstance(frameX, frameY), this);
-        if (enemy != null && enemy.isHitFlashVisible()) {
+        if (enemy.isHitFlashVisible()) {
             g2d.setColor(CAVE_HIT_FLASH);
             g2d.fillOval(
                     (int) Math.round(enemyCenterX - (frameWidth / 2.0)),
@@ -405,7 +397,7 @@ public class EnemyView extends JPanel {
                     frameHeight
             );
         }
-        if (enemy != null && enemy.isCaveMonster()) {
+        if (enemy.isCaveMonster()) {
             drawCaveHealthBar(g2d, enemy, enemyCenterX, enemyCenterY, isSelected);
         }
     }

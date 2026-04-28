@@ -56,14 +56,6 @@ public final class TreeGeometry {
     }
 
     /**
-     * Construit l'enveloppe maximale allouée au sprite dans le repère d'une case.
-     * Le vrai sprite peut être un peu plus petit selon son ratio, mais jamais plus grand.
-     */
-    public static Rectangle buildCenteredScaledBounds(Rectangle cellBounds, double tileScale) {
-        return buildAnchoredScaledBounds(cellBounds, tileScale, 0.50, 0.50);
-    }
-
-    /**
      * On construit ici l'enveloppe visuelle du grand arbre selon son type de sprite.
      */
     public static Rectangle buildMatureTreeBounds(Rectangle cellBounds, boolean weepingWillow) {

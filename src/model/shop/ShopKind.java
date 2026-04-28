@@ -2,7 +2,7 @@ package model.shop;
 
 /**
  * Décrit les deux points de vente du jeu.
- *
+
  * La boutique centrale et l'échoppe réutilisent la même logique,
  * mais elles n'exposent pas le même catalogue.
  */

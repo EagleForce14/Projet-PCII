@@ -2,13 +2,13 @@ package model.management;
 
 /**
  * Représente une animation de gain d'argent en attente d'affichage.
- *
+
  * Le modèle d'argent ne connaît pas l'écran ni les coordonnées Swing.
  * Il mémorise donc seulement :
  * - le montant gagné,
  * - un point de départ logique dans le monde quand on en dispose,
  * - et l'instant de départ de l'effet.
- *
+
  * La vue convertit ensuite ces informations en trajectoire visuelle.
  */
 public class MoneyRewardEffect {
@@ -42,13 +42,6 @@ public class MoneyRewardEffect {
         this.sourceWorldY = sourceWorldY;
         this.explicitSource = explicitSource;
         this.startedAtMs = startedAtMs;
-    }
-
-    /**
-     * On renvoie le montant porté par cet effet.
-     */
-    public int getAmount() {
-        return amount;
     }
 
     /**

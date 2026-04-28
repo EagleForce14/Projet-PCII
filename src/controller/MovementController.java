@@ -17,7 +17,6 @@ import model.culture.Culture;
 import model.culture.GrilleCulture;
 import model.culture.Stade;
 import model.culture.Type;
-import model.enemy.EnemyModel;
 import model.environment.FieldObstacleMap;
 import model.environment.TreeInstance;
 import model.environment.TreeManager;
@@ -53,7 +52,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     /**
      * On branche ici tous les boutons et tous les listeners qui pilotent le jeu principal.
      */
-    public MovementController(MovementModel model, MovementView view, EnemyModel enemyModel, EnemyView enemyView, SidebarPanel sidebarPanel,
+    public MovementController(MovementModel model, MovementView view, EnemyView enemyView, SidebarPanel sidebarPanel,
                               GrilleCulture grilleCulture, Money playerMoney, Inventaire inventaire,
                               TreeManager treeManager,
                               FieldPanel fieldPanel, InventoryStatusOverlay inventoryStatusOverlay, ShopOverlay shopOverlay,
@@ -401,7 +400,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
      * La coupe d'arbre suit exactement la même philosophie que les autres boutons :
      * le contrôleur valide l'action, met à jour le modèle, puis laisse les vues
      * se contenter d'afficher l'état courant.
-     *
+
      * Ici, chaque clic ajoute simplement un impact.
      * Au quatrième, l'arbre disparaît et le bois est crédité.
      */
@@ -533,7 +532,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
     /**
      * Un clic sur l'inventaire choisit explicitement l'action en attente.
      * Recliquer sur le slot déjà sélectionné annule simplement ce mode.
-     *
+
      * Cette méthode joue donc un rôle central dans le "mode courant" du joueur:
      * elle transforme un simple clic UI en intention de gameplay.
      * Après son passage, le contrôleur sait si le joueur veut planter une graine
@@ -815,7 +814,7 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
 
     /**
      * Un clic sur le compost posé sert uniquement à afficher sa zone d'effet.
-     *
+
      * On ne consomme pas ce clic comme une action de pose :
      * c'est un clic d'inspection / lecture pour aider le joueur à comprendre le bonus.
      */

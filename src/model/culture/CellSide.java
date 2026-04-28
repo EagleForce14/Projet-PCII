@@ -2,7 +2,7 @@ package model.culture;
 
 /**
  * Représente un des quatre bords d'une case de la grille.
- *
+
  * Cette information sert à deux choses très concrètes :
  * - On s'en sert pour savoir sur quel bord une clôture est posée,
  * - la vue s'en sert pour dessiner la preview et la clôture du bon côté.
@@ -53,7 +53,7 @@ public enum CellSide {
 
     /**
      * Renvoie le bord opposé sur la case voisine.
-     *
+
      * Exemple :
      * le bord RIGHT d'une case correspond au bord LEFT de la case à droite.
      */

@@ -16,26 +16,13 @@ public class GrilleCulture {
 
     /**
      * La grille couvre désormais toute la zone de jeu visible.
-     *
+
      * Ces dimensions ont été choisies pour remplir confortablement la fenêtre.
      */
     public static final int LARGEUR_GRILLE = 22;
     
     /** Constante représentant la hauteur de la grille */
     public static final int HAUTEUR_GRILLE = 16;
-
-    /** Constante représentant le prix d'achat de chaque culture */
-    public static final Map<Type, Integer> PRIX_ACHAT_CULTURES = Map.of(
-        Type.TULIPE, 10,
-        Type.ROSE, 10,
-        Type.MARGUERITE, 10,
-        Type.ORCHIDEE, 10,
-        Type.NENUPHAR, 10,
-        Type.IRIS_DES_MARAIS, 10,
-        Type.CAROTTE, 20,
-        Type.RADIS, 20,
-        Type.CHOUFLEUR, 20
-    );
 
     /** Constante représentant le prix de vente de chaque culture */
     public static final Map<Type, Integer> PRIX_VENTE_CULTURES = Map.of(
@@ -48,19 +35,6 @@ public class GrilleCulture {
         Type.CAROTTE, 25,
         Type.RADIS, 30,
         Type.CHOUFLEUR, 35
-    );
-
-    /** SERA UTILISE PROCHAINEMENT. Constante représentant le delai de croissance de chaque culture */
-    public static final Map<Type, Integer> DELAI_CROISSANCE_CULTURES = Map.of(
-        Type.TULIPE, 5,
-        Type.ROSE, 5,
-        Type.MARGUERITE, 5,
-        Type.ORCHIDEE, 5,
-        Type.NENUPHAR, 5,
-        Type.IRIS_DES_MARAIS, 5,
-        Type.CAROTTE, 10,
-        Type.RADIS, 10,
-        Type.CHOUFLEUR, 10
     );
 
     /** Attribut représentant la grille de culture */
@@ -303,13 +277,13 @@ public class GrilleCulture {
 
     /**
      * Une clôture sert ici à fermer le bord d'une parcelle de terre.
-     *
+
      * Les règles :
      * - la case de depart doit etre une case de terre,
      * - on ne pose pas de clôture entre deux cases de terre voisines,
      * - un chemin reste un bord valide,
      * - on refuse toujours les doublons sur un segment déjà occupé.
-     *
+
      * Autrement dit, la clôture se pose sur le contour de la parcelle,
      * pas au milieu d'un bloc de terre continu.
      */
@@ -486,13 +460,6 @@ public class GrilleCulture {
     }
 
     /**
-     * Dit si au moins un compost est déjà posé quelque part sur la map.
-     */
-    public boolean hasCompost() {
-        return !compostCells.isEmpty();
-    }
-
-    /**
      * Le pont est mémorisé par sa case d'ancrage côté droit de la rivière.
      * Cette case reste marchable, mais elle n'est plus libre pour d'autres placements.
      */
@@ -528,7 +495,7 @@ public class GrilleCulture {
      * Un chemin peut etre posé seulement sur une case libre :
      * qui n'est pas déjà recouverte par un chemin,
      * qui n'est pas occupée par une culture.
-     *
+
      * Ici la règle voulue est simple :
      * un chemin se pose sur de l'herbe,
      * pas sur une case deja transformée en terre.
@@ -575,7 +542,7 @@ public class GrilleCulture {
 
     /**
      * Une rivière se pose sur une case d'herbe totalement libre.
-     *
+
      * Important :
      * on la traite comme un vrai obstacle de terrain.
      * Donc pas de labour, pas de culture, pas de chemin, pas de compost sur la même case.
@@ -603,7 +570,7 @@ public class GrilleCulture {
 
     /**
      * Un pont se pose uniquement sur la berge droite de la rivière décorative.
-     *
+
      * La case ciblée reste une case de berge normale côté sol,
      * mais elle devient l'ancre métier et visuelle du pont posé.
      */
@@ -638,7 +605,7 @@ public class GrilleCulture {
 
     /**
      * Le compost se pose seulement sur de l'herbe libre.
-     *
+
      * Les règles :
      * - pas plus de deux composts posés en même temps,
      * - pas sur une case deja labourée,
@@ -691,7 +658,7 @@ public class GrilleCulture {
 
     /**
      * Indique si une case de terre profite du compost.
-     *
+
      * Important :
      * on ne booste que les cases labourées.
      * Le compost peut être proche d'une zone d'herbe,
@@ -737,13 +704,7 @@ public class GrilleCulture {
      * une petite boucle est plus claire qu'une structure plus lourde.
      */
     private int findCompostIndexAt(int x, int y) {
-        for (int index = 0; index < compostCells.size(); index++) {
-            Point compostCell = compostCells.get(index);
-            if (compostCell.x == x && compostCell.y == y) {
-                return index;
-            }
-        }
-        return -1;
+        return findPointIndexAt(compostCells, x, y);
     }
 
     /**
@@ -751,25 +712,22 @@ public class GrilleCulture {
      * et c'est plus simple que de gérer une structure plus complexe juste pour ça.
      */
     private int findBridgeAnchorIndexAt(int x, int y) {
-        for (int index = 0; index < bridgeAnchorCells.size(); index++) {
-            Point bridgeAnchorCell = bridgeAnchorCells.get(index);
-            if (bridgeAnchorCell.x == x && bridgeAnchorCell.y == y) {
+        return findPointIndexAt(bridgeAnchorCells, x, y);
+    }
+
+    /**
+     * Retrouve la position d'une cellule précise dans une petite liste de points.
+     * Les composts et ancres de pont sont volontairement peu nombreux,
+     * donc une recherche linéaire reste la solution la plus simple et la plus lisible ici.
+     */
+    private int findPointIndexAt(List<Point> points, int x, int y) {
+        for (int index = 0; index < points.size(); index++) {
+            Point point = points.get(index);
+            if (point.x == x && point.y == y) {
                 return index;
             }
         }
         return -1;
-    }
-
-    /**
-     * Dit si une case de terre est assez proche d'une rivière pour recevoir son bonus.
-     *
-     * On inclut volontairement les diagonales :
-     * visuellement, cela donne une zone d'humidité compacte et facile à comprendre.
-     */
-    public boolean isCellBoostedByRiver(int x, int y) {
-        return estDansGrille(x, y)
-                && isLabouree(x, y)
-                && isCellBoostedByRiver(decorativeRiverCells, x, y);
     }
 
     /**

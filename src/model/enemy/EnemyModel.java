@@ -290,7 +290,7 @@ public class EnemyModel {
         int currentFieldHeight = fieldHeight;
 
         for (EnemyUnit enemy : enemies) {
-            if (!enemy.isAlive()) {
+            if (enemy.isAlive()) {
                 enemies.remove(enemy);
                 continue;
             }

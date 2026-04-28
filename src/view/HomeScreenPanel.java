@@ -298,7 +298,7 @@ public class HomeScreenPanel extends JPanel {
         for (int index = 0; index < LEAF_COUNT; index++) {
             FallingLeaf leaf = new FallingLeaf();
             // Demarrage sans feuille visible: toutes apparaissent ensuite depuis le haut.
-            randomizeLeaf(leaf, false);
+            randomizeLeaf(leaf);
             fallingLeaves.add(leaf);
         }
     }
@@ -307,14 +307,14 @@ public class HomeScreenPanel extends JPanel {
     private void updateLeaves() {
         int drawableWidth = Math.max(1, getWidth() - SidebarPanel.SIDEBAR_WIDTH);
         int drawableHeight = Math.max(1, getHeight());
-        if (drawableWidth <= 1 || drawableHeight <= 1) {
+        if (drawableWidth == 1 || drawableHeight == 1) {
             return;
         }
 
         // Premiere frame avec dimensions valides : repartit les feuilles sur toute la largeur.
         if (leavesNeedInitialDistribution) {
             for (FallingLeaf leaf : fallingLeaves) {
-                randomizeLeaf(leaf, false, drawableWidth, drawableHeight);
+                randomizeLeaf(leaf, drawableWidth, drawableHeight);
             }
             leavesNeedInitialDistribution = false; // Evite de repositionner les feuilles a chaque redimensionnement ensuite.
         }
@@ -330,7 +330,7 @@ public class HomeScreenPanel extends JPanel {
             boolean outOfBottom = leaf.y - leaf.size > drawableHeight;
             boolean outOfHorizontalBounds = visualX < -40 || visualX > drawableWidth + 40;
             if (outOfBottom || outOfHorizontalBounds) {
-                randomizeLeaf(leaf, false, drawableWidth, drawableHeight);
+                randomizeLeaf(leaf, drawableWidth, drawableHeight);
             }
         }
     }
@@ -367,21 +367,19 @@ public class HomeScreenPanel extends JPanel {
     }
 
     // Variante pratique qui prend les dimensions courantes du panneau.
-    private void randomizeLeaf(FallingLeaf leaf, boolean initialSpread) {
+    private void randomizeLeaf(FallingLeaf leaf) {
         int drawableWidth = Math.max(1, getWidth() - SidebarPanel.SIDEBAR_WIDTH);
         int drawableHeight = Math.max(1, getHeight());
-        randomizeLeaf(leaf, initialSpread, drawableWidth, drawableHeight);
+        randomizeLeaf(leaf, drawableWidth, drawableHeight);
     }
 
     // Repositionne une feuille avec de nouvelles valeurs de chute et de derives.
-    private void randomizeLeaf(FallingLeaf leaf, boolean initialSpread, int drawableWidth, int drawableHeight) {
+    private void randomizeLeaf(FallingLeaf leaf, int drawableWidth, int drawableHeight) {
         // Les feuilles respawnent soit dans toute la zone pour le premier affichage,
         // soit au-dessus de l'ecran pour retomber naturellement.
         leaf.size = 7.0 + random.nextDouble() * 7.0;
         leaf.x = random.nextDouble() * drawableWidth;
-        leaf.y = initialSpread
-                ? random.nextDouble() * drawableHeight
-                : -10.0 - random.nextDouble() * Math.max(120.0, drawableHeight * 0.35);
+        leaf.y = -10.0 - random.nextDouble() * Math.max(120.0, drawableHeight * 0.35);
         leaf.fallSpeed = 0.9 + random.nextDouble() * 1.8;
         leaf.horizontalDrift = -0.35 + random.nextDouble() * 0.7;
         leaf.swayAmplitude = 3.0 + random.nextDouble() * 9.0;

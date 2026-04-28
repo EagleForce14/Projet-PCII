@@ -262,6 +262,31 @@ public final class ProductPixelArt {
      * dans la largeur, la hauteur et le dessin.
      */
     private static Image getIllustratedSeedImage(Type type) {
+        return getDedicatedMatureCultureImage(type);
+    }
+
+    /**
+     * Cette table décrit le visuel "au sol" d'une culture mature.
+     * Les légumes et fleurs des marais utilisent leur sprite mature dédié,
+     * alors que les fleurs génériques de la ferme réutilisent le sprite mature commun.
+     */
+    private static Image getMatureCultureImage(Type type) {
+        if (type == null) {
+            return null;
+        }
+        Image dedicatedImage = getDedicatedMatureCultureImage(type);
+        if (dedicatedImage != null) {
+            return dedicatedImage;
+        }
+        return DEFAULT_MATURE_FLOWER_IMAGE;
+    }
+
+    /**
+     * Regroupe les cultures qui possèdent leur propre sprite mature dédié.
+     * Cette correspondance est réutilisée à la fois par les graines illustrées
+     * et par les drops de cultures matures pour garder un rendu cohérent.
+     */
+    private static Image getDedicatedMatureCultureImage(Type type) {
         if (type == Type.CAROTTE) {
             return CARROT_IMAGE;
         }
@@ -278,33 +303,6 @@ public final class ProductPixelArt {
             return MARSH_IRIS_IMAGE;
         }
         return null;
-    }
-
-    /**
-     * Cette table décrit le visuel "au sol" d'une culture mature.
-     * Les légumes et fleurs des marais utilisent leur sprite mature dédié,
-     * alors que les fleurs génériques de la ferme réutilisent le sprite mature commun.
-     */
-    private static Image getMatureCultureImage(Type type) {
-        if (type == null) {
-            return null;
-        }
-        if (type == Type.CAROTTE) {
-            return CARROT_IMAGE;
-        }
-        if (type == Type.RADIS) {
-            return RADISH_IMAGE;
-        }
-        if (type == Type.CHOUFLEUR) {
-            return CAULIFLOWER_IMAGE;
-        }
-        if (type == Type.NENUPHAR) {
-            return WATER_LILY_IMAGE;
-        }
-        if (type == Type.IRIS_DES_MARAIS) {
-            return MARSH_IRIS_IMAGE;
-        }
-        return DEFAULT_MATURE_FLOWER_IMAGE;
     }
 
     /**
@@ -461,7 +459,6 @@ public final class ProductPixelArt {
 
     /**
      * Calcule une seule fois la taille affichée d'une image.
-     *
      * On évite ainsi de dupliquer la même lecture
      * de largeur/hauteur source dans plusieurs méthodes.
      */

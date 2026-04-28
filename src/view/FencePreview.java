@@ -6,7 +6,7 @@ import java.awt.Point;
 
 /**
  * Représente une prévisualisation de pose de clôture.
- *
+
  * Cette classe reste volontairement minuscule :
  * elle stocke seulement
  * - la case visée

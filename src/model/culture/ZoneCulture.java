@@ -28,14 +28,6 @@ public class ZoneCulture {
     }
 
     /**
-     * Constructeur explicite utilisé par la grille de la map.
-     * On peut ainsi créer des cases d'herbe non labourées au démarrage.
-     */
-    public ZoneCulture(boolean laboureeInitialement) {
-        this(laboureeInitialement, null, -1, -1);
-    }
-
-    /**
      * Constructeur utilisé par la grille.
      * La zone connaît alors son emplacement logique et peut transmettre ce contexte
      * à la culture pour les bonus liés à l'environnement.

@@ -48,11 +48,4 @@ public class FenceCollision {
     public CellSide getSide() {
         return side;
     }
-
-    /**
-     * On expose une copie des bornes logiques du segment touché.
-     */
-    public Rectangle getBounds() {
-        return bounds == null ? null : new Rectangle(bounds);
-    }
 }

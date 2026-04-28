@@ -24,13 +24,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Boucle de combat dédiée à la grotte.
- *
+
  * Le but de cette classe est de concentrer au même endroit :
  * - les tirs du joueur,
  * - les tirs des monstres,
  * - les collisions projectiles / murs / entités,
  * - la défaite quand la vie du joueur tombe à zéro.
- *
+
  * Remarque : les déplacements du joueur et l'IA de patrouille sont implémentés dans une autre classe.
  */
 public final class CaveCombatModel {
@@ -284,7 +284,7 @@ public final class CaveCombatModel {
         double bestDistanceSquared = Double.MAX_VALUE;
 
         for (EnemyUnit enemy : enemyModel.getEnemyUnits()) {
-            if (enemy == null || !enemy.isCaveMonster() || !enemy.isAlive()) {
+            if (enemy == null || !enemy.isCaveMonster() || enemy.isAlive()) {
                 continue;
             }
 
@@ -383,7 +383,7 @@ public final class CaveCombatModel {
         );
 
         for (EnemyUnit enemy : enemyModel.getEnemyUnits()) {
-            if (enemy == null || !enemy.isCaveMonster() || !enemy.isAlive()) {
+            if (enemy == null || !enemy.isCaveMonster() || enemy.isAlive()) {
                 continue;
             }
 
@@ -453,7 +453,7 @@ public final class CaveCombatModel {
     /**
      * Le drop n'est pas garanti :
      * on veut un petit moment de récompense, pas une pluie d'objets à chaque kill.
-     *
+
      * Le pool est recalculé à chaque mort à partir de l'inventaire actuel.
      * Ainsi, si le contenu de l'inventaire change plus tard dans le code,
      * les drops suivent automatiquement sans liste codée en dur ici.
@@ -535,7 +535,7 @@ public final class CaveCombatModel {
 
     /**
      * Ce pool est reconstruit à partir de la définition réelle de l'inventaire.
-     *
+
      * On évite ainsi le bug où une partie neuve ne pouvait jamais afficher de drop
      * simplement parce que les quantités de départ étaient encore à zéro.
      */
