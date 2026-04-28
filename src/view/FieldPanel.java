@@ -137,6 +137,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private final Image[] tilledTileImages;
     private final Image[] pathTileImages;
     private final Image[] riverTileImages;
+    private final Image leftRiverPathTileImage;
     private final Image marshTileImage;
     private final Image marshCenterTileImage;
     private final Image marshLeftEdgeTileImage;
@@ -217,6 +218,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         this.tilledTileImages = TerrainTileFactory.createSoilTiles(PIXEL_ART_TILE_SIZE);
         this.pathTileImages = TerrainTileFactory.createStoneWithGrass(PIXEL_ART_TILE_SIZE);
         this.riverTileImages = TerrainTileFactory.createRiverTiles(PIXEL_ART_TILE_SIZE);
+        this.leftRiverPathTileImage = ImageLoader.load("/assets/stone_with_grass_leftRiver.png");
         this.marshTileImage = ImageLoader.load("/assets/marecages.png");
         this.marshCenterTileImage = ImageLoader.load("/assets/marecagesCenter.png");
         this.marshLeftEdgeTileImage = ImageLoader.load("/assets/marecagesGauche.png");
@@ -1465,6 +1467,9 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         } else if (grilleCulture.hasRiver(gridX, gridY)) {
             return getDecorativeRiverTile(gridY);
         } else if (grilleCulture.hasPath(gridX, gridY)) {
+            if (PredefinedFieldLayout.isLeftOfDecorativeRiver(this, gridX) && leftRiverPathTileImage != null) {
+                return leftRiverPathTileImage;
+            }
             variants = pathTileImages;
         } else if (grilleCulture.isLabouree(gridX, gridY)) {
             if (PredefinedFieldLayout.isLeftOfDecorativeRiver(this, gridX) && wetSoilTileImage != null) {
@@ -2243,11 +2248,11 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         if (isBlockedByBarn(gridX, gridY)
                 || grilleCulture.hasPath(gridX, gridY)
                 || isBarnStoneBandExtensionCell(gridX, gridY)) {
-            drawLayeredStoneWithGrassGroundTile(g2, cellBounds);
+            drawLayeredStoneWithGrassGroundTile(g2, gridX, cellBounds);
             return;
         }
         if (isBarnTopStoneColumnCell(gridX, gridY)) {
-            drawLayeredStoneWithGrassGroundTile(g2, cellBounds);
+            drawLayeredStoneWithGrassGroundTile(g2, gridX, cellBounds);
             return;
         }
 
@@ -2265,19 +2270,42 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
      * Pour les zones pierre + herbe, on garde une vraie base d'herbe
      * puis on superpose la dalle pierre + herbe par-dessus.
      */
-    private void drawLayeredStoneWithGrassGroundTile(Graphics2D g2, Rectangle cellBounds) {
-        Image grassTile = getFirstAvailableTile(grassTileImages);
-        if (grassTile != null) {
-            drawScaledTile(g2, grassTile, cellBounds);
+    private void drawLayeredStoneWithGrassGroundTile(Graphics2D g2, int gridX, Rectangle cellBounds) {
+        Image baseGroundTile = resolvePathBaseGroundTile(gridX);
+        if (baseGroundTile != null) {
+            drawScaledTile(g2, baseGroundTile, cellBounds);
         } else {
             g2.setColor(DEFAULT_GRASS_FILL);
             g2.fillRect(cellBounds.x, cellBounds.y, cellBounds.width, cellBounds.height);
         }
 
-        Image stoneWithGrassTile = getFirstAvailableTile(pathTileImages);
+        Image stoneWithGrassTile = resolvePathGroundTile(gridX);
         if (stoneWithGrassTile != null) {
             drawScaledTile(g2, stoneWithGrassTile, cellBounds);
         }
+    }
+
+    /**
+     * Le chemin repose visuellement sur le sol naturel de sa zone.
+     * À gauche de la rivière, on garde donc la base marécageuse au lieu de l'herbe standard.
+     */
+    private Image resolvePathBaseGroundTile(int gridX) {
+        if (PredefinedFieldLayout.isLeftOfDecorativeRiver(this, gridX)) {
+            return getLeftMarshTile(gridX);
+        }
+        return getFirstAvailableTile(grassTileImages);
+    }
+
+    /**
+     * Choisit la bonne tuile de chemin selon la zone du champ.
+     * La partie gauche de la rivière garde son propre visuel de pierre
+     * pour mieux s'intégrer au marécage.
+     */
+    private Image resolvePathGroundTile(int gridX) {
+        if (PredefinedFieldLayout.isLeftOfDecorativeRiver(this, gridX) && leftRiverPathTileImage != null) {
+            return leftRiverPathTileImage;
+        }
+        return getFirstAvailableTile(pathTileImages);
     }
 
     /**

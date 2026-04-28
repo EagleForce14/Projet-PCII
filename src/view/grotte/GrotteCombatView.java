@@ -6,6 +6,7 @@ import model.grotte.combat.CaveProjectile;
 import model.grotte.combat.CaveProjectileOwner;
 import model.grotte.drop.CaveDrop;
 import model.grotte.drop.CaveDropDefinition;
+import view.CustomFontLoader;
 import view.HudProgressBarPainter;
 import view.InventoryStatusOverlay;
 import view.ProductPixelArt;
@@ -15,8 +16,10 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 
@@ -27,6 +30,8 @@ import java.awt.RenderingHints;
  * projectiles, flash de dégâts et petite barre de vie du joueur.
  */
 public final class GrotteCombatView extends JPanel {
+    // Police pixel commune aux petits overlays de grotte.
+    private static final String FONT_PATH = "src/assets/fonts/Minecraftia.ttf";
     // Halo des projectiles du joueur.
     private static final Color PLAYER_PROJECTILE_GLOW = new Color(72, 214, 120, 96);
     // Noyau des projectiles du joueur.
@@ -51,11 +56,39 @@ public final class GrotteCombatView extends JPanel {
     private static final Color REWARD_GLOW = new Color(255, 229, 149, 120);
     // Couleur du petit parachute décoratif des récompenses.
     private static final Color REWARD_PARACHUTE = new Color(255, 247, 225, 220);
+    // Ombre discrète du popup d'aide.
+    private static final Color SHOOT_HINT_SHADOW = new Color(0, 0, 0, 86);
+    // Fond principal du popup d'aide.
+    private static final Color SHOOT_HINT_BACKGROUND = new Color(33, 24, 19, 238);
+    // Bordure fixe du popup d'aide.
+    private static final Color SHOOT_HINT_BORDER = new Color(236, 203, 132, 255);
+    // Couleur du texte principal.
+    private static final Color SHOOT_HINT_TEXT = new Color(255, 245, 225, 255);
+    // Couleur du texte secondaire.
+    private static final Color SHOOT_HINT_MUTED = new Color(226, 214, 192, 236);
+    // Fond de la capsule "ESPACE".
+    private static final Color SHOOT_HINT_KEY_BACKGROUND = new Color(91, 67, 39, 245);
+    // Bordure de la capsule "ESPACE".
+    private static final Color SHOOT_HINT_KEY_BORDER = new Color(255, 229, 170, 245);
+    // Fond du bouton de fermeture.
+    private static final Color SHOOT_HINT_CLOSE_BACKGROUND = new Color(72, 48, 29, 240);
+    // Couleur de la croix de fermeture.
+    private static final Color SHOOT_HINT_CLOSE_TEXT = new Color(255, 243, 218, 255);
 
     // Modèle de combat dont on lit l'état à afficher.
     private final CaveCombatModel combatModel;
     // Carte de grotte utilisée pour convertir les cases et repères logiques.
     private final GrotteFieldPanel mapPanel;
+    // Police du petit titre.
+    private final Font shootHintTitleFont;
+    // Police de la consigne.
+    private final Font shootHintBodyFont;
+    // Police de la capsule clavier.
+    private final Font shootHintKeyFont;
+    // Le hint est refermé localement mais réouvert à chaque nouvelle entrée.
+    private boolean shootHintVisible;
+    // Zone cliquable de la croix de fermeture.
+    private Rectangle shootHintCloseBounds;
 
     /**
      * On prépare la couche d'affichage du combat de grotte.
@@ -63,8 +96,34 @@ public final class GrotteCombatView extends JPanel {
     public GrotteCombatView(CaveCombatModel combatModel, GrotteFieldPanel mapPanel) {
         this.combatModel = combatModel;
         this.mapPanel = mapPanel;
+        this.shootHintTitleFont = CustomFontLoader.loadFont(FONT_PATH, 8.0f);
+        this.shootHintBodyFont = CustomFontLoader.loadFont(FONT_PATH, 8.0f);
+        this.shootHintKeyFont = CustomFontLoader.loadFont(FONT_PATH, 7.0f);
+        this.shootHintVisible = true;
+        this.shootHintCloseBounds = new Rectangle();
         setOpaque(false);
         setDoubleBuffered(true);
+    }
+
+    /**
+     * Réaffiche explicitement l'aide quand le joueur revient dans la grotte.
+     */
+    public void showShootHint() {
+        shootHintVisible = true;
+        repaint();
+    }
+
+    /**
+     * Ferme le popup seulement si le clic tombe sur la croix.
+     */
+    public boolean handleShootHintCloseClick(Point clickPoint) {
+        if (!shootHintVisible || clickPoint == null || !shootHintCloseBounds.contains(clickPoint)) {
+            return false;
+        }
+
+        shootHintVisible = false;
+        repaint();
+        return true;
     }
 
     /**
@@ -93,8 +152,79 @@ public final class GrotteCombatView extends JPanel {
         drawInventoryRewardEffects(g2d, centerX, centerY, fieldBounds);
         drawPlayerHitVignette(g2d);
         drawPlayerHealthBar(g2d, centerX, centerY);
+        drawShootHint(g2d);
 
         g2d.dispose();
+    }
+
+    /**
+     * Le hint reste compact et haut perché pour informer sans masquer la zone de jeu.
+     */
+    private void drawShootHint(Graphics2D g2d) {
+        if (!shootHintVisible || getWidth() <= 0 || getHeight() <= 0) {
+            shootHintCloseBounds.setBounds(0, 0, 0, 0);
+            return;
+        }
+
+        int cardWidth = Math.min(292, Math.max(214, getWidth() - 32));
+        int cardHeight = 52;
+        int cardX = (getWidth() - cardWidth) / 2;
+        int cardY = 14;
+        int closeSize = 18;
+        int closeX = cardX + cardWidth - closeSize - 10;
+        int closeY = cardY + 8;
+        shootHintCloseBounds.setBounds(closeX, closeY, closeSize, closeSize);
+
+        g2d.setColor(SHOOT_HINT_SHADOW);
+        g2d.fillRoundRect(cardX + 3, cardY + 4, cardWidth, cardHeight, 18, 18);
+
+        g2d.setColor(SHOOT_HINT_BORDER);
+        g2d.fillRoundRect(cardX, cardY, cardWidth, cardHeight, 18, 18);
+        g2d.setColor(SHOOT_HINT_BACKGROUND);
+        g2d.fillRoundRect(cardX + 1, cardY + 1, cardWidth - 2, cardHeight - 2, 16, 16);
+
+        g2d.setColor(SHOOT_HINT_CLOSE_BACKGROUND);
+        g2d.fillRoundRect(closeX, closeY, closeSize, closeSize, 8, 8);
+        g2d.setFont(shootHintBodyFont);
+        g2d.setColor(SHOOT_HINT_CLOSE_TEXT);
+        java.awt.FontMetrics closeMetrics = g2d.getFontMetrics();
+        int closeTextX = closeX + ((closeSize - closeMetrics.stringWidth("x")) / 2);
+        int closeTextY = closeY + ((closeSize - closeMetrics.getHeight()) / 2) + closeMetrics.getAscent();
+        g2d.drawString("x", closeTextX, closeTextY);
+
+        int textX = cardX + 24;
+        g2d.setFont(shootHintTitleFont);
+        g2d.setColor(SHOOT_HINT_TEXT);
+        g2d.drawString("Tir dans la grotte", textX, cardY + 19);
+
+        String prefix = "Appuyez sur";
+        String keyLabel = "ESPACE";
+        String suffix = "pour tirer";
+        int baselineY = cardY + 37;
+
+        g2d.setFont(shootHintBodyFont);
+        g2d.setColor(SHOOT_HINT_MUTED);
+        g2d.drawString(prefix, textX, baselineY);
+
+        int prefixWidth = g2d.getFontMetrics().stringWidth(prefix);
+        int keyX = textX + prefixWidth + 8;
+        int keyY = baselineY - 11;
+        int keyWidth = g2d.getFontMetrics(shootHintKeyFont).stringWidth(keyLabel) + 12;
+        int keyHeight = 16;
+
+        g2d.setColor(SHOOT_HINT_KEY_BACKGROUND);
+        g2d.fillRoundRect(keyX, keyY, keyWidth, keyHeight, 8, 8);
+        g2d.setFont(shootHintKeyFont);
+        g2d.setColor(SHOOT_HINT_TEXT);
+        java.awt.FontMetrics keyMetrics = g2d.getFontMetrics();
+        int keyTextX = keyX + ((keyWidth - keyMetrics.stringWidth(keyLabel)) / 2);
+        int keyTextY = keyY + ((keyHeight - keyMetrics.getHeight()) / 2) + keyMetrics.getAscent();
+        g2d.drawString(keyLabel, keyTextX, keyTextY);
+
+        int suffixX = keyX + keyWidth + 8;
+        g2d.setFont(shootHintBodyFont);
+        g2d.setColor(SHOOT_HINT_MUTED);
+        g2d.drawString(suffix, suffixX, baselineY);
     }
 
     /**

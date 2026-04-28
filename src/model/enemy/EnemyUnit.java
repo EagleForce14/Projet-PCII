@@ -373,14 +373,16 @@ public class EnemyUnit {
         int offset = 50;
 
         placeOutsideForSide(side, halfWidth, halfHeight, offset);
-        
+
+        // À droite de la rivière, la boutique principale et la menuiserie
+        // bouchent le haut de l'écran : un lapin ne doit donc jamais y apparaître.
+        if (side == SPAWN_SIDE_TOP && isRightOfDecorativeRiver(x)) {
+            side = random.nextBoolean() ? SPAWN_SIDE_RIGHT : SPAWN_SIDE_BOTTOM;
+            placeOutsideForSide(side, halfWidth, halfHeight, offset);
+        }
+
         // Dès l'apparition, on choisit un premier point d'entrée dans le champ.
         pickFieldEntryTarget();
-
-        if (side == SPAWN_SIDE_TOP && isRightOfDecorativeRiver(targetX)) {
-            int redirectedSide = SPAWN_SIDE_RIGHT + random.nextInt(3);
-            placeOutsideForSide(redirectedSide, halfWidth, halfHeight, offset);
-        }
     }
 
     /**

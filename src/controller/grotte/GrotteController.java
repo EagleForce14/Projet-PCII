@@ -187,6 +187,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
             if (caveCombatModel != null) {
                 caveCombatModel.setPlayerFiring(true);
             }
+            event.consume();
             return;
         }
 
@@ -220,6 +221,7 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         int key = event.getKeyCode();
         if (isShootKey(key)) {
             stopPlayerFire();
+            event.consume();
             return;
         }
 
@@ -258,6 +260,12 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
     public void mousePressed(MouseEvent event) {
         if (grotteMovementView != null) {
             grotteMovementView.requestFocusInWindow();
+        }
+        if (event != null
+                && event.getSource() == grotteCombatView
+                && grotteCombatView != null
+                && grotteCombatView.handleShootHintCloseClick(event.getPoint())) {
+            return;
         }
         syncEnemySelection(event);
     }
@@ -472,6 +480,10 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         }
         if (caveCombatModel != null) {
             caveCombatModel.enterCave();
+        }
+        if (grotteCombatView != null) {
+            // Le joueur peut fermer l'aide, mais on la réaffiche à chaque nouvelle entrée.
+            grotteCombatView.showShootHint();
         }
         setCaveThreadsActive(true);
         if (grotteMovementView != null) {
