@@ -20,7 +20,6 @@ public class Inventaire {
             Type.TULIPE,
             Type.ROSE,
             Type.MARGUERITE,
-            Type.ORCHIDEE,
             Type.CAROTTE,
             Type.RADIS,
             Type.CHOUFLEUR

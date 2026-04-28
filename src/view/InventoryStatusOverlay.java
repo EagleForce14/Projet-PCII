@@ -51,7 +51,18 @@ public class InventoryStatusOverlay extends JPanel {
     private static final Color LOCKED_SEED_OVERLAY = new Color(22, 18, 14, 148);
     // Bordure des graines encore verrouillées.
     private static final Color LOCKED_SEED_BORDER = new Color(150, 132, 112, 185);
-
+    // Ombre douce du popup de plantation.
+    private static final Color PLANTING_HINT_SHADOW = new Color(0, 0, 0, 82);
+    // Fond externe du popup.
+    private static final Color PLANTING_HINT_BORDER = new Color(236, 204, 142, 250);
+    // Fond principal du popup.
+    private static final Color PLANTING_HINT_BACKGROUND = new Color(44, 31, 21, 242);
+    // Liseré clair de surface.
+    private static final Color PLANTING_HINT_TOP_HIGHLIGHT = new Color(128, 94, 59, 190);
+    // Texte titre du popup.
+    private static final Color PLANTING_HINT_TITLE = new Color(255, 246, 222, 255);
+    // Texte secondaire du popup.
+    private static final Color PLANTING_HINT_BODY = new Color(233, 219, 193, 245);
     // Map actuellement affichée sous l'inventaire.
     private final PlayableMapPanel mapPanel;
     // Référence typée vers la ferme quand la map courante en est une.
@@ -62,6 +73,10 @@ public class InventoryStatusOverlay extends JPanel {
     private final MovementModel movementModel;
     // Police utilisée pour afficher les quantités dans les slots.
     private final Font quantityFont;
+    // Police du titre du popup de plantation.
+    private final Font plantingHintTitleFont;
+    // Police du texte du popup de plantation.
+    private final Font plantingHintBodyFont;
     // Modèle de combat de grotte éventuellement observé pour les pickups.
     private CaveCombatModel caveCombatModel;
     // Indique si l'inventaire de grotte doit s'afficher de façon temporaire.
@@ -82,6 +97,8 @@ public class InventoryStatusOverlay extends JPanel {
         this.inventaire = inventaire;
         this.movementModel = movementModel;
         this.quantityFont = CustomFontLoader.loadFont(FONT_PATH, 8.0f);
+        this.plantingHintTitleFont = CustomFontLoader.loadFont(FONT_PATH, 11.8f);
+        this.plantingHintBodyFont = CustomFontLoader.loadFont(FONT_PATH, 10.0f);
         this.caveCombatModel = null;
         this.transientCaveDisplayEnabled = false;
         this.transientDisplayStartMs = Long.MIN_VALUE;
@@ -273,6 +290,10 @@ public class InventoryStatusOverlay extends JPanel {
         }
 
         Rectangle[] groupBounds = getInventoryGroupBounds(fieldBounds, viewWidth, viewHeight);
+        Rectangle inventoryBounds = computeInventoryBarBounds(fieldBounds, viewWidth, viewHeight);
+        if (shouldShowPlantingHint()) {
+            drawPlantingHintPopup(g2d, inventoryBounds);
+        }
         for (Rectangle groupBoundsItem : groupBounds) {
             drawInventoryShell(g2d, groupBoundsItem.x, groupBoundsItem.y, groupBoundsItem.width, groupBoundsItem.height);
         }
@@ -283,6 +304,177 @@ public class InventoryStatusOverlay extends JPanel {
                 drawSlot(g2d, slotIndex, slotBounds.x, slotBounds.y, slotBounds.width);
             }
         }
+    }
+
+    /**
+     * Sur une case labourée mais vide, on rappelle au joueur qu'il peut planter
+     * en choisissant d'abord une graine valide dans la hotbar.
+     */
+    private boolean shouldShowPlantingHint() {
+        if (transientCaveDisplayEnabled || farmFieldPanel == null || movementModel == null || inventaire == null) {
+            return false;
+        }
+
+        Point activeFieldCell = movementModel.getActiveFieldCell();
+        if (activeFieldCell == null || !farmFieldPanel.isFarmableCell(activeFieldCell)) {
+            return false;
+        }
+
+        int gridX = activeFieldCell.x;
+        int gridY = activeFieldCell.y;
+        if (!farmFieldPanel.getGrilleCulture().isLabouree(gridX, gridY)
+                || farmFieldPanel.getGrilleCulture().getCulture(gridX, gridY) != null
+                || farmFieldPanel.getGrilleCulture().hasPath(gridX, gridY)
+                || farmFieldPanel.getGrilleCulture().hasRiver(gridX, gridY)
+                || farmFieldPanel.getGrilleCulture().hasBridgeAnchorAt(gridX, gridY)
+                || farmFieldPanel.getGrilleCulture().hasCompostAt(gridX, gridY)) {
+            return false;
+        }
+
+        Type selectedSeedType = movementModel.getSelectedSeedType();
+        return selectedSeedType == null
+                || !inventaire.possedeGraine(selectedSeedType)
+                || !farmFieldPanel.getGrilleCulture().canPlantCulture(gridX, gridY, selectedSeedType, inventaire);
+    }
+
+    /**
+     * Dessine un popup juste au-dessus de l'inventaire.
+     * L'idée est d'accompagner le joueur quand il veut planter une culture.
+     */
+    private void drawPlantingHintPopup(Graphics2D g2d, Rectangle inventoryBounds) {
+        if (inventoryBounds == null || inventoryBounds.isEmpty()) {
+            return;
+        }
+
+        Point activeFieldCell = movementModel.getActiveFieldCell();
+        if (activeFieldCell == null) {
+            return;
+        }
+
+        int cardWidth = Math.min(430, Math.max(320, inventoryBounds.width - 26));
+        cardWidth = Math.min(cardWidth, Math.max(240, getWidth() - 24));
+        int cardHeight = 74;
+        int cardX = inventoryBounds.x + ((inventoryBounds.width - cardWidth) / 2);
+        cardX = Math.max(12, Math.min(cardX, getWidth() - cardWidth - 12));
+        int pointerHeight = 10;
+        int pointerWidth = 18;
+        int gapAboveInventory = 12;
+        int cardY = Math.max(10, inventoryBounds.y - cardHeight - pointerHeight - gapAboveInventory);
+
+        String title = "Case prête à planter";
+        String[] bodyLines = resolvePlantingHintLines(activeFieldCell.x, activeFieldCell.y);
+
+        g2d.setColor(PLANTING_HINT_SHADOW);
+        g2d.fillRoundRect(cardX + 4, cardY + 4, cardWidth, cardHeight, 18, 18);
+        int[] shadowTriangleX = {cardX + (cardWidth / 2) - (pointerWidth / 2) + 4, cardX + (cardWidth / 2) + (pointerWidth / 2) + 4, cardX + (cardWidth / 2) + 4};
+        int[] shadowTriangleY = {cardY + cardHeight - 2 + 4, cardY + cardHeight - 2 + 4, cardY + cardHeight + pointerHeight + 4};
+        g2d.fillPolygon(shadowTriangleX, shadowTriangleY, 3);
+
+        g2d.setColor(PLANTING_HINT_BORDER);
+        g2d.fillRoundRect(cardX, cardY, cardWidth, cardHeight, 18, 18);
+        int[] borderTriangleX = {cardX + (cardWidth / 2) - (pointerWidth / 2), cardX + (cardWidth / 2) + (pointerWidth / 2), cardX + (cardWidth / 2)};
+        int[] borderTriangleY = {cardY + cardHeight - 2, cardY + cardHeight - 2, cardY + cardHeight + pointerHeight};
+        g2d.fillPolygon(borderTriangleX, borderTriangleY, 3);
+
+        g2d.setColor(PLANTING_HINT_BACKGROUND);
+        g2d.fillRoundRect(cardX + 1, cardY + 1, cardWidth - 2, cardHeight - 2, 16, 16);
+        int[] innerTriangleX = {cardX + (cardWidth / 2) - (pointerWidth / 2) + 1, cardX + (cardWidth / 2) + (pointerWidth / 2) - 1, cardX + (cardWidth / 2)};
+        int[] innerTriangleY = {cardY + cardHeight - 3, cardY + cardHeight - 3, cardY + cardHeight + pointerHeight - 2};
+        g2d.fillPolygon(innerTriangleX, innerTriangleY, 3);
+
+        g2d.setColor(PLANTING_HINT_TOP_HIGHLIGHT);
+        g2d.fillRoundRect(cardX + 2, cardY + 2, cardWidth - 4, 18, 14, 14);
+
+        int contentX = cardX + 18;
+        int contentY = cardY + 18;
+        int textX = contentX;
+        g2d.setFont(plantingHintTitleFont);
+        g2d.setColor(PLANTING_HINT_TITLE);
+        g2d.drawString(title, textX, contentY + 5);
+
+        g2d.setFont(plantingHintBodyFont);
+        g2d.setColor(PLANTING_HINT_BODY);
+        g2d.drawString(bodyLines[0], contentX, cardY + 48);
+        g2d.drawString(bodyLines[1], contentX, cardY + 64);
+    }
+
+    /**
+     * Le message reste court pour éviter d'alourdir le HUD.
+     * On nuance seulement selon qu'une graine compatible est déjà en stock ou non.
+     */
+    private String[] resolvePlantingHintLines(int gridX, int gridY) {
+        FieldZone fieldZone = farmFieldPanel.getGrilleCulture().getFieldZoneAt(gridX, gridY);
+        if (hasOwnedSeedForZone(fieldZone)) {
+            return new String[] {
+                    "Cliquez sur une graine dans l'inventaire que vous possédez",
+                    "pour la planter ici."
+            };
+        }
+
+        FieldZone oppositeFieldZone = getOppositeFieldZone(fieldZone);
+        if (hasOwnedSeedForZone(oppositeFieldZone)) {
+            return new String[] {
+                    "Vous avez des graines pour la zone " + getFieldZoneLabel(oppositeFieldZone) + ",",
+                    "mais aucune adaptée à cette zone du champ."
+            };
+        }
+
+        return new String[] {
+                "Aucune graine disponible dans votre inventaire pour cette zone.",
+                "Achetez-en à la boutique puis choisissez-la dans l'inventaire."
+        };
+    }
+
+    /**
+     * On vérifie s'il reste au moins une graine réellement utilisable
+     * dans la zone du champ où se trouve la case active.
+     */
+    private boolean hasOwnedSeedForZone(FieldZone fieldZone) {
+        Type[] mainZoneSeedOrder = Inventaire.getMainZoneSeedSlotOrder();
+        for (Type seedType : mainZoneSeedOrder) {
+            if (seedType != null
+                    && inventaire.possedeGraine(seedType)
+                    && (fieldZone == null || seedType.canBePlantedIn(fieldZone))) {
+                return true;
+            }
+        }
+
+        Type[] leftZoneSeedOrder = Inventaire.getLeftZoneSeedSlotOrder();
+        for (Type seedType : leftZoneSeedOrder) {
+            if (seedType != null
+                    && inventaire.possedeGraine(seedType)
+                    && (fieldZone == null || seedType.canBePlantedIn(fieldZone))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Identifie l'autre côté de la rivière pour préciser le message d'aide.
+     */
+    private FieldZone getOppositeFieldZone(FieldZone fieldZone) {
+        if (fieldZone == FieldZone.LEFT_OF_RIVER) {
+            return FieldZone.RIGHT_OF_RIVER;
+        }
+        if (fieldZone == FieldZone.RIGHT_OF_RIVER) {
+            return FieldZone.LEFT_OF_RIVER;
+        }
+        return null;
+    }
+
+    /**
+     * Libellé court destiné au popup contextuel.
+     */
+    private String getFieldZoneLabel(FieldZone fieldZone) {
+        if (fieldZone == FieldZone.LEFT_OF_RIVER) {
+            return "gauche";
+        }
+        if (fieldZone == FieldZone.RIGHT_OF_RIVER) {
+            return "droite";
+        }
+        return "correspondante";
     }
 
     /**
@@ -486,7 +678,7 @@ public class InventoryStatusOverlay extends JPanel {
             g2d.drawRoundRect(x + 1, y + 1, size - 3, size - 3, 9, 9);
         }
 
-        int iconPixelSize = hasStock ? 5 : 4;
+        int iconPixelSize = resolveInventoryIconPixelSize(seedType, hasStock);
         FacilityType facilityType = getFacilityTypeForSlot(slotIndex);
         int iconArtWidth = seedType != null
                 ? ProductPixelArt.getSeedArtWidth(seedType, iconPixelSize)
@@ -529,6 +721,18 @@ public class InventoryStatusOverlay extends JPanel {
         if (seedLockedForCurrentZone) {
             drawLockedSeedVeil(g2d, x, y, size);
         }
+    }
+
+    /**
+     * Certaines fleurs gagnent à être un peu plus grandes dans l'inventaire
+     * pour rester lisibles sans toucher au rendu de la boutique ni du champ.
+     */
+    private int resolveInventoryIconPixelSize(Type seedType, boolean hasStock) {
+        int basePixelSize = hasStock ? 5 : 4;
+        if (seedType == Type.ROSE || seedType == Type.MARGUERITE || seedType == Type.TULIPE) {
+            return basePixelSize + 1;
+        }
+        return basePixelSize;
     }
 
     private static int getInventorySlotCount() {

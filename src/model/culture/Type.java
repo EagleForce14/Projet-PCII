@@ -11,7 +11,6 @@ public enum Type {
     TULIPE("Tulipe", Categorie.FLEUR, FieldZone.RIGHT_OF_RIVER, ShopKind.MAIN),
     ROSE("Rose", Categorie.FLEUR, FieldZone.RIGHT_OF_RIVER, ShopKind.MAIN),
     MARGUERITE("Marguerite", Categorie.FLEUR, FieldZone.RIGHT_OF_RIVER, ShopKind.MAIN),
-    ORCHIDEE("Orchidee", Categorie.FLEUR, FieldZone.RIGHT_OF_RIVER, ShopKind.MAIN),
     CAROTTE("Carotte", Categorie.LEGUME, FieldZone.RIGHT_OF_RIVER, ShopKind.MAIN),
     RADIS("Radis", Categorie.LEGUME, FieldZone.RIGHT_OF_RIVER, ShopKind.MAIN),
     CHOUFLEUR("Choufleur", Categorie.LEGUME, FieldZone.RIGHT_OF_RIVER, ShopKind.MAIN),

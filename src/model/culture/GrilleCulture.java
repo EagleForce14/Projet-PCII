@@ -29,7 +29,6 @@ public class GrilleCulture {
         Type.TULIPE, 15,
         Type.ROSE, 20,
         Type.MARGUERITE, 12,
-        Type.ORCHIDEE, 25,
         Type.NENUPHAR, 15,
         Type.IRIS_DES_MARAIS, 15,
         Type.CAROTTE, 25,

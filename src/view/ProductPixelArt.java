@@ -48,8 +48,14 @@ public final class ProductPixelArt {
     private static final Image WOOD_IMAGE = ImageLoader.load("/assets/wood.png");
     // Sprite utilisé pour représenter les pièces dans les aperçus produit.
     private static final Image COIN_IMAGE = ImageLoader.load("/assets/coin.png");
-    // Sprite mature générique réutilisé pour les fleurs classiques.
+    // Sprite mature générique réutilisé pour les fleurs classiques sans sprite dédié.
     private static final Image DEFAULT_MATURE_FLOWER_IMAGE = ImageLoader.load("/assets/maturite.png");
+    // Sprite mature de la rose.
+    private static final Image ROSE_IMAGE = ImageLoader.load("/assets/rose_mature.png");
+    // Sprite mature de la marguerite.
+    private static final Image DAISY_IMAGE = ImageLoader.load("/assets/marguerithe_mature.png");
+    // Sprite mature de la tulipe.
+    private static final Image TULIP_IMAGE = ImageLoader.load("/assets/tulipe_mature.png");
     // Sprite mature de la carotte.
     private static final Image CARROT_IMAGE = ImageLoader.load("/assets/carotte_mature.png");
     // Sprite mature du radis.
@@ -224,23 +230,6 @@ public final class ProductPixelArt {
             drawScaledImage(g2d, illustratedSeedImage, x, y, ILLUSTRATED_SEED_IMAGE_MAX_SIDE * pixelSize);
             return;
         }
-
-        switch (type) {
-            case TULIPE:
-                drawTulip(g2d, x, y, pixelSize);
-                break;
-            case ROSE:
-                drawRose(g2d, x, y, pixelSize);
-                break;
-            case MARGUERITE:
-                drawDaisy(g2d, x, y, pixelSize);
-                break;
-            case ORCHIDEE:
-                drawOrchid(g2d, x, y, pixelSize);
-                break;
-            default:
-                break;
-        }
     }
 
     /**
@@ -267,8 +256,8 @@ public final class ProductPixelArt {
 
     /**
      * Cette table décrit le visuel "au sol" d'une culture mature.
-     * Les légumes et fleurs des marais utilisent leur sprite mature dédié,
-     * alors que les fleurs génériques de la ferme réutilisent le sprite mature commun.
+     * Les légumes, la rose, la marguerite, la tulipe et les fleurs des marais utilisent leur sprite mature dédié,
+     * alors que les autres fleurs de la ferme réutilisent le sprite mature commun.
      */
     private static Image getMatureCultureImage(Type type) {
         if (type == null) {
@@ -295,6 +284,15 @@ public final class ProductPixelArt {
         }
         if (type == Type.CHOUFLEUR) {
             return CAULIFLOWER_IMAGE;
+        }
+        if (type == Type.ROSE) {
+            return ROSE_IMAGE;
+        }
+        if (type == Type.MARGUERITE) {
+            return DAISY_IMAGE;
+        }
+        if (type == Type.TULIPE) {
+            return TULIP_IMAGE;
         }
         if (type == Type.NENUPHAR) {
             return WATER_LILY_IMAGE;
@@ -342,58 +340,6 @@ public final class ProductPixelArt {
     }
 
     /**
-     * On dessine le petit motif manuel de la tulipe.
-     */
-    private static void drawTulip(Graphics2D g2d, int x, int y, int pixelSize) {
-        drawStem(g2d, x, y, pixelSize);
-        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(226, 73, 126));
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(255, 154, 190));
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(255, 120, 165));
-        fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, new Color(255, 154, 190));
-    }
-
-    /**
-     * On dessine le petit motif manuel de la rose.
-     */
-    private static void drawRose(Graphics2D g2d, int x, int y, int pixelSize) {
-        drawStem(g2d, x, y, pixelSize);
-        fillPixel(g2d, x + pixelSize, y, pixelSize, new Color(174, 41, 66));
-        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, new Color(212, 61, 84));
-        fillPixel(g2d, x, y + pixelSize, pixelSize, new Color(174, 41, 66));
-        fillPixel(g2d, x + pixelSize, y + pixelSize, pixelSize, new Color(234, 91, 114));
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(212, 61, 84));
-    }
-
-    /**
-     * On dessine le petit motif manuel de la marguerite.
-     */
-    private static void drawDaisy(Graphics2D g2d, int x, int y, int pixelSize) {
-        drawStem(g2d, x, y, pixelSize);
-        Color petal = new Color(245, 239, 227);
-        fillPixel(g2d, x + pixelSize, y, pixelSize, petal);
-        fillPixel(g2d, x + (2 * pixelSize), y, pixelSize, petal);
-        fillPixel(g2d, x, y + pixelSize, pixelSize, petal);
-        fillPixel(g2d, x + (3 * pixelSize), y + pixelSize, pixelSize, petal);
-        fillPixel(g2d, x + pixelSize, y + (2 * pixelSize), pixelSize, petal);
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, petal);
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, new Color(236, 201, 72));
-    }
-
-    /**
-     * On dessine le petit motif manuel de l'orchidée.
-     */
-    private static void drawOrchid(Graphics2D g2d, int x, int y, int pixelSize) {
-        drawStem(g2d, x, y, pixelSize);
-        Color purple = new Color(170, 110, 214);
-        Color lightPurple = new Color(213, 170, 244);
-        fillPixel(g2d, x + pixelSize, y, pixelSize, purple);
-        fillPixel(g2d, x + (3 * pixelSize), y, pixelSize, purple);
-        fillPixel(g2d, x + (2 * pixelSize), y + pixelSize, pixelSize, lightPurple);
-        fillPixel(g2d, x, y + (2 * pixelSize), pixelSize, purple);
-        fillPixel(g2d, x + (4 * pixelSize), y + (2 * pixelSize), pixelSize, purple);
-    }
-
-    /**
      * On dessine le petit motif manuel utilisé pour représenter une clôture.
      */
     private static void drawFence(Graphics2D g2d, int x, int y, int pixelSize) {
@@ -423,23 +369,6 @@ public final class ProductPixelArt {
         fillGridRect(g2d, x, y, pixelSize, 3, 4, 3, 1, slat);
         fillGridRect(g2d, x, y, pixelSize, 3, 2, 1, 1, new Color(255, 145, 61));
         fillGridRect(g2d, x, y, pixelSize, 3, 4, 1, 1, new Color(255, 145, 61));
-    }
-
-    /**
-     * On dessine la tige commune aux petits motifs de fleurs.
-     */
-    private static void drawStem(Graphics2D g2d, int x, int y, int pixelSize) {
-        fillPixel(g2d, x + (2 * pixelSize), y + (2 * pixelSize), pixelSize, new Color(79, 163, 78));
-        fillPixel(g2d, x + (2 * pixelSize), y + (3 * pixelSize), pixelSize, new Color(63, 137, 63));
-        fillPixel(g2d, x + pixelSize, y + (3 * pixelSize), pixelSize, new Color(103, 188, 93));
-    }
-
-    /**
-     * On remplit un seul pixel logique du motif avec la couleur demandée.
-     */
-    private static void fillPixel(Graphics2D g2d, int x, int y, int pixelSize, Color color) {
-        g2d.setColor(color);
-        g2d.fillRect(x, y, pixelSize, pixelSize);
     }
 
     /**

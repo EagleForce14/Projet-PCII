@@ -49,10 +49,14 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private static final double CAULIFLOWER_INTERMEDIATE_MAP_SCALE = 0.90;
     private static final double CAULIFLOWER_MATURE_MAP_SCALE = 0.82;
     private static final double CAULIFLOWER_WILTED_MAP_SCALE = 0.82;
+    // Échelle de rendu dédiée aux marguerites pour calmer leur hauteur visuelle dans la case.
+    private static final double DAISY_MAP_SCALE = 0.88;
     // Échelle de rendu du stade jeune des nénuphars sur la carte.
     private static final double WATER_LILY_YOUNG_MAP_SCALE = 0.78;
     // Échelle de rendu du stade jeune des iris des marais sur la carte.
     private static final double MARSH_IRIS_YOUNG_MAP_SCALE = 0.78;
+    // Décalage vertical appliqué aux marguerites pour les garder visuellement centrées.
+    private static final double DAISY_VERTICAL_OFFSET_RATIO = -0.10;
 
     // Taille préférée alignée sur la zone de jeu principale.
     // Le panneau peut s'étirer ensuite, mais ces valeurs servent de base cohérente
@@ -158,6 +162,18 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private final Image carotteIntermediaireImage;
     private final Image carotteMatureImage;
     private final Image carotteFletrieImage;
+    private final Image roseJeunePousseImage;
+    private final Image roseIntermediaireImage;
+    private final Image roseMatureImage;
+    private final Image roseFletrieImage;
+    private final Image tulipeJeunePousseImage;
+    private final Image tulipeIntermediaireImage;
+    private final Image tulipeMatureImage;
+    private final Image tulipeFletrieImage;
+    private final Image margueriteJeunePousseImage;
+    private final Image margueriteIntermediaireImage;
+    private final Image margueriteMatureImage;
+    private final Image margueriteFletrieImage;
     private final Image radisJeuneImage;
     private final Image radisIntermediaireImage;
     private final Image radisMatureImage;
@@ -237,6 +253,18 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         this.carotteIntermediaireImage = ImageLoader.load("/assets/carotte_intermediaire.png");
         this.carotteMatureImage = ImageLoader.load("/assets/carotte_mature.png");
         this.carotteFletrieImage = ImageLoader.load("/assets/carotte_fletrie.png");
+        this.roseJeunePousseImage = ImageLoader.load("/assets/marguerithe_jeune_pousse.png");
+        this.roseIntermediaireImage = ImageLoader.load("/assets/rose_inter.png");
+        this.roseMatureImage = ImageLoader.load("/assets/rose_mature.png");
+        this.roseFletrieImage = ImageLoader.load("/assets/rose_fletrie.png");
+        this.tulipeJeunePousseImage = ImageLoader.load("/assets/marguerithe_jeune_pousse.png");
+        this.tulipeIntermediaireImage = ImageLoader.load("/assets/tulipe_inter.png");
+        this.tulipeMatureImage = ImageLoader.load("/assets/tulipe_mature.png");
+        this.tulipeFletrieImage = ImageLoader.load("/assets/tulipe_fletrie.png");
+        this.margueriteJeunePousseImage = ImageLoader.load("/assets/marguerithe_jeune_pousse.png");
+        this.margueriteIntermediaireImage = ImageLoader.load("/assets/marguerithe_inter.png");
+        this.margueriteMatureImage = ImageLoader.load("/assets/marguerithe_mature.png");
+        this.margueriteFletrieImage = ImageLoader.load("/assets/marguerithe_fletrie.png");
         this.radisJeuneImage = ImageLoader.load("/assets/radis_jeune.png");
         this.radisIntermediaireImage = ImageLoader.load("/assets/radis_inter.png");
         this.radisMatureImage = ImageLoader.load("/assets/radis_mature.png");
@@ -1152,6 +1180,15 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         if (culture.getType() == Type.CAROTTE) {
             return getCarrotCultureImage(culture.getStadeCroissance());
         }
+        if (culture.getType() == Type.ROSE) {
+            return getRoseCultureImage(culture.getStadeCroissance());
+        }
+        if (culture.getType() == Type.TULIPE) {
+            return getTulipCultureImage(culture.getStadeCroissance());
+        }
+        if (culture.getType() == Type.MARGUERITE) {
+            return getDaisyCultureImage(culture.getStadeCroissance());
+        }
         if (culture.getType() == Type.RADIS) {
             return getRadishCultureImage(culture.getStadeCroissance());
         }
@@ -1176,6 +1213,18 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
             return fletrieImage;
         }
         return null;
+    }
+
+    private Image getRoseCultureImage(Stade stade) {
+        return getStageImage(stade, roseJeunePousseImage, roseIntermediaireImage, roseMatureImage, roseFletrieImage);
+    }
+
+    private Image getTulipCultureImage(Stade stade) {
+        return getStageImage(stade, tulipeJeunePousseImage, tulipeIntermediaireImage, tulipeMatureImage, tulipeFletrieImage);
+    }
+
+    private Image getDaisyCultureImage(Stade stade) {
+        return getStageImage(stade, margueriteJeunePousseImage, margueriteIntermediaireImage, margueriteMatureImage, margueriteFletrieImage);
     }
 
     /**
@@ -1562,6 +1611,12 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         );
         if (culture != null && culture.getType() == Type.CAROTTE) {
             scale *= getCarrotMapScale(culture.getStadeCroissance());
+        } else if (culture != null && culture.getType() == Type.ROSE) {
+            scale *= DAISY_MAP_SCALE;
+        } else if (culture != null && culture.getType() == Type.TULIPE) {
+            scale *= DAISY_MAP_SCALE;
+        } else if (culture != null && culture.getType() == Type.MARGUERITE) {
+            scale *= DAISY_MAP_SCALE;
         } else if (culture != null && culture.getType() == Type.RADIS) {
             scale *= getRadishMapScale(culture.getStadeCroissance());
         } else if (culture != null && culture.getType() == Type.CHOUFLEUR) {
@@ -1594,6 +1649,14 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         if (shouldAnchorVisibleBottomAtCellCenter(culture)) {
             int visibleTopY = y + (tileSize / 2) - scaledVisibleHeight;
             drawY = visibleTopY - (int) Math.round(visibleBounds.y * scale);
+        }
+
+        if (culture != null && culture.getType() == Type.ROSE) {
+            drawY += (int) Math.round(tileSize * DAISY_VERTICAL_OFFSET_RATIO);
+        } else if (culture != null && culture.getType() == Type.TULIPE) {
+            drawY += (int) Math.round(tileSize * DAISY_VERTICAL_OFFSET_RATIO);
+        } else if (culture != null && culture.getType() == Type.MARGUERITE) {
+            drawY += (int) Math.round(tileSize * DAISY_VERTICAL_OFFSET_RATIO);
         }
 
         // Les plantes sont elles aussi en pixel art :
