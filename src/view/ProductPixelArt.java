@@ -48,8 +48,6 @@ public final class ProductPixelArt {
     private static final Image WOOD_IMAGE = ImageLoader.load("/assets/wood.png");
     // Sprite utilisé pour représenter les pièces dans les aperçus produit.
     private static final Image COIN_IMAGE = ImageLoader.load("/assets/coin.png");
-    // Sprite mature générique réutilisé pour les fleurs classiques sans sprite dédié.
-    private static final Image DEFAULT_MATURE_FLOWER_IMAGE = ImageLoader.load("/assets/maturite.png");
     // Sprite mature de la rose.
     private static final Image ROSE_IMAGE = ImageLoader.load("/assets/rose_mature.png");
     // Sprite mature de la marguerite.
@@ -256,18 +254,10 @@ public final class ProductPixelArt {
 
     /**
      * Cette table décrit le visuel "au sol" d'une culture mature.
-     * Les légumes, la rose, la marguerite, la tulipe et les fleurs des marais utilisent leur sprite mature dédié,
-     * alors que les autres fleurs de la ferme réutilisent le sprite mature commun.
+     * Toutes les cultures actuellement jouables possèdent leur sprite mature dédié.
      */
     private static Image getMatureCultureImage(Type type) {
-        if (type == null) {
-            return null;
-        }
-        Image dedicatedImage = getDedicatedMatureCultureImage(type);
-        if (dedicatedImage != null) {
-            return dedicatedImage;
-        }
-        return DEFAULT_MATURE_FLOWER_IMAGE;
+        return getDedicatedMatureCultureImage(type);
     }
 
     /**

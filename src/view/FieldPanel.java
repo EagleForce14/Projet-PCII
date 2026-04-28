@@ -154,10 +154,6 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private final Image caveEntranceImage;
 
     // Images associées aux différents stades visuels d'une culture.
-    private final Image jeunePousseImage;
-    private final Image croissanceInterImage;
-    private final Image maturiteImage;
-    private final Image fletrieImage;
     private final Image carotteJeunePousseImage;
     private final Image carotteIntermediaireImage;
     private final Image carotteMatureImage;
@@ -245,10 +241,6 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         this.decorativeRiverEntryTileImage = ImageLoader.load("/assets/entreeRiviere.png");
         this.decorativeRiverContinuationTileImage = ImageLoader.load("/assets/river2.png");
         this.caveEntranceImage = ImageLoader.load("/assets/cave_entrance.png");
-        this.jeunePousseImage = ImageLoader.load("/assets/jeune_pousse.png");
-        this.croissanceInterImage = ImageLoader.load("/assets/croissance_inter.png");
-        this.maturiteImage = ImageLoader.load("/assets/maturite.png");
-        this.fletrieImage = ImageLoader.load("/assets/fletrie.png");
         this.carotteJeunePousseImage = ImageLoader.load("/assets/carotte_jeune_pousse.png");
         this.carotteIntermediaireImage = ImageLoader.load("/assets/carotte_intermediaire.png");
         this.carotteMatureImage = ImageLoader.load("/assets/carotte_mature.png");
@@ -1199,19 +1191,6 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
             return getLeftZoneFlowerCultureImage(culture.getType(), culture.getStadeCroissance());
         }
 
-        Stade stade = culture.getStadeCroissance();
-        if (stade == Stade.JEUNE_POUSSE) {
-            return jeunePousseImage;
-        }
-        if (stade == Stade.INTERMEDIAIRE) {
-            return croissanceInterImage;
-        }
-        if (stade == Stade.MATURE) {
-            return maturiteImage;
-        }
-        if (stade == Stade.FLETRIE) {
-            return fletrieImage;
-        }
         return null;
     }
 
