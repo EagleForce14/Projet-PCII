@@ -355,7 +355,6 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         }
 
         this.highlightedCell = highlightedCell == null ? null : new Point(highlightedCell);
-        repaint();
     }
 
     /**
@@ -382,7 +381,6 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         this.fencePreview = fencePreview == null
                 ? null
                 : new FencePreview(fencePreview.getCell(), fencePreview.getSide());
-        repaint();
     }
 
     /**

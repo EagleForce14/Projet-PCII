@@ -353,7 +353,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
 
         syncPlacementVisuals();
         inventoryStatusOverlay.repaint();
-        fieldPanel.repaint();
         movementView.requestFocusInWindow();
     }
 
