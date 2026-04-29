@@ -14,6 +14,7 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -46,6 +47,14 @@ public class ProductCardView extends JPanel {
     private static final Color BADGE_FILL_ERROR = new Color(114, 43, 38, 225);
     // Bordure du badge quand il signale un manque de bois.
     private static final Color BADGE_BORDER_ERROR = new Color(232, 112, 101);
+    // Fond du bouton intégré quand l'action est disponible.
+    private static final Color ACTION_FILL = new Color(92, 166, 196, 225);
+    // Fond du bouton intégré au survol.
+    private static final Color ACTION_FILL_HOVER = new Color(116, 191, 221, 235);
+    // Fond du bouton quand l'action est indisponible.
+    private static final Color ACTION_FILL_DISABLED = new Color(74, 78, 86, 220);
+    // Bordure du bouton intégré.
+    private static final Color ACTION_BORDER = new Color(203, 228, 240, 180);
 
     // Produit représenté par cette carte.
     private final Product product;
@@ -74,9 +83,17 @@ public class ProductCardView extends JPanel {
     // la carte ne connaît ni la boutique, ni le contrôleur, ni la logique métier.
     // Elle sait seulement déclencher "l'action de sélection" qu'on lui confie au clic.
     private final Runnable onSelect;
+    // Libellé du bouton d'action intégré, quand la carte en porte un.
+    private final String actionLabel;
+    // Indique si l'action intégrée est cliquable.
+    private final boolean actionEnabled;
+    // Callback exécuté quand on clique sur l'action intégrée.
+    private final Runnable onAction;
 
     // Indique si le pointeur survole actuellement la carte.
     private boolean hovered;
+    // Indique si le pointeur survole le bouton intégré.
+    private boolean actionHovered;
 
     /**
      * On prépare une carte purement visuelle pour un produit du catalogue.
@@ -97,6 +114,45 @@ public class ProductCardView extends JPanel {
             Font bodyFont,
             Runnable onSelect
     ) {
+        this(
+                product,
+                categoryLabel,
+                detailLabel,
+                valueLabel,
+                footerLabel,
+                badgeText,
+                selected,
+                woodTexture,
+                labelFont,
+                priceFont,
+                bodyFont,
+                onSelect,
+                null,
+                false,
+                null
+        );
+    }
+
+    /**
+     * Variante enrichie avec un bouton intégré dans la carte.
+     */
+    public ProductCardView(
+            Product product,
+            String categoryLabel,
+            String detailLabel,
+            String valueLabel,
+            String footerLabel,
+            String badgeText,
+            boolean selected,
+            Image woodTexture,
+            Font labelFont,
+            Font priceFont,
+            Font bodyFont,
+            Runnable onSelect,
+            String actionLabel,
+            boolean actionEnabled,
+            Runnable onAction
+    ) {
         this.product = product;
         this.categoryLabel = categoryLabel;
         this.detailLabel = detailLabel == null ? "" : detailLabel.trim();
@@ -109,6 +165,9 @@ public class ProductCardView extends JPanel {
         this.priceFont = priceFont;
         this.bodyFont = bodyFont;
         this.onSelect = onSelect;
+        this.actionLabel = actionLabel == null ? "" : actionLabel.trim();
+        this.actionEnabled = actionEnabled;
+        this.onAction = onAction;
 
         setOpaque(false);
         setPreferredSize(new Dimension(270, getCardHeight()));
@@ -120,23 +179,39 @@ public class ProductCardView extends JPanel {
             @Override
             public void mouseEntered(MouseEvent e) {
                 hovered = true;
+                actionHovered = isInsideActionButton(e);
                 repaint();
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
                 hovered = false;
+                actionHovered = false;
                 repaint();
             }
 
             @Override
+            public void mouseMoved(MouseEvent e) {
+                boolean wasActionHovered = actionHovered;
+                actionHovered = isInsideActionButton(e);
+                if (wasActionHovered != actionHovered) {
+                    repaint();
+                }
+            }
+
+            @Override
             public void mousePressed(MouseEvent e) {
+                if (isInsideActionButton(e) && actionEnabled && onAction != null) {
+                    onAction.run();
+                    return;
+                }
                 if (onSelect != null) {
                     onSelect.run();
                 }
             }
         };
         addMouseListener(mouseAdapter);
+        addMouseMotionListener(mouseAdapter);
     }
 
     /**
@@ -225,7 +300,7 @@ public class ProductCardView extends JPanel {
             java.awt.FontMetrics badgeMetrics = g2d.getFontMetrics();
             int badgeWidth = badgeMetrics.stringWidth(badgeText) + 18;
             int badgeX = getWidth() - badgeWidth - 14;
-            int badgeY = getHeight() - 38;
+            int badgeY = hasActionButton() ? getHeight() - 74 : getHeight() - 38;
 
             g2d.setColor(getBadgeFillColor());
             g2d.fillRoundRect(badgeX, badgeY, badgeWidth, 24, 12, 12);
@@ -237,7 +312,41 @@ public class ProductCardView extends JPanel {
             g2d.drawString(badgeText, badgeTextX, badgeTextY);
         }
 
+        paintActionButton(g2d);
+
         g2d.dispose();
+    }
+
+    /**
+     * Dessine le CTA intégré au bas de la carte quand il existe.
+     */
+    private void paintActionButton(Graphics2D g2d) {
+        if (!hasActionButton()) {
+            return;
+        }
+
+        Rectangle actionBounds = getActionButtonBounds();
+        if (actionBounds == null) {
+            return;
+        }
+
+        Color fill = !actionEnabled
+                ? ACTION_FILL_DISABLED
+                : actionHovered
+                ? ACTION_FILL_HOVER
+                : ACTION_FILL;
+
+        g2d.setColor(fill);
+        g2d.fillRoundRect(actionBounds.x, actionBounds.y, actionBounds.width, actionBounds.height, 14, 14);
+        g2d.setColor(ACTION_BORDER);
+        g2d.drawRoundRect(actionBounds.x, actionBounds.y, actionBounds.width, actionBounds.height, 14, 14);
+
+        g2d.setFont(bodyFont);
+        java.awt.FontMetrics metrics = g2d.getFontMetrics();
+        g2d.setColor(TEXT_PRIMARY);
+        int textX = actionBounds.x + ((actionBounds.width - metrics.stringWidth(actionLabel)) / 2);
+        int textY = actionBounds.y + ((actionBounds.height - metrics.getHeight()) / 2) + metrics.getAscent();
+        g2d.drawString(actionLabel, textX, textY);
     }
 
     /**
@@ -245,6 +354,13 @@ public class ProductCardView extends JPanel {
      */
     private boolean hasDetailLabel() {
         return !detailLabel.isBlank();
+    }
+
+    /**
+     * Indique si cette carte embarque un CTA visible.
+     */
+    private boolean hasActionButton() {
+        return !actionLabel.isBlank();
     }
 
     /**
@@ -280,13 +396,41 @@ public class ProductCardView extends JPanel {
     }
 
     /**
+     * Calcule la zone cliquable du CTA intégré.
+     */
+    private Rectangle getActionButtonBounds() {
+        if (!hasActionButton()) {
+            return null;
+        }
+
+        int horizontalInset = 14;
+        int buttonHeight = 32;
+        int bottomInset = 14;
+        return new Rectangle(
+                horizontalInset,
+                getHeight() - buttonHeight - bottomInset,
+                getWidth() - (horizontalInset * 2),
+                buttonHeight
+        );
+    }
+
+    /**
+     * On teste si la souris est bien dans la zone du CTA intégré.
+     */
+    private boolean isInsideActionButton(MouseEvent event) {
+        Rectangle actionBounds = getActionButtonBounds();
+        return actionBounds != null && actionBounds.contains(event.getPoint());
+    }
+
+    /**
      * Une carte avec plusieurs lignes d'aide doit être un peu plus haute,
      * sinon le prix et le stock viennent se coller au badge du panier.
      */
     private int getCardHeight() {
+        int actionHeight = hasActionButton() ? 46 : 0;
         if (!hasDetailLabel()) {
-            return 154;
+            return 154 + actionHeight;
         }
-        return 162 + (getDetailLines().length * 18);
+        return 162 + (getDetailLines().length * 18) + actionHeight;
     }
 }

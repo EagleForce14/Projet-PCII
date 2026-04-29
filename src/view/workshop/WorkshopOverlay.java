@@ -8,7 +8,6 @@ import model.workshop.WorkshopConstructionManager;
 import view.CustomFontLoader;
 import view.ImageLoader;
 import view.shop.ProductCardView;
-import view.shop.ProductPreview;
 import view.shop.ShopOverlayUiFactory;
 import view.shop.ShopPixelButton;
 import view.shop.ShopSectionPanel;
@@ -88,28 +87,14 @@ public class WorkshopOverlay extends JPanel {
     private final JPanel productsGrid;
     // Aperçu visuel dédié à la ressource bois.
     private final WoodPreviewPanel woodPreviewPanel;
-    // Libellé du stock de bois dans la colonne de droite.
-    private final JLabel woodValueLabel;
     // Libellé d'information de stock dans la colonne de gauche.
     private final JLabel infoWoodLabel;
     // Libellé d'état du chantier dans la colonne de gauche.
     private final JLabel infoQueueLabel;
-    // Nom du plan sélectionné.
-    private final JLabel selectedNameLabel;
-    // Coût du plan sélectionné.
-    private final JLabel selectedCostLabel;
-    // Nombre de ponts déjà présents dans l'inventaire.
-    private final JLabel selectedBridgeStockLabel;
-    // État général du chantier en cours.
-    private final JLabel constructionStateLabel;
     // Temps restant ou durée totale affichée.
     private final JLabel remainingTimeLabel;
-    // Message court affiché en bas de la colonne de droite.
+    // Message court affiché dans la colonne de gauche.
     private final JLabel messageLabel;
-    // Aperçu visuel du plan sélectionné.
-    private final ProductPreview productPreview;
-    // Bouton principal qui lance la fabrication.
-    private final ShopPixelButton constructButton;
     // Timer de rafraîchissement périodique de l'overlay.
     private final Timer refreshTimer;
 
@@ -139,24 +124,10 @@ public class WorkshopOverlay extends JPanel {
         this.productsGrid.setOpaque(false);
 
         this.woodPreviewPanel = new WoodPreviewPanel();
-        this.woodValueLabel = createPrimaryLabel(priceFont);
         this.infoWoodLabel = createSecondaryLabel(bodyFont);
         this.infoQueueLabel = createSecondaryLabel(bodyFont);
-        this.selectedNameLabel = createPrimaryLabel(priceFont);
-        this.selectedCostLabel = createPrimaryLabel(bodyFont);
-        this.selectedBridgeStockLabel = createSecondaryLabel(bodyFont);
-        this.constructionStateLabel = createPrimaryLabel(bodyFont);
         this.remainingTimeLabel = createSecondaryLabel(bodyFont);
         this.messageLabel = createSecondaryLabel(bodyFont);
-        this.productPreview = new ProductPreview();
-        this.constructButton = new ShopPixelButton(
-                "Construire",
-                bodyFont,
-                ACCENT,
-                ACCENT_HOVER,
-                new Color(37, 72, 92),
-                TEXT_PRIMARY
-        );
         this.refreshTimer = new Timer(250, event -> syncFromState());
 
         setOpaque(false);
@@ -166,7 +137,6 @@ public class WorkshopOverlay extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(22, 24, 24, 24));
 
         add(buildContent(), BorderLayout.CENTER);
-        wireActions();
         setMessage(null, TEXT_MUTED);
     }
 
@@ -287,7 +257,7 @@ public class WorkshopOverlay extends JPanel {
     }
 
     /**
-     * On construit les trois grandes colonnes de la menuiserie.
+     * On construit les deux colonnes de la menuiserie.
      */
     private JComponent buildColumns() {
         JPanel columns = new JPanel(new GridBagLayout());
@@ -305,12 +275,8 @@ public class WorkshopOverlay extends JPanel {
 
         gbc.gridx = 1;
         gbc.weightx = 1.0;
-        columns.add(buildCatalogPanel(), gbc);
-
-        gbc.gridx = 2;
-        gbc.weightx = 0.0;
         gbc.insets = new Insets(0, 0, 0, 0);
-        columns.add(buildSummaryPanel(), gbc);
+        columns.add(buildCatalogPanel(), gbc);
         return columns;
     }
 
@@ -323,15 +289,15 @@ public class WorkshopOverlay extends JPanel {
 
         JLabel title = createPrimaryLabel(priceFont);
         title.setText("Atelier");
-
-        JLabel queueTitle = createSecondaryLabel(subtitleFont);
-        queueTitle.setText("CHANTIER");
+        alignLeft(infoQueueLabel);
+        alignLeft(remainingTimeLabel);
+        alignLeft(messageLabel);
 
         content.add(title);
         content.add(Box.createVerticalStrut(10));
         content.add(buildWoodStockPanel());
         content.add(Box.createVerticalStrut(18));
-        content.add(createLeftAlignedGroup(new int[] {6}, queueTitle, infoQueueLabel));
+        content.add(createLeftAlignedGroup(new int[] {6, 8}, infoQueueLabel, remainingTimeLabel, messageLabel));
         content.add(Box.createVerticalGlue());
 
         infoPanel.add(content, BorderLayout.CENTER);
@@ -357,60 +323,6 @@ public class WorkshopOverlay extends JPanel {
     }
 
     /**
-     * On construit la colonne de droite avec la sélection, le chantier et l'action principale.
-     */
-    private JComponent buildSummaryPanel() {
-        ShopSectionPanel summaryPanel = createWorkshopSectionPanel(new BorderLayout(), new Insets(18, 18, 18, 18), new Dimension(350, 0));
-        JPanel topBlock = createTransparentVerticalPanel();
-
-        JLabel woodTitle = createLeftAlignedSecondaryLabel(subtitleFont);
-        alignLeft(woodValueLabel);
-        topBlock.add(createLeftAlignedGroup(new int[] {4}, woodTitle, woodValueLabel));
-        topBlock.add(Box.createVerticalStrut(16));
-        topBlock.add(buildSelectionPanel());
-        topBlock.add(Box.createVerticalStrut(16));
-
-        JLabel chantierTitle = createLeftAlignedPrimaryLabel(priceFont);
-        alignLeft(constructionStateLabel);
-        alignLeft(remainingTimeLabel);
-        topBlock.add(createLeftAlignedGroup(new int[] {8, 6}, chantierTitle, constructionStateLabel, remainingTimeLabel));
-
-        JPanel footer = createTransparentVerticalPanel();
-        footer.add(Box.createVerticalStrut(12));
-        footer.add(constructButton);
-        footer.add(Box.createVerticalStrut(10));
-        footer.add(messageLabel);
-
-        summaryPanel.add(topBlock, BorderLayout.NORTH);
-        summaryPanel.add(Box.createGlue(), BorderLayout.CENTER);
-        summaryPanel.add(footer, BorderLayout.SOUTH);
-        return summaryPanel;
-    }
-
-    /**
-     * On construit le petit panneau qui décrit le plan actuellement affiché.
-     */
-    private JComponent buildSelectionPanel() {
-        ShopSectionPanel selectionPanel = createWorkshopSectionPanel(new BorderLayout(0, 14), new Insets(14, 14, 14, 14), null);
-        JPanel meta = createTransparentVerticalPanel();
-        meta.add(selectedNameLabel);
-        meta.add(Box.createVerticalStrut(6));
-        meta.add(selectedCostLabel);
-        meta.add(Box.createVerticalStrut(4));
-        meta.add(selectedBridgeStockLabel);
-
-        selectionPanel.add(createPreviewMetaPanel(productPreview, meta), BorderLayout.NORTH);
-        return selectionPanel;
-    }
-
-    /**
-     * On branche ici les clics principaux de la menuiserie.
-     */
-    private void wireActions() {
-        constructButton.addActionListener(event -> startBridgeConstruction());
-    }
-
-    /**
      * On relit l'état du chantier puis on rafraîchit toutes les zones visibles de l'overlay.
      */
     private void syncFromState() {
@@ -422,7 +334,6 @@ public class WorkshopOverlay extends JPanel {
 
         refreshInfoPanel();
         refreshCatalog();
-        refreshSummary();
         revalidate();
         repaint();
     }
@@ -434,8 +345,11 @@ public class WorkshopOverlay extends JPanel {
         int woodQuantity = inventaire.getQuantiteBois();
         infoWoodLabel.setText(toHtmlLines(woodQuantity + " unites", "disponibles"));
         infoQueueLabel.setText(constructionManager.isConstructionInProgress()
-                ? toHtmlLines("Pont en", "fabrication")
-                : toHtmlLines("Aucune construction", "active"));
+                ? "Pont en fabrication"
+                : "Atelier prêt");
+        remainingTimeLabel.setText(constructionManager.isConstructionInProgress()
+                ? "Temps restant : " + WorkshopConstructionManager.formatDuration(constructionManager.getRemainingConstructionMs())
+                : "Durée d'un pont : " + WorkshopConstructionManager.formatDuration(constructionManager.getBridgeDurationMs()));
     }
 
     /**
@@ -463,7 +377,10 @@ public class WorkshopOverlay extends JPanel {
                 labelFont,
                 priceFont,
                 bodyFont,
-                this::selectBridgeProduct
+                null,
+                getBridgeActionLabel(),
+                isBridgeActionEnabled(),
+                this::startBridgeConstruction
         ), gbc);
 
         GridBagConstraints filler = new GridBagConstraints();
@@ -476,41 +393,31 @@ public class WorkshopOverlay extends JPanel {
     }
 
     /**
-     * On met à jour les valeurs affichées dans la colonne de droite.
-     */
-    private void refreshSummary() {
-        int woodQuantity = inventaire.getQuantiteBois();
-        int bridgeQuantity = inventaire.getQuantiteInstallation(FacilityType.PONT);
-        boolean constructionInProgress = constructionManager.isConstructionInProgress();
-
-        woodValueLabel.setText(woodQuantity + " unités");
-        productPreview.setProduct(bridgeProduct);
-        selectedNameLabel.setText(bridgeProduct.getName());
-        selectedCostLabel.setText("Coût : " + formatWoodUnits(constructionManager.getBridgeWoodCost()));
-        selectedBridgeStockLabel.setText("Ponts en inventaire : " + bridgeQuantity);
-
-        constructionStateLabel.setText(constructionInProgress ? "Construction active" : "Prêt à lancer");
-        remainingTimeLabel.setText(constructionInProgress
-                ? "Temps restant : " + WorkshopConstructionManager.formatDuration(constructionManager.getRemainingConstructionMs())
-                : "Durée d'un pont : " + WorkshopConstructionManager.formatDuration(constructionManager.getBridgeDurationMs()));
-
-        constructButton.setText(constructionInProgress ? "Construction en cours" : "Construire");
-        constructButton.setEnabled(!constructionInProgress && inventaire.possedeBois(constructionManager.getBridgeWoodCost()));
-    }
-
-    /**
-     * On force simplement la sélection visuelle du plan de pont.
-     */
-    private void selectBridgeProduct() {
-        productPreview.setProduct(bridgeProduct);
-        repaint();
-    }
-
-    /**
      * Uniformise l'affichage des coûts en bois dans toute la menuiserie.
      */
     private String formatWoodUnits(int quantity) {
         return quantity + " unités de bois";
+    }
+
+    /**
+     * Libellé du CTA directement intégré à la carte du pont.
+     */
+    private String getBridgeActionLabel() {
+        if (constructionManager.isConstructionInProgress()) {
+            return "Construction en cours";
+        }
+        if (!inventaire.possedeBois(constructionManager.getBridgeWoodCost())) {
+            return "Bois insuffisant";
+        }
+        return "Construire";
+    }
+
+    /**
+     * Le CTA n'est actif que si l'atelier est libre et que le bois suffit.
+     */
+    private boolean isBridgeActionEnabled() {
+        return !constructionManager.isConstructionInProgress()
+                && inventaire.possedeBois(constructionManager.getBridgeWoodCost());
     }
 
     /**
@@ -547,10 +454,11 @@ public class WorkshopOverlay extends JPanel {
      * On renvoie le texte d'aide court affiché sur la carte du pont.
      */
     private String getBridgeCardDetailLabel() {
+        int bridgeQuantity = inventaire.getQuantiteInstallation(FacilityType.PONT);
         if (constructionManager.isConstructionInProgress()) {
-            return "Permet de franchir la rivière\nChantier en cours";
+            return "Permet de franchir la rivière\nPonts en inventaire : " + bridgeQuantity;
         }
-        return "Permet de franchir la rivière";
+        return "Permet de franchir la rivière\nPonts en inventaire : " + bridgeQuantity;
     }
 
     /**
@@ -577,7 +485,7 @@ public class WorkshopOverlay extends JPanel {
     }
 
     /**
-     * On affiche ou masque le message d'état en bas de la colonne de droite.
+     * On affiche ou masque le message d'état dans la colonne de gauche.
      */
     private void setMessage(String text, Color color) {
         boolean hasMessage = text != null && !text.isBlank();
@@ -680,16 +588,6 @@ public class WorkshopOverlay extends JPanel {
     private void alignLeft(JLabel label) {
         label.setAlignmentX(LEFT_ALIGNMENT);
         label.setHorizontalAlignment(SwingConstants.LEFT);
-    }
-
-    /**
-     * Variante pratique pour créer un titre principal déjà calé à gauche.
-     */
-    private JLabel createLeftAlignedPrimaryLabel(Font font) {
-        JLabel label = createPrimaryLabel(font);
-        label.setText("Chantier");
-        alignLeft(label);
-        return label;
     }
 
     /**
