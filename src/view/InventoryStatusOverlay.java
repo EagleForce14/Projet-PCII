@@ -387,10 +387,9 @@ public class InventoryStatusOverlay extends JPanel {
 
         int contentX = cardX + 18;
         int contentY = cardY + 18;
-        int textX = contentX;
         g2d.setFont(plantingHintTitleFont);
         g2d.setColor(PLANTING_HINT_TITLE);
-        g2d.drawString(title, textX, contentY + 5);
+        g2d.drawString(title, contentX, contentY + 5);
 
         g2d.setFont(plantingHintBodyFont);
         g2d.setColor(PLANTING_HINT_BODY);
