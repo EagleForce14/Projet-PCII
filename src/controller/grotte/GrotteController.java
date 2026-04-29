@@ -312,24 +312,6 @@ public final class GrotteController implements KeyListener, MouseListener {
     }
 
     /**
-     * On bascule entre ferme et grotte en appliquant les arrêts nécessaires juste avant.
-     */
-    private void toggleCaveScene() {
-        if (pauseController.isPaused()) {
-            return;
-        }
-
-        stopPlayerMovement(playerUnit);
-        stopPlayerFire();
-        if (isCaveSceneActive()) {
-            returnToFarm();
-            return;
-        }
-
-        showCave();
-    }
-
-    /**
      * Le déplacement du joueur est calculé dans le thread physique,
      * mais la bascule de carte et le focus restent des opérations Swing.
      * On revalide donc le trigger sur l'EDT avec la position la plus récente.
