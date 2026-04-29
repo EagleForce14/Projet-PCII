@@ -40,6 +40,7 @@ import javax.swing.JPanel;
 import javax.swing.OverlayLayout;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Point;
@@ -224,10 +225,12 @@ public class Main {
         );
 
         JPanel centerPanel = new JPanel(new CardLayout());
+        centerPanel.setBackground(Color.BLACK);
         centerPanel.add(gamePanel, FARM_CARD);
         centerPanel.add(grotteGamePanel, GROTTE_CARD);
 
         JPanel contentPanel = new JPanel(new BorderLayout());
+        contentPanel.setBackground(Color.BLACK);
         contentPanel.add(centerPanel, BorderLayout.CENTER);
         contentPanel.add(actionSidebarPanel, BorderLayout.EAST);
         frame.setContentPane(contentPanel);
@@ -392,6 +395,7 @@ public class Main {
      */
     private static JPanel createGamePanel() {
         JPanel gamePanel = new BackgroundPanel(null);
+        gamePanel.setBackground(Color.BLACK);
         gamePanel.setMinimumSize(GAME_AREA_MINIMUM_SIZE);
         gamePanel.setPreferredSize(GAME_AREA_PREFERRED_SIZE);
         return gamePanel;

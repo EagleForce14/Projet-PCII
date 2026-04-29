@@ -52,7 +52,7 @@ public final class Stall {
             return null;
         }
 
-        Rectangle barnDrawBounds = new Rectangle(Barn.getDrawX(), Barn.Y, Barn.WIDTH, Barn.HEIGHT);
+        Rectangle barnDrawBounds = Barn.getDrawBounds();
         Rectangle preferredBounds = BuildingGeometry.buildBarnSideBuildingDrawBounds(
                 fieldLogicalBounds,
                 barnDrawBounds,

@@ -219,6 +219,8 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     private Rectangle cachedTerrainFieldBounds;
     // Cache des rectangles utiles pour dessiner les cultures déjà visibles.
     private final Map<Image, Rectangle> visibleCultureBoundsCache = new IdentityHashMap<>();
+    // Taille de tuile figée après le premier layout réel pour stabiliser la map au resize.
+    private int fixedViewportTileSize = -1;
 
     /**
      * Initialise la carte.
@@ -526,9 +528,13 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         Rectangle fieldBounds = getFieldBounds();
         int centerX = fieldBounds.x + (fieldBounds.width / 2);
         int centerY = fieldBounds.y + (fieldBounds.height / 2);
-        int drawX = centerX + Barn.getDrawX();
-        int drawY = centerY + Barn.Y;
-        return new Rectangle(drawX, drawY, Barn.WIDTH, Barn.HEIGHT);
+        Rectangle barnDrawBounds = getBarnLogicalDrawBounds();
+        return new Rectangle(
+                centerX + barnDrawBounds.x,
+                centerY + barnDrawBounds.y,
+                barnDrawBounds.width,
+                barnDrawBounds.height
+        );
     }
 
     /**
@@ -593,7 +599,19 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
      */
     private Rectangle getPreferredFieldBounds() {
         Dimension preferredSize = getPreferredSize();
-        Rectangle fieldBounds = computeFieldBounds(preferredSize.width, preferredSize.height);
+        int tileSize = resolveCoverTileSize(
+                preferredSize.width,
+                preferredSize.height,
+                getColumnCount(),
+                getRowCount()
+        );
+        Rectangle fieldBounds = buildCenteredFieldBounds(
+                preferredSize.width,
+                preferredSize.height,
+                getColumnCount(),
+                getRowCount(),
+                tileSize
+        );
         syncBarnTileSize(fieldBounds);
         return fieldBounds;
     }
@@ -609,18 +627,39 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         }
 
         /*
-         * Ici on cherche un comportement précis :
-         * la map doit recouvrir toute la zone visible.
-         * On choisit donc la plus grande taille de case nécessaire pour couvrir
-         * à la fois la largeur ET la hauteur, quitte à déborder de quelques pixels.
-         * Le panneau est ensuite simplement "recadré" par la fenêtre.
+         * On fige ici la taille de tuile après le premier layout réellement affiché.
+         * Ainsi, le layout de départ reste strictement inchangé, puis les futurs resizes
+         * recentrent simplement la ferme sans remaquetter toute sa géométrie.
          */
+        if (fixedViewportTileSize <= 0) {
+            fixedViewportTileSize = resolveCoverTileSize(panelWidth, panelHeight, columns, rows);
+        }
+
+        return buildCenteredFieldBounds(panelWidth, panelHeight, columns, rows, fixedViewportTileSize);
+    }
+
+    /**
+     * Reproduit la règle historique de layout utilisée au premier affichage :
+     * couvrir la zone visible avec la plus grande taille de case nécessaire.
+     */
+    private int resolveCoverTileSize(int panelWidth, int panelHeight, int columns, int rows) {
         int tileSize = (int) Math.ceil(Math.max(
                 (double) panelWidth / columns,
                 (double) panelHeight / rows
         ));
-        tileSize = Math.max(1, tileSize);
+        return Math.max(1, tileSize);
+    }
 
+    /**
+     * Construit un champ centré à partir d'une taille de tuile déjà choisie.
+     */
+    private Rectangle buildCenteredFieldBounds(
+            int panelWidth,
+            int panelHeight,
+            int columns,
+            int rows,
+            int tileSize
+    ) {
         int gridW = tileSize * columns;
         int gridH = tileSize * rows;
         int startX = (panelWidth - gridW) / 2;
@@ -956,7 +995,7 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
     public Rectangle getBarnLogicalDrawBounds() {
         Rectangle fieldBounds = getFieldBounds();
         syncBarnTileSize(fieldBounds);
-        return new Rectangle(Barn.getDrawX(), Barn.Y, Barn.WIDTH, Barn.HEIGHT);
+        return Barn.getDrawBounds();
     }
 
     /**

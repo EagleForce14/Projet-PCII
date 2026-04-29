@@ -35,20 +35,55 @@ public class Barn {
 
     // La taille affichée suit désormais les dimensions réelles du PNG
     // pour éviter d'écraser une image plus large ou plus plate.
-    public static final int WIDTH = Math.max(1, (int) Math.round(SPRITE_SIZE.width * SPRITE_SCALE));
-    public static final int HEIGHT = Math.max(1, (int) Math.round(SPRITE_SIZE.height * SPRITE_SCALE));
+    private static final int BASE_WIDTH = Math.max(1, (int) Math.round(SPRITE_SIZE.width * SPRITE_SCALE));
+    private static final int BASE_HEIGHT = Math.max(1, (int) Math.round(SPRITE_SIZE.height * SPRITE_SCALE));
     
     // Position x dans le repère logique du champ.
     // On garde ici le placement historique de référence.
-    private static final int BASE_X = (-WIDTH / 2) + HORIZONTAL_SHIFT_RIGHT;
+    private static final int BASE_X = (-BASE_WIDTH / 2) + HORIZONTAL_SHIFT_RIGHT;
     // On la garde un peu dégagée du bord haut, mais plus basse qu'avant.
-    public static final int Y = -400;
+    private static final int BASE_Y = -400;
+
+    /**
+     * Facteur d'échelle dérivé de la taille réelle des tuiles visibles.
+     */
+    private static double getTileScale() {
+        return Math.max(1, currentTileSize) / (double) DEFAULT_TILE_SIZE;
+    }
+
+    /**
+     * Largeur actuelle du sprite, synchronisée avec la taille des tuiles visibles.
+     */
+    public static int getWidth() {
+        return Math.max(1, (int) Math.round(BASE_WIDTH * getTileScale()));
+    }
+
+    /**
+     * Hauteur actuelle du sprite, synchronisée avec la taille des tuiles visibles.
+     */
+    public static int getHeight() {
+        return Math.max(1, (int) Math.round(BASE_HEIGHT * getTileScale()));
+    }
 
     /**
      * On calcule l'abscisse de dessin actuelle de la boutique.
      */
     public static int getDrawX() {
-        return BASE_X;
+        return (int) Math.round(BASE_X * getTileScale());
+    }
+
+    /**
+     * On calcule l'ordonnée de dessin actuelle de la boutique.
+     */
+    public static int getDrawY() {
+        return (int) Math.round(BASE_Y * getTileScale());
+    }
+
+    /**
+     * On reconstruit le rectangle de dessin complet de la boutique à l'échelle courante.
+     */
+    public static Rectangle getDrawBounds() {
+        return new Rectangle(getDrawX(), getDrawY(), getWidth(), getHeight());
     }
 
     /**
@@ -76,7 +111,7 @@ public class Barn {
      */
     public static Rectangle getCollisionBounds() {
         return BuildingGeometry.buildCollisionBounds(
-                new Rectangle(getDrawX(), Y, WIDTH, HEIGHT),
+                getDrawBounds(),
                 HITBOX_WIDTH_RATIO,
                 HITBOX_HEIGHT_RATIO,
                 HITBOX_BOTTOM_INSET_RATIO

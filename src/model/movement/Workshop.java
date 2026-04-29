@@ -43,7 +43,7 @@ public final class Workshop {
             return null;
         }
 
-        Rectangle barnDrawBounds = new Rectangle(Barn.getDrawX(), Barn.Y, Barn.WIDTH, Barn.HEIGHT);
+        Rectangle barnDrawBounds = Barn.getDrawBounds();
         return BuildingGeometry.buildBarnSideBuildingDrawBounds(
                 fieldLogicalBounds,
                 barnDrawBounds,
