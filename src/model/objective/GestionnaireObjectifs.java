@@ -145,36 +145,42 @@ public class GestionnaireObjectifs {
 
     /** Méthode qui met à jour les objectifs liés à la plantation */
     public void mettreAJourObjectifsPlanter(Type typeCulture) {
-        for (ObjectifJournalier objectif : objectifs.values()) {
-            switch (objectif.getType()) {
-                case PLANTER_CULTURES:
-                    ((ObjectifCompteur) objectif).mettreAJourProgression(1); // Incrémente la progression de l'objectif PLANTER_CULTURES de 1 à chaque plantation de culture
-                    break;
-                case PLANTER_TYPES_CULTURE:
-                    ((ObjectifCompteurTypes) objectif).mettreAJourProgression(typeCulture);
-                    break;
-                default:
-                    break;
-            }
-        }
-        afficherProgressionObjectifs(); // Affiche la progression de chaque objectif dans la console après la mise à jour
+        mettreAJourObjectifsCulture(
+                TypeObjectif.PLANTER_CULTURES,
+                TypeObjectif.PLANTER_TYPES_CULTURE,
+                typeCulture
+        );
     }
 
     /** Méthode qui met à jour les objectifs liés à la récolte */
     public void mettreAJourObjectifsRecolter(Type typeCulture) {
+        mettreAJourObjectifsCulture(
+                TypeObjectif.RECOLTER_CULTURES,
+                TypeObjectif.RECOLTER_TYPES_CULTURE,
+                typeCulture
+        );
+    }
+
+    /**
+     * Mutualise la mise à jour des objectifs de culture
+     * qui existent en version "compteur simple" et "types distincts".
+     */
+    private void mettreAJourObjectifsCulture(
+            TypeObjectif compteurType,
+            TypeObjectif compteurTypesType,
+            Type typeCulture
+    ) {
         for (ObjectifJournalier objectif : objectifs.values()) {
-            switch (objectif.getType()) {
-                case RECOLTER_CULTURES:
-                    ((ObjectifCompteur) objectif).mettreAJourProgression(1); // Incrémente la progression de l'objectif RECOLTER_CULTURES de la quantité récoltée à chaque récolte de culture
-                    break;
-                case RECOLTER_TYPES_CULTURE:
-                    ((ObjectifCompteurTypes) objectif).mettreAJourProgression(typeCulture);
-                    break;
-                default:
-                    break;
+            if (objectif.getType() == compteurType) {
+                ((ObjectifCompteur) objectif).mettreAJourProgression(1);
+                continue;
+            }
+
+            if (objectif.getType() == compteurTypesType) {
+                ((ObjectifCompteurTypes) objectif).mettreAJourProgression(typeCulture);
             }
         }
-        afficherProgressionObjectifs(); // Affiche la progression de chaque objectif dans la console après la mise à jour
+        afficherProgressionObjectifs();
     }
 
     /** Méthode qui met à jour les objectifs liés à l'arrosage */

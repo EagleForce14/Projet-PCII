@@ -5,7 +5,6 @@ package model.management;
 
  * Le modèle d'argent ne connaît pas l'écran ni les coordonnées Swing.
  * Il mémorise donc seulement :
- * - le montant gagné,
  * - un point de départ logique dans le monde quand on en dispose,
  * - et l'instant de départ de l'effet.
 
@@ -15,8 +14,6 @@ public class MoneyRewardEffect {
     // Durée totale pendant laquelle un gain reste affichable à l'écran.
     private static final long MONEY_REWARD_EFFECT_MS = 720L;
 
-    // Montant affiché par cet effet de gain.
-    private final int amount;
     // Position logique d'origine du gain sur l'axe X.
     private final int sourceWorldX;
     // Position logique d'origine du gain sur l'axe Y.
@@ -29,15 +26,17 @@ public class MoneyRewardEffect {
     /**
      * On crée un effet simple quand on ne connaît pas la position d'origine du gain.
      */
-    public MoneyRewardEffect(int amount, long startedAtMs) {
-        this(amount, 0, 0, false, startedAtMs);
+    public MoneyRewardEffect(long startedAtMs) {
+        this.sourceWorldX = 0;
+        this.sourceWorldY = 0;
+        this.explicitSource = false;
+        this.startedAtMs = startedAtMs;
     }
 
     /**
      * On mémorise ici toutes les données nécessaires pour animer un gain d'argent.
      */
-    public MoneyRewardEffect(int amount, int sourceWorldX, int sourceWorldY, boolean explicitSource, long startedAtMs) {
-        this.amount = amount;
+    public MoneyRewardEffect(int sourceWorldX, int sourceWorldY, boolean explicitSource, long startedAtMs) {
         this.sourceWorldX = sourceWorldX;
         this.sourceWorldY = sourceWorldY;
         this.explicitSource = explicitSource;

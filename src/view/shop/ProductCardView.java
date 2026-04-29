@@ -78,17 +78,10 @@ public class ProductCardView extends JPanel {
     private final Font priceFont;
     // Police du corps de texte.
     private final Font bodyFont;
-    // Sert juste à dire quoi faire quand on clique sur la carte.
-    // Le callback reste volontairement un Runnable très simple :
-    // la carte ne connaît ni la boutique, ni le contrôleur, ni la logique métier.
-    // Elle sait seulement déclencher "l'action de sélection" qu'on lui confie au clic.
-    private final Runnable onSelect;
     // Libellé du bouton d'action intégré, quand la carte en porte un.
     private final String actionLabel;
     // Indique si l'action intégrée est cliquable.
     private final boolean actionEnabled;
-    // Callback exécuté quand on clique sur l'action intégrée.
-    private final Runnable onAction;
 
     // Indique si le pointeur survole actuellement la carte.
     private boolean hovered;
@@ -164,10 +157,8 @@ public class ProductCardView extends JPanel {
         this.labelFont = labelFont;
         this.priceFont = priceFont;
         this.bodyFont = bodyFont;
-        this.onSelect = onSelect;
         this.actionLabel = actionLabel == null ? "" : actionLabel.trim();
         this.actionEnabled = actionEnabled;
-        this.onAction = onAction;
 
         setOpaque(false);
         setPreferredSize(new Dimension(270, getCardHeight()));

@@ -68,8 +68,6 @@ public final class GrotteCombatView extends JPanel {
     private static final Color SHOOT_HINT_MUTED = new Color(226, 214, 192, 236);
     // Fond de la capsule "ESPACE".
     private static final Color SHOOT_HINT_KEY_BACKGROUND = new Color(91, 67, 39, 245);
-    // Bordure de la capsule "ESPACE".
-    private static final Color SHOOT_HINT_KEY_BORDER = new Color(255, 229, 170, 245);
     // Fond du bouton de fermeture.
     private static final Color SHOOT_HINT_CLOSE_BACKGROUND = new Color(72, 48, 29, 240);
     // Couleur de la croix de fermeture.
@@ -88,7 +86,7 @@ public final class GrotteCombatView extends JPanel {
     // Le hint est refermé localement mais réouvert à chaque nouvelle entrée.
     private boolean shootHintVisible;
     // Zone cliquable de la croix de fermeture.
-    private Rectangle shootHintCloseBounds;
+    private final Rectangle shootHintCloseBounds;
 
     /**
      * On prépare la couche d'affichage du combat de grotte.

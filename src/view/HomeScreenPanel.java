@@ -8,7 +8,6 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.InputMap;
-import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.KeyStroke;
 import javax.swing.JPanel;
@@ -87,19 +86,11 @@ public class HomeScreenPanel extends JPanel {
     // Permet d'attendre la premiere taille reelle du panneau avant de repartir les feuilles.
     private boolean leavesNeedInitialDistribution = true;
 
-    // Constructeur pratique pour creer l'accueil sans decor figé fourni.
     public HomeScreenPanel(Runnable onStartGame, Runnable onQuitGame) {
-        this(onStartGame, onQuitGame, null);
-    }
-
-    // Construit l'accueil avec le fond, la sidebar et l'animation des feuilles.
-    public HomeScreenPanel(Runnable onStartGame, Runnable onQuitGame, JComponent frozenGameBackground) {
         setLayout(new BorderLayout());
         setFocusable(true);
         setOpaque(true);
 
-        // Le parametre frozenGameBackground est conserve pour compatibilite API,
-        // mais l'accueil utilise desormais un fond dedie.
         this.homeBackground = ImageLoader.load(HOME_BACKGROUND_PATH);
 
         // Les feuilles sont preparees avant le lancement du timer pour eviter un premier rendu vide.

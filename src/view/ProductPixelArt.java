@@ -226,7 +226,6 @@ public final class ProductPixelArt {
         Image illustratedSeedImage = getIllustratedSeedImage(type);
         if (illustratedSeedImage != null) {
             drawScaledImage(g2d, illustratedSeedImage, x, y, ILLUSTRATED_SEED_IMAGE_MAX_SIDE * pixelSize);
-            return;
         }
     }
 

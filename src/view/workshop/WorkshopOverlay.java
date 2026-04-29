@@ -50,10 +50,6 @@ public class WorkshopOverlay extends JPanel {
     private static final Color TEXT_SECONDARY = new Color(216, 199, 164);
     // Couleur des textes peu prioritaires.
     private static final Color TEXT_MUTED = new Color(169, 151, 124);
-    // Couleur d'accent du bouton principal.
-    private static final Color ACCENT = new Color(92, 166, 196);
-    // Variante de survol de la couleur d'accent.
-    private static final Color ACCENT_HOVER = new Color(116, 191, 221);
     // Couleur des messages de succès.
     private static final Color SUCCESS = new Color(163, 216, 130);
     // Couleur des messages d'erreur.
@@ -455,9 +451,7 @@ public class WorkshopOverlay extends JPanel {
      */
     private String getBridgeCardDetailLabel() {
         int bridgeQuantity = inventaire.getQuantiteInstallation(FacilityType.PONT);
-        if (constructionManager.isConstructionInProgress()) {
-            return "Permet de franchir la rivière\nPonts en inventaire : " + bridgeQuantity;
-        }
+        constructionManager.isConstructionInProgress();
         return "Permet de franchir la rivière\nPonts en inventaire : " + bridgeQuantity;
     }
 

@@ -2,8 +2,6 @@ package model.environment;
 
 import model.culture.CellSide;
 
-import java.awt.Rectangle;
-
 /**
  * Décrit le segment précis qui bloque une entité.
  * L'IA des lapins s'en sert pour savoir quelle clôture elle est réellement en train de taper.
@@ -15,17 +13,14 @@ public class FenceCollision {
     private final int gridY;
     // Côté précis de la case où se trouve le segment de clôture touché.
     private final CellSide side;
-    // Bornes logiques du segment de clôture touché.
-    private final Rectangle bounds;
 
     /**
      * On mémorise ici la clôture précise qui vient de bloquer une entité.
      */
-    public FenceCollision(int gridX, int gridY, CellSide side, Rectangle bounds) {
+    public FenceCollision(int gridX, int gridY, CellSide side) {
         this.gridX = gridX;
         this.gridY = gridY;
         this.side = side;
-        this.bounds = bounds == null ? null : new Rectangle(bounds);
     }
 
     /**

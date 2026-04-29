@@ -17,9 +17,6 @@ public class MovementModel {
     // Référence directe vers le joueur (pour le contrôler au clavier)
     private Unit playerUnit;
 
-    // Vaut true si une unité déplaçable (ici le joueur) est sur une case du champ highlightée.
-    private volatile boolean actionOverlayEnabled;
-
     // La case sur laquelle le joueur est réellement positionné dans le champ.
     private volatile Point activeFieldCell;
 
@@ -70,7 +67,6 @@ public class MovementModel {
      */
     public void setActiveFieldCell(Point activeFieldCell) {
         this.activeFieldCell = activeFieldCell == null ? null : new Point(activeFieldCell);
-        this.actionOverlayEnabled = activeFieldCell != null;
     }
 
     /**

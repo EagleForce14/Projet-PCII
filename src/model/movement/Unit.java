@@ -96,9 +96,9 @@ public class Unit {
     // Animation actuellement affichée pour l'unité.
     private volatile SpriteAnimation spriteAnimation = SpriteAnimation.IDLE;
     // Index de l'image actuellement affichée dans l'animation.
-    private volatile int animationFrameIndex = 0;
+    private int animationFrameIndex = 0;
     // Compteur interne utilisé pour ralentir l'avancement des animations.
-    private volatile int animationTick = 0;
+    private int animationTick = 0;
 
     /**
      * On crée une unité mobile à la position donnée avec tout son état de base.

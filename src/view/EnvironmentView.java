@@ -488,7 +488,12 @@ public class EnvironmentView extends JPanel {
      * arbre adulte ou tronc selon son état.
      */
     private Image getDisplayedTreeImage(TreeInstance tree) {
-        return tree != null && tree.isMature() ? getMatureTreeImage(tree) : getTrunkImage(tree);
+        if (tree != null && tree.isMature()) {
+            return getMatureTreeImage(tree);
+        } else {
+            assert tree != null;
+            return getTrunkImage(tree);
+        }
     }
 
     /**

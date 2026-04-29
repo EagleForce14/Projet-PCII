@@ -76,8 +76,8 @@ public class Money {
         this.amount += amount;
         long now = System.currentTimeMillis();
         rewardEffects.add(explicitSource
-                ? new MoneyRewardEffect(amount, sourceWorldX, sourceWorldY, true, now)
-                : new MoneyRewardEffect(amount, now));
+                ? new MoneyRewardEffect(sourceWorldX, sourceWorldY, true, now)
+                : new MoneyRewardEffect(now));
     }
 
     /**

@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Fabrique des tuiles de terrain.
- *
+
  * Ici il y a deux familles de tuiles :
  * - l'herbe, qui doit utiliser directement l'asset valide par l'utilisateur,
  * - la terre, qui reste une tuile pixel art fixe.
@@ -103,10 +103,6 @@ public final class TerrainTileFactory {
             return new Image[] { soilTile };
         }
         return null;
-//
-//        return new Image[] {
-//                createReferenceSoilTile(pixelSize)
-//        };
     }
 
     /**
@@ -243,15 +239,6 @@ public final class TerrainTileFactory {
     }
 
     /**
-     * On mélange tres légèrement la texture avec ses rotations.
-     *
-     * But :
-     * casser un peu la lecture diagonale de l'image source
-     * sans denaturer le motif que tu aimais deja.
-     *
-     * Le poids du pixel d'origine reste majoritaire.
-     */
-    /**
      * Mélange légèrement la texture d'herbe avec ses rotations
      * pour casser les grandes directions visibles dans le motif.
      */
@@ -260,12 +247,12 @@ public final class TerrainTileFactory {
         int height = source.getHeight();
         BufferedImage result = createTransparentTile(width);
 
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                Color c0 = new Color(source.getRGB(x, y));
-                Color c90 = new Color(source.getRGB(y, width - 1 - x));
-                Color c180 = new Color(source.getRGB(width - 1 - x, height - 1 - y));
-                Color c270 = new Color(source.getRGB(height - 1 - y, x));
+        for (int row = 0; row < height; row++) {
+            for (int column = 0; column < width; column++) {
+                Color c0 = new Color(source.getRGB(column, row));
+                Color c90 = sampleRotated90(source, column, row, width);
+                Color c180 = sampleRotated180(source, column, row, width, height);
+                Color c270 = sampleRotated270(source, column, row, height);
 
                 int blendedRed = clampColor((int) Math.round(
                         (c0.getRed() * 0.58)
@@ -287,7 +274,7 @@ public final class TerrainTileFactory {
                 ));
 
                 Color blended = new Color(blendedRed, blendedGreen, blendedBlue);
-                result.setRGB(x, y, findNearestPaletteColor(blended, palette).getRGB());
+                result.setRGB(column, row, findNearestPaletteColor(blended, palette).getRGB());
             }
         }
 
@@ -295,11 +282,26 @@ public final class TerrainTileFactory {
     }
 
     /**
-     * Reduction de la grande tuile source vers une petite tuile 16x16.
-     *
-     * On moyenne chaque bloc pour garder le "dessin" global de l'ancienne herbe,
-     * mais le passage sur une petite grille rend naturellement la lecture plus pixel art.
+     * On lit la couleur du même point après une rotation à 90 degrés.
      */
+    private static Color sampleRotated90(BufferedImage source, int column, int row, int width) {
+        return new Color(source.getRGB(row, width - 1 - column));
+    }
+
+    /**
+     * On lit la couleur du même point après une rotation à 180 degrés.
+     */
+    private static Color sampleRotated180(BufferedImage source, int column, int row, int width, int height) {
+        return new Color(source.getRGB(width - 1 - column, height - 1 - row));
+    }
+
+    /**
+     * On lit la couleur du même point après une rotation à 270 degrés.
+     */
+    private static Color sampleRotated270(BufferedImage source, int column, int row, int height) {
+        return new Color(source.getRGB(height - 1 - row, column));
+    }
+
     /**
      * Réduit une grande texture en une petite tuile 16x16.
      * Cela donne une apparence plus proche d'un vrai sprite de terrain.
@@ -341,13 +343,6 @@ public final class TerrainTileFactory {
         return result;
     }
 
-    /**
-     * Petit regroupement local des pixels.
-     *
-     * Ce passage ne change pas le style de base.
-     * Il rend juste les paquets de vert un peu plus francs,
-     * ce qui rapproche la tuile de la lecture de la terre.
-     */
     /**
      * Regroupe légèrement les pixels voisins pour donner un rendu plus compact et plus lisible.
      */
@@ -394,16 +389,6 @@ public final class TerrainTileFactory {
         return result;
     }
 
-    /**
-     * On retire une partie du grand denivelé de lumiere.
-     *
-     * Concretement :
-     * on regarde la luminance moyenne autour de chaque pixel avec wrap,
-     * puis on rapproche doucement cette luminance du niveau global.
-     *
-     * Cela laisse vivre les details fins,
-     * mais ca reduit l'effet de grande vague visible quand la tuile se repete.
-     */
     /**
      * Réduit les contrastes trop marqués qui donnent une impression de relief arrondi à l'herbe.
      */
@@ -457,66 +442,6 @@ public final class TerrainTileFactory {
 
         return result;
     }
-
-//    /**
-//     * La terre reste une tuile fixe 16x16.
-//     *
-//     * Ici la stabilite du motif est voulue :
-//     * l'utilisateur a valide un look proche de cette reference,
-//     * donc on ne cherche pas de generation procedurale.
-//     */
-//    private static BufferedImage createReferenceSoilTile(int pixelSize) {
-//        Color darkest = new Color(67, 43, 29);
-//        Color dark = new Color(92, 58, 38);
-//        Color mid = new Color(121, 78, 49);
-//        Color warm = new Color(156, 103, 66);
-//        Color light = new Color(191, 133, 86);
-//
-//        String[] pattern = {
-//                "CCBBAACDCCBBAADC",
-//                "BBAADDCCBBAACCCB",
-//                "CBADDCBBCCDDBBAC",
-//                "DBCCBAADCCBBAADC",
-//                "CCBBAADDBCCCBBAA",
-//                "BAADCCBBAADCCCBD",
-//                "ADCCBBADCCBBAADC",
-//                "CCBBADCCBBAADCCB",
-//                "BBAADCCCBBAADDBC",
-//                "CCDBBAADCCBBAACC",
-//                "BAADCCBBAADCCBBD",
-//                "ADCCBBAADCCCBBAA",
-//                "CCBBAADCCBBAADDC",
-//                "BBAADCCCBBAACCCB",
-//                "CBDCCBBAADCCBBAD",
-//                "DCCBBAADCCBBAACC"
-//        };
-//
-//        BufferedImage base = createTransparentTile(16);
-//        for (int y = 0; y < pattern.length; y++) {
-//            String row = pattern[y];
-//            for (int x = 0; x < row.length(); x++) {
-//                paintPixel(base, x, y, getSoilColor(row.charAt(x), darkest, dark, mid, warm, light));
-//            }
-//        }
-//
-//        return scaleNearest(base, pixelSize);
-//    }
-//
-//
-//    private static Color getSoilColor(char code, Color darkest, Color dark, Color mid, Color warm, Color light) {
-//        switch (code) {
-//            case 'A':
-//                return light;
-//            case 'B':
-//                return warm;
-//            case 'C':
-//                return mid;
-//            case 'D':
-//                return dark;
-//            default:
-//                return darkest;
-//        }
-//    }
 
     /**
      * Redimensionne une image sans lisser les pixels.

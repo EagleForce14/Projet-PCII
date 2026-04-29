@@ -539,7 +539,7 @@ public class FieldObstacleMap implements MovementCollisionMap {
                     Rectangle fenceBounds = fieldPanel.getLogicalFenceBounds(column, row, side);
                     // On renvoie immédiatement la première clôture qui coupe la hitbox.
                     if (fenceBounds != null && fenceBounds.intersects(entityBounds)) {
-                        return new FenceCollision(column, row, side, fenceBounds);
+                        return new FenceCollision(column, row, side);
                     }
                 }
             }

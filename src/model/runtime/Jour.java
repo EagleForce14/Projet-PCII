@@ -19,7 +19,7 @@ public class Jour extends Thread {
     private boolean actif;
     private volatile boolean partieTerminee;
     private volatile DefeatCause defeatCause;
-    private volatile long elapsedInCurrentDayMs;
+    private long elapsedInCurrentDayMs;
     private volatile boolean tempsFige;
     private final GamePauseController pauseController;
     private final Object freezeLock;
@@ -62,7 +62,7 @@ public class Jour extends Thread {
              * On remet la jauge a zero juste avant de lancer le nouveau jour.
              * Ainsi, le HUD repart immédiatement d'un cycle propre pour le jour suivant.
              */
-            elapsedInCurrentDayMs = 0L;
+            resetElapsedInCurrentDayMs();
             jour++; // Incrémenter le jour
 
             // Notifier les listeners avant de vérifier la validité du jour, afin qu'ils
@@ -85,7 +85,7 @@ public class Jour extends Thread {
      * 0.0 = début du jour, 1.0 = passage imminent au jour suivant.
      */
     public double getProgressionVersJourSuivant() {
-        return Math.max(0.0, Math.min(1.0, elapsedInCurrentDayMs / (double) DELAI_JOUR));
+        return Math.max(0.0, Math.min(1.0, getElapsedInCurrentDayMs() / (double) DELAI_JOUR));
     }
 
     /**
@@ -93,7 +93,7 @@ public class Jour extends Thread {
      * Le résultat reste figé pendant une pause, car le chrono de jeu s'arrête lui aussi.
      */
     public long getTempsRestantAvantProchainJourMs() {
-        return Math.max(0L, DELAI_JOUR - elapsedInCurrentDayMs);
+        return Math.max(0L, DELAI_JOUR - getElapsedInCurrentDayMs());
     }
 
     /**
@@ -172,20 +172,32 @@ public class Jour extends Thread {
      * la jauge s'immobilise naturellement jusqu'à la reprise.
      */
     private void waitUntilNextDayBoundary() throws InterruptedException {
-        while (actif && elapsedInCurrentDayMs < DELAI_JOUR) {
+        while (actif && getElapsedInCurrentDayMs() < DELAI_JOUR) {
             pauseController.awaitIfPaused();
             attendreSiTempsFige();
             if (!actif) {
                 return;
             }
 
-            long remainingMs = DELAI_JOUR - elapsedInCurrentDayMs;
+            long remainingMs = DELAI_JOUR - getElapsedInCurrentDayMs();
             long chunkMs = Math.min(remainingMs, PAS_MISE_A_JOUR_PROGRESSION_MS);
             long startMs = System.currentTimeMillis();
             Thread.sleep(chunkMs);
             long elapsedChunkMs = Math.max(1L, System.currentTimeMillis() - startMs);
-            elapsedInCurrentDayMs = Math.min(DELAI_JOUR, elapsedInCurrentDayMs + elapsedChunkMs);
+            advanceElapsedInCurrentDayMs(elapsedChunkMs);
         }
+    }
+
+    private synchronized long getElapsedInCurrentDayMs() {
+        return elapsedInCurrentDayMs;
+    }
+
+    private synchronized void resetElapsedInCurrentDayMs() {
+        elapsedInCurrentDayMs = 0L;
+    }
+
+    private synchronized void advanceElapsedInCurrentDayMs(long elapsedChunkMs) {
+        elapsedInCurrentDayMs = Math.min(DELAI_JOUR, elapsedInCurrentDayMs + elapsedChunkMs);
     }
 
     private void attendreSiTempsFige() throws InterruptedException {
