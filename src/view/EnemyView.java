@@ -322,7 +322,6 @@ public class EnemyView extends JPanel {
      */
     public void handleWorldClick(Point point) {
         selectedEnemy = findEnemyAt(point);
-        repaint();
     }
 
     /**

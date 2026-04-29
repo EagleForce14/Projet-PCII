@@ -177,7 +177,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         }
         if (!inventaire.possedeGraine(selectedSeedType)) {
             model.clearSelectedInventoryItem();
-            inventoryStatusOverlay.repaint();
         }
     }
 
@@ -275,7 +274,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         if (inventaire.possedeInstallation(FacilityType.CHEMIN)) {
             model.clearSelectedInventoryItem();
         }
-        inventoryStatusOverlay.repaint();
     }
 
     /**
@@ -295,7 +293,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         if (grilleCulture.hasPath(activeFieldCell.x, activeFieldCell.y)) {
             grilleCulture.storePath(activeFieldCell.x, activeFieldCell.y, inventaire);
             fieldPanel.refreshStaticTerrain();
-            inventoryStatusOverlay.repaint();
             return;
         }
 
@@ -325,7 +322,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         if (inventaire.possedeInstallation(FacilityType.COMPOST)) {
             model.clearSelectedInventoryItem();
         }
-        inventoryStatusOverlay.repaint();
     }
 
     /**
@@ -352,7 +348,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         }
 
         syncPlacementVisuals();
-        inventoryStatusOverlay.repaint();
         movementView.requestFocusInWindow();
     }
 
@@ -392,7 +387,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
 
         grilleCulture.storeCompost(activeFieldCell.x, activeFieldCell.y, inventaire);
         fieldPanel.clearCompostInfluenceHighlight();
-        inventoryStatusOverlay.repaint();
     }
 
     /**
@@ -422,7 +416,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             }
         }
 
-        inventoryStatusOverlay.repaint();
         movementView.requestFocusInWindow();
     }
 
@@ -522,7 +515,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
         if (inventaire.possedeInstallation(FacilityType.CLOTURE)) {
             model.clearSelectedInventoryItem();
             fieldPanel.clearFencePreview();
-            inventoryStatusOverlay.repaint();
         }
 
         return true;
@@ -570,7 +562,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             // Cas 2: la graine existe mais appartient à l'autre côté du champ.
             // Le clic est absorbé par l'inventaire, mais on ne change rien à la sélection.
             } else if (!inventoryStatusOverlay.isSeedSelectableInCurrentZone(clickedSeedType)) {
-                inventoryStatusOverlay.repaint();
                 movementView.requestFocusInWindow();
                 return true;
             // Cas 3: le joueur reclique sur la graine déjà active.
@@ -587,8 +578,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             fieldPanel.clearFencePreview();
             fieldPanel.clearCompostInfluenceHighlight();
             syncPlacementVisuals();
-            // On redessine la barre pour refléter immédiatement le changement de sélection.
-            inventoryStatusOverlay.repaint();
             // Enfin, on rend le focus au panneau principal pour que le clavier
             // continue de piloter le joueur juste après le clic.
             movementView.requestFocusInWindow();
@@ -622,7 +611,6 @@ public class MovementController implements KeyListener, MouseListener, MouseMoti
             fieldPanel.clearFencePreview();
             fieldPanel.clearCompostInfluenceHighlight();
             syncPlacementVisuals();
-            inventoryStatusOverlay.repaint();
             movementView.requestFocusInWindow();
             return true;
         }

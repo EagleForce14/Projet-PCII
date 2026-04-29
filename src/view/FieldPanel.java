@@ -397,7 +397,6 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
      */
     public void toggleCompostInfluenceHighlight() {
         compostInfluenceVisible = !compostInfluenceVisible;
-        repaint();
     }
 
     /**
@@ -408,7 +407,6 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
             return;
         }
         compostInfluenceVisible = false;
-        repaint();
     }
 
     /**
@@ -422,7 +420,6 @@ public class FieldPanel extends JPanel implements PlayableMapPanel {
         }
 
         bridgePlacementHighlightVisible = visible;
-        repaint();
     }
 
     /**

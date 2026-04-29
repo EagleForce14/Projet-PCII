@@ -617,8 +617,6 @@ public class SidebarPanel extends JPanel {
         bridgePlacementHintLabel.setVisible(state.bridgeHintVisible);
         compostButton.setText(state.compostButtonLabel);
         labourWarningLabel.setVisible(state.labourWarningVisible);
-
-        repaint();
     }
 
     /**
@@ -1059,7 +1057,6 @@ public class SidebarPanel extends JPanel {
         // Mise à jour du bilan du jour (texte + couleur d'état).
         // Synthèse métier: le jour est validé si le seuil minimal est atteint.
         boolean isDayValidated = validatedObjectives >= effectiveMinimum;
-        boolean shouldRepaintDayValidationCard = isDayValidated != currentDayValidatedState;
         currentDayValidatedState = isDayValidated;
 
         if (caveMode) {
@@ -1079,14 +1076,8 @@ public class SidebarPanel extends JPanel {
             dayValidationStatusLabel.setForeground(isDayValidated ? new Color(172, 227, 143) : new Color(255, 196, 118));
         }
 
-        // Repaint minimal pour garder l'UI fluide sans clignotement.
-        // repaint (sans revalidate) suffit ici: la structure n'a pas changé, seul le contenu textuel évolue.
-        objectivesContentPanel.repaint();
-        dayValidationContentPanel.repaint();
-        if (shouldRepaintDayValidationCard) {
-            // Repaint de la carte seulement si ses couleurs dynamiques doivent changer.
-            dayValidationCardPanel.repaint();
-        }
+        // Aucune demande de repaint ici :
+        // le RenderThread redessinera la sidebar après les mises à jour de texte et de couleur.
     }
 
     /**
@@ -1146,7 +1137,6 @@ public class SidebarPanel extends JPanel {
         }
 
         objectivesContentPanel.revalidate();
-        objectivesContentPanel.repaint();
     }
 
     /**
@@ -1274,7 +1264,6 @@ public class SidebarPanel extends JPanel {
         this.caveMode = caveMode;
         caveButton.setText(caveMode ? "Retour ferme" : "Aller grotte");
         refreshObjectivesDisplay();
-        repaint();
     }
 
 

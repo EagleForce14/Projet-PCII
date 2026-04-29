@@ -110,7 +110,6 @@ public final class GrotteCombatView extends JPanel {
      */
     public void showShootHint() {
         shootHintVisible = true;
-        repaint();
     }
 
     /**
@@ -122,7 +121,6 @@ public final class GrotteCombatView extends JPanel {
         }
 
         shootHintVisible = false;
-        repaint();
         return true;
     }
 

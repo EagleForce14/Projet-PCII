@@ -242,7 +242,6 @@ public class TopBarPanel extends JPanel {
         button.addActionListener(event -> {
             pauseController.setPaused(!pauseController.isPaused());
             syncPauseButtonState();
-            repaint();
         });
         return button;
     }
