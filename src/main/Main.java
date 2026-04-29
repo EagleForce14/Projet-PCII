@@ -48,8 +48,8 @@ import java.awt.Point;
 public class Main {
     private static final Dimension GAME_AREA_MINIMUM_SIZE = new Dimension(960, 690);
     private static final Dimension GAME_AREA_PREFERRED_SIZE = new Dimension(1180, 885);
-    private static final String FARM_CARD = "farm";
-    private static final String GROTTE_CARD = "grotte";
+    private static final String FARM_CARD = "farm"; // Identifiant CardLayout de la vue principale de la ferme.
+    private static final String GROTTE_CARD = "grotte"; // Identifiant CardLayout de la vue de la grotte.
 
     /**
      * Point d'entrée du programme.
