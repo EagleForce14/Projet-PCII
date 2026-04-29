@@ -17,15 +17,12 @@ import view.SidebarPanel;
 import view.grotte.GrotteCombatView;
 import view.grotte.GrotteFieldPanel;
 
-import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -37,7 +34,7 @@ import java.awt.event.MouseListener;
  * déplacement, tir, focus clavier, clic de sélection des monstres
  * et bascule ferme <-> grotte.
  */
-public final class GrotteController implements KeyListener, MouseListener, ActionListener {
+public final class GrotteController implements KeyListener, MouseListener {
     private final GamePauseController pauseController;
     private final GrotteFieldPanel grotteFieldPanel;
     private final EnemyView caveEnemyView;
@@ -60,7 +57,6 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
     private final String farmCardName;
     private final String grotteCardName;
 
-    private JButton caveButton;
     private boolean entryTriggered;
     private boolean exitTriggered;
     private volatile boolean transitionCheckQueued;
@@ -112,7 +108,6 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         this.shrineHazardThread = shrineHazardThread;
 
         registerInputLayers();
-        bindCaveButton();
         markActiveCard(farmCardName);
     }
 
@@ -129,30 +124,6 @@ public final class GrotteController implements KeyListener, MouseListener, Actio
         }
         if (grotteCombatView != null) {
             grotteCombatView.addMouseListener(this);
-        }
-    }
-
-    /**
-     * On relie le bouton de grotte de la sidebar à ce contrôleur.
-     */
-    private void bindCaveButton() {
-        if (sidebarPanel == null) {
-            return;
-        }
-
-        caveButton = sidebarPanel.getCaveButton();
-        if (caveButton != null) {
-            caveButton.addActionListener(this);
-        }
-    }
-
-    /**
-     * On ne réagit ici qu'au bouton dédié à l'entrée ou à la sortie de la grotte.
-     */
-    @Override
-    public void actionPerformed(ActionEvent event) {
-        if (event.getSource() == caveButton) {
-            toggleCaveScene();
         }
     }
 

@@ -81,8 +81,6 @@ public class SidebarPanel extends JPanel {
     private final JButton compostButton;
     private final JButton cutTreeButton;
     private final JButton bridgeButton;
-    // Bouton qui permet d'entrer dans la grotte.
-    private final JButton caveButton;
     // Message d'avertissement lié au labour.
     private final JLabel labourWarningLabel;
     // Indication affichée pendant le placement d'un pont.
@@ -231,9 +229,6 @@ public class SidebarPanel extends JPanel {
         bridgeActionRow = createSpecialActionRow(bridgeButton);
         bridgeActionRow.setVisible(false);
 
-        // Bouton temporaire de navigation : il sert uniquement à afficher la grotte pendant le développement.
-        caveButton = createStyledButton("Aller grotte", new Color(64, 70, 86, 255), 11.5f);
-
         labourWarningLabel = new JLabel(
                 "<html>Le labourage n'est pas autorisé sur une case adjacente à une clôture.</html>"
         );
@@ -263,7 +258,6 @@ public class SidebarPanel extends JPanel {
         specialActionsPanel.add(cutTreeActionRow);
         specialActionsPanel.add(bridgePlacementHintLabel);
         specialActionsPanel.add(labourWarningLabel);
-        specialActionsPanel.add(createSpecialActionRow(caveButton));
 
         // Titre de la section objectifs (même hiérarchie visuelle que "Actions").
         JPanel objectivesTitleRow = new JPanel(new BorderLayout());
@@ -1067,7 +1061,7 @@ public class SidebarPanel extends JPanel {
             dayValidationStatusLabel.setText("Statut : temps figé");
             dayValidationStatusLabel.setForeground(new Color(182, 222, 255));
         } else {
-            String dayValidationState = isDayValidated ? "Validee" : "En cours";
+            String dayValidationState = isDayValidated ? "Validée" : "En cours";
             dayValidationTitleLabel.setText("Bilan du jour");
             dayValidationProgressLabel.setText(
                     "Objectifs valides : " + validatedObjectives + " / " + effectiveMinimum
@@ -1176,6 +1170,9 @@ public class SidebarPanel extends JPanel {
         if (type == TypeObjectif.CULTURES_MANGEES && objectif instanceof ObjectifCompteur compteur) {
             return "Ne pas dépasser " + compteur.getValeurCible() + " cultures mangées";
         }
+        if (type == TypeObjectif.ACHETER_ITEMS_BOUTIQUE) {
+            return "Acheter des items\ndans la boutique";
+        }
         return TypeObjectif.getIntitule(type);
     }
 
@@ -1250,11 +1247,6 @@ public class SidebarPanel extends JPanel {
         return bridgeButton;
     }
 
-    /** Retourne le bouton de la grotte. */
-    public JButton getCaveButton() {
-        return caveButton;
-    }
-
     /** Définit le mode grotte. */
     public void setCaveMode(boolean caveMode) {
         if (this.caveMode == caveMode) {
@@ -1262,7 +1254,6 @@ public class SidebarPanel extends JPanel {
         }
 
         this.caveMode = caveMode;
-        caveButton.setText(caveMode ? "Retour ferme" : "Aller grotte");
         refreshObjectivesDisplay();
     }
 
